@@ -90,7 +90,7 @@ def _resolve_rate(client: Client, service_type: ServiceType) -> tuple[Decimal | 
     error this import flow surfaces to the user.
     """
     rate = resolve_session_rate(client, service_type)
-    if rate == Decimal("0") and service_type.code != "therapy_free":
+    if rate == Decimal("0") and service_type.code != "initial_consultation":
         return None, _("Client %(code)s has no hourly rate — set it in client settings") % {
             "code": client.client_code
         }
@@ -179,7 +179,7 @@ def create_invoice_items_from_events(
 
         try:
             with transaction.atomic():
-                if service_type.code == "therapy_free" and not client.first_seen_date:
+                if service_type.code == "initial_consultation" and not client.first_seen_date:
                     client.first_seen_date = event_date.date()
                     client.save(update_fields=["first_seen_date"])
 

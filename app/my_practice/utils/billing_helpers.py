@@ -39,14 +39,14 @@ def resolve_session_rate(client, service_type) -> Decimal:
     """
     Return the billing rate for a session of this service type for the client.
 
-    Returns Decimal("0") for free consultations (service_type.code == "therapy_free").
+    Returns Decimal("0") for free consultations (service_type.code == "initial_consultation").
     Types with default_duration >= 90 use the client's separately-negotiated 90-min
     rate — not prorated, since practices often discount double sessions rather than
     charging a strict 1.5x multiple of the 60-min rate. Shorter types are prorated
     off the 60-min rate (default_duration / 60 * hourly_rate_60), so e.g. a 15-min
     check-in bills at a quarter of a full session instead of the full rate.
     """
-    if service_type.code == "therapy_free":
+    if service_type.code == "initial_consultation":
         return Decimal("0")
     if service_type.default_duration >= 90:
         return Decimal(str(client.hourly_rate_90 or client.hourly_rate_60 or 0))

@@ -3,6 +3,7 @@ Google Calendar API utilities for OAuth2 and event parsing.
 """
 
 import logging
+import re
 from datetime import datetime
 from typing import cast
 
@@ -21,8 +22,8 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 # Duration to ServiceType code mapping
 DURATION_TO_SERVICE_CODE = {
-    (14, 16): "therapy_15",  # 15min = Check-in
-    (18, 22): "therapy_free",  # 20min = initial consultation
+    (14, 16): "checkin_15",  # 15min = Check-in
+    (18, 22): "initial_consultation",  # 20min = initial consultation
     (50, 65): "therapy_60",  # 50-60min = Standard session
     (80, 95): "therapy_90",  # 80-90min = Extended session
 }
@@ -207,6 +208,18 @@ class CalendarEventParser:
                 service_type = ServiceType.objects.filter(code=service_code).first()
                 if service_type:
                     return (service_type, service_type.name_de or service_type.name)
+                # A code with no ServiceType row degrades silently: the event just
+                # gets no suggestion, and every rule keyed on the code (free-consult
+                # rate, auto-skip) stops firing. This mapping pointed at two codes
+                # that never existed, so intro calls were billed for months.
+                logger.warning(
+                    "DURATION_TO_SERVICE_CODE maps %s-%s min to unknown ServiceType "
+                    "code %r — event suggestions and code-keyed billing rules are "
+                    "inactive for this duration",
+                    min_dur,
+                    max_dur,
+                    service_code,
+                )
         return (None, None)
 
     @staticmethod
@@ -252,7 +265,15 @@ class CalendarEventParser:
     @staticmethod
     def match_client(summary: str, clients=None) -> "Client | None":
         """
-        Match client by client_code in event summary.
+        Match client by client_code appearing as a standalone token in the summary.
+
+        The code must be delimited on both sides: a plain substring search matches
+        far too eagerly when almost every code is two letters. "Nat" contains AT,
+        "CAR" contains CA, "Blocked" contains CK and "ZK (cancel)" contains EL — all
+        of which silently booked a session onto an unrelated client. A hyphen counts
+        as part of the code, not a delimiter, so MM does not match inside MM-G.
+
+        Longer codes win: the summary "TOB" belongs to client TOB, not to TO.
 
         Args:
             summary: Event title/summary
@@ -265,9 +286,14 @@ class CalendarEventParser:
             # Use optimized query - only fetch needed fields
             clients = Client.objects.only("id", "client_code")
 
-        summary_upper = summary.upper()
-        for client in clients:
-            if client.client_code and client.client_code.upper() in summary_upper:
+        candidates = sorted(
+            (c for c in clients if c.client_code),
+            key=lambda c: len(c.client_code),
+            reverse=True,
+        )
+        for client in candidates:
+            pattern = rf"(?<![A-Za-z0-9-]){re.escape(client.client_code)}(?![A-Za-z0-9-])"
+            if re.search(pattern, summary, re.IGNORECASE):
                 return cast(Client, client)
         return None
 

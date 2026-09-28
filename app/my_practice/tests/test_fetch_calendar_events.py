@@ -100,9 +100,9 @@ class UpsertEventCreateTest(UpsertEventTestBase):
         self.assertEqual(pce.status, PendingCalendarEvent.Status.CANCELLED)
         self.assertIsNone(pce.session)
 
-    def test_therapy_free_event_creates_skipped_pce_with_session(self):
+    def test_initial_consultation_event_creates_skipped_pce_with_session(self):
         free_type = ServiceType.objects.create(
-            code="therapy_free", name="Free consult", default_duration=30
+            code="initial_consultation", name="Free consult", default_duration=30
         )
         result = self.cmd._upsert_event(
             self._event(suggested_service_type_obj=free_type), self.practice, dry_run=False
@@ -242,8 +242,8 @@ class ResolveEventStatusTest(TestCase):
         status = Command._resolve_event_status({"is_cancelled": True})
         self.assertEqual(status, PendingCalendarEvent.Status.CANCELLED)
 
-    def test_therapy_free_event(self):
-        stype = ServiceType(code="therapy_free")
+    def test_initial_consultation_event(self):
+        stype = ServiceType(code="initial_consultation")
         status = Command._resolve_event_status(
             {"is_cancelled": False, "suggested_service_type_obj": stype}
         )

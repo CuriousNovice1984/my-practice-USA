@@ -613,7 +613,7 @@ class Command(BaseCommand):
         if event.get("is_cancelled"):
             return PendingCalendarEvent.Status.CANCELLED
         stype = event.get("suggested_service_type_obj")
-        if stype and stype.code == "therapy_free":
+        if stype and stype.code == "initial_consultation":
             return PendingCalendarEvent.Status.SKIPPED
         return PendingCalendarEvent.Status.PENDING
 

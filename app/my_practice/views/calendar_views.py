@@ -492,7 +492,7 @@ def _resolve_billing_inputs(
         return None
 
     rate = resolve_session_rate(client, service_type)
-    if rate == Decimal("0") and service_type.code != "therapy_free":
+    if rate == Decimal("0") and service_type.code != "initial_consultation":
         messages.error(
             request,
             _("No hourly rate set for %(code)s.") % {"code": client.client_code},
