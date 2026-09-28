@@ -36,7 +36,7 @@ def _make_service_types(practice):
         practice=practice,
     )
     st_free = ServiceType.objects.create(
-        code="therapy_free",
+        code="initial_consultation",
         name="Free Consultation",
         default_duration=20,
         practice=practice,
@@ -118,7 +118,7 @@ class ResolveSessionRateTests(TestCase):
         self.st60, self.st90, self.st_free, self.st15 = _make_service_types(self.practice)
         self.client = _make_client(self.practice)
 
-    def test_therapy_free_returns_zero(self):
+    def test_initial_consultation_returns_zero(self):
         self.assertEqual(resolve_session_rate(self.client, self.st_free), Decimal("0"))
 
     def test_60min_uses_hourly_rate_60(self):
@@ -245,7 +245,7 @@ class CreateInvoiceItemForSessionTests(TestCase):
         self.assertIsNotNone(item)
         self.assertEqual(item.service_type, self.st60)
 
-    def test_therapy_free_creates_zero_rate_item(self):
+    def test_initial_consultation_creates_zero_rate_item(self):
         session = _make_session(self.client, duration=20)
         item = create_invoice_item_for_session(self.invoice, session, self.service_type_map)
         self.assertIsNotNone(item)

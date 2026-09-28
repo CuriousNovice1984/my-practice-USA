@@ -145,13 +145,13 @@ class CalendarEventParserTest(TestCase):
         )
 
         ServiceType.objects.create(
-            code="therapy_15",
+            code="checkin_15",
             name="Check-in",
             name_de="Check-in Termin",
             practice=self.practice,
         )
         ServiceType.objects.create(
-            code="therapy_free",
+            code="initial_consultation",
             name="Initial Consultation",
             name_de="Vorgespräch",
             practice=self.practice,
@@ -270,6 +270,58 @@ class CalendarEventParserTest(TestCase):
         result = CalendarEventParser.match_client("AJ session")
         self.assertIsNone(result)
 
+    def _make_clients(self, *codes):
+        """Create clients for the given codes, returned as a code -> Client map."""
+        return {
+            code: Client.objects.create(
+                full_name=f"Client {code}",
+                client_code=code,
+                email=f"{code.lower()}@example.com",
+                practice=self.practice,
+            )
+            for code in codes
+        }
+
+    def test_match_client_ignores_code_inside_a_word(self):
+        """A code embedded in a longer word is not a match.
+
+        Intro calls are titled with a short name abbreviation; with 2-letter codes
+        a plain substring search booked them onto unrelated clients.
+        """
+        self._make_clients("AT", "CA", "LB")
+
+        for summary in ("Nat", "CAR", "LBW"):
+            with self.subTest(summary=summary):
+                self.assertIsNone(CalendarEventParser.match_client(summary))
+
+    def test_match_client_ignores_code_inside_a_german_or_status_word(self):
+        """Ordinary calendar words must not match a client code."""
+        self._make_clients("EL", "FR", "MA", "CK")
+
+        for summary in ("Frei", "Mail", "Blocked", "cancel"):
+            with self.subTest(summary=summary):
+                self.assertIsNone(CalendarEventParser.match_client(summary))
+
+    def test_match_client_prefers_the_longest_code(self):
+        """A summary equal to a longer code matches that code, not its prefix."""
+        clients = self._make_clients("TO", "TOB")
+
+        self.assertEqual(CalendarEventParser.match_client("TOB"), clients["TOB"])
+        self.assertEqual(CalendarEventParser.match_client("TO"), clients["TO"])
+
+    def test_match_client_hyphen_is_part_of_the_code(self):
+        """A hyphen does not delimit a code, so MM does not match inside MM-G."""
+        clients = self._make_clients("MM", "MM-G")
+
+        self.assertEqual(CalendarEventParser.match_client("MM-G 60min"), clients["MM-G"])
+        self.assertEqual(CalendarEventParser.match_client("MM 60min"), clients["MM"])
+
+    def test_match_client_with_cancel_suffix(self):
+        """A cancelled session still matches its own code, not one inside 'cancel'."""
+        clients = self._make_clients("ZK", "EL")
+
+        self.assertEqual(CalendarEventParser.match_client("ZK (cancel)"), clients["ZK"])
+
     def test_is_cancelled_with_parentheses(self):
         """Test cancelled detection with (cancel) format."""
         self.assertTrue(CalendarEventParser.is_cancelled("JD 60min (cancel)"))
@@ -359,15 +411,35 @@ class CalendarEventParserTest(TestCase):
         """Test mapping 15-minute events to Check-in."""
         service_type, description = CalendarEventParser.map_duration_to_service_type(15)
         self.assertIsNotNone(service_type)
-        self.assertEqual(service_type.code, "therapy_15")
+        self.assertEqual(service_type.code, "checkin_15")
         self.assertEqual(description, "Check-in Termin")
 
     def test_map_duration_to_service_type_free_consultation(self):
         """Test mapping 20-minute events to the free initial-consultation service type."""
         service_type, description = CalendarEventParser.map_duration_to_service_type(20)
         self.assertIsNotNone(service_type)
-        self.assertEqual(service_type.code, "therapy_free")
+        self.assertEqual(service_type.code, "initial_consultation")
         self.assertEqual(description, "Vorgespräch")
+
+    def test_map_duration_to_service_type_warns_on_unknown_code(self):
+        """An unseeded code must be logged, not silently degrade to no suggestion.
+
+        A code with no ServiceType row also disables every rule keyed on that code
+        (free-consult rate, auto-skip), which is invisible without the warning.
+        """
+        with (
+            patch.dict(
+                "my_practice.utils.google_calendar.DURATION_TO_SERVICE_CODE",
+                {(18, 22): "does_not_exist"},
+                clear=True,
+            ),
+            self.assertLogs("my_practice.utils.google_calendar", level="WARNING") as logs,
+        ):
+            service_type, description = CalendarEventParser.map_duration_to_service_type(20)
+
+        self.assertIsNone(service_type)
+        self.assertIsNone(description)
+        self.assertIn("does_not_exist", logs.output[0])
 
     def test_map_duration_to_service_type_standard_session(self):
         """Test mapping 60-minute events to Sitzung."""
