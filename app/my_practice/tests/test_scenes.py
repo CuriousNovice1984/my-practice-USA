@@ -32,6 +32,9 @@ from ..templatetags.scene_tags import scene_image, scene_video, strip_emoji
 from ..utils.briefing import build_briefing
 
 SCENE_DIR = Path(settings.BASE_DIR) / "static" / "scenes"
+# Footage ships in the repo and to every page load with motion on: keep it light.
+MAX_CLIP_BYTES = 8 * 1024 * 1024
+MAX_POSTER_BYTES = 300 * 1024
 EMPTY_STATS = {
     "draft": {"count": 0, "total": Decimal("0")},
     "sent": {"count": 0, "total": Decimal("0")},
@@ -122,9 +125,21 @@ class SceneAssetTests(SimpleTestCase):
         for scene in SCENES.values():
             has_mp4 = finders.find(f"{scene.base}.mp4") is not None
             with self.subTest(scene=scene.key):
-                self.assertEqual(has_mp4, scene.video, "set Scene.video to match the files")
+                self.assertEqual(has_mp4, scene.video, "give the scene Footage to match the files")
                 if scene.video:
                     self.assertIsNotNone(finders.find(f"{scene.base}-poster.webp"))
+
+    def test_footage_stays_light(self):
+        """The large-file pre-commit hook exempts scene clips; this is their ceiling."""
+        for scene in SCENES.values():
+            if not scene.video:
+                continue
+            with self.subTest(scene=scene.key):
+                self.assertLessEqual(
+                    (SCENE_DIR / f"{scene.key}.mp4").stat().st_size, MAX_CLIP_BYTES
+                )
+                poster = SCENE_DIR / f"{scene.key}-poster.webp"
+                self.assertLessEqual(poster.stat().st_size, MAX_POSTER_BYTES)
 
     def test_no_orphaned_files(self):
         pattern = re.compile(
@@ -147,6 +162,17 @@ class SceneAssetTests(SimpleTestCase):
                 self.assertTrue(scene.license)
                 self.assertTrue(scene.source_url.startswith("https://"))
 
+    def test_every_clip_is_credited(self):
+        credits = (SCENE_DIR / "CREDITS.md").read_text(encoding="utf-8")
+        footage_section = credits.split("## Footage", 1)[1].split("\nCollections:", 1)[0]
+        listed = set(re.findall(r"^\| `([a-z]+)` \|", footage_section, re.M))
+        self.assertEqual(listed, {key for key, scene in SCENES.items() if scene.video})
+        for scene in SCENES.values():
+            if scene.footage:
+                with self.subTest(scene=scene.key):
+                    self.assertIn(scene.footage.source_url, footage_section)
+                    self.assertTrue(scene.footage.license)
+
 
 class SceneTagTests(SimpleTestCase):
     def test_scene_image_is_responsive_and_cropped(self):
@@ -161,12 +187,10 @@ class SceneTagTests(SimpleTestCase):
         self.assertNotIn("fetchpriority", scene_image(SCENES["focus"], loading="lazy"))
 
     def test_no_video_markup_without_footage(self):
-        self.assertEqual(scene_video(SCENES["dawn"]), "")
+        self.assertEqual(scene_video(SCENES["focus"]), "")
 
     def test_video_source_is_deferred_until_motion_is_allowed(self):
-        html = scene_video(
-            Scene("dawn", "alt", "place", "who", "https://example.com", "CC0", video=True)
-        )
+        html = scene_video(SCENES["dawn"])
         self.assertIn('data-src="/static/scenes/dawn.mp4"', html)
         self.assertIn('poster="/static/scenes/dawn-poster.webp"', html)
         self.assertNotIn(" src=", html)
@@ -331,6 +355,25 @@ class ShellRenderingTests(TestCase):
         self.assertContains(response, "signin__card")
         self.assertNotContains(response, "mainnav")
         self.assertNotContains(response, 'class="page"')
+
+    def test_time_of_day_scenes_carry_deferred_footage_and_both_credits(self):
+        response = self.client.get(reverse("login"))
+        html = response.content.decode()
+        key = re.search(r'data-scene="(\w+)"', html).group(1)
+        scene = SCENES[key]
+        self.assertTrue(scene.video)
+        self.assertContains(response, "scene--footage")
+        self.assertContains(response, f'data-src="/static/scenes/{key}.mp4"')
+        self.assertContains(response, scene.photographer)
+        self.assertContains(response, scene.footage.source_url)
+        self.assertIn("classList.add('motion-on')", html)
+
+    def test_photo_only_scenes_have_no_footage_markup(self):
+        self.login()
+        response = self.client.get(reverse("focus_queue"))
+        self.assertNotContains(response, "<video")
+        self.assertNotContains(response, "scene--footage")
+        self.assertNotContains(response, "scene__credit-footage")
 
     def test_page_titles_have_no_emoji(self):
         self.login()

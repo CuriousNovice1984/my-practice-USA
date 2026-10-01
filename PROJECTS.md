@@ -31,8 +31,8 @@ grep -rho "P-[0-9]\{3\}" --include=*.md --include=*.py --include=*.html \
 
 ## 🔍 Recent Activity
 
-- **2026-10-01 — Photographic interface**: every page now opens on a real, credited photograph chosen for its section, under a frosted top bar with the title in a display serif; the dashboard greets you by time of day and briefs you on today (sessions by client code, due tasks, uploads, renewals, inquiries, invoices); full-screen sign-in, a redesigned client portal and matching 404/500 pages; emoji replaced by line icons, charts and palettes redone for light and dark. Footage support is wired but no clips ship yet (stock-video hosts blocked here). Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
-- **2026-10-01 — v1.0.0 US fork**: English-only UI on Central time with USD and `DD MMM YY` dates; IRS quarterly estimates, SE tax and home-office deduction; LPC license tracker for TX/UT/VA/NM with renewal tasks and client-state warnings; Plaid bank connection feeding the existing matching pipeline; client forms portal with private expiring upload links over Tailscale Funnel; records retention instead of GDPR deletion; German features, update checks and registry pulls removed. Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
+- **2026-10-01 — Real footage**: the dashboard and sign-in greeting now sit over a real, seamlessly looping clip for the time of day (sunrise, drifting clouds, sunset, the Milky Way), self-hosted and credited, and only downloaded when motion is on. Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
+- **2026-10-01 — Photographic interface**: every page now opens on a real, credited photograph chosen for its section, under a frosted top bar with the title in a display serif; the dashboard greets you by time of day and briefs you on today (sessions by client code, due tasks, uploads, renewals, inquiries, invoices); full-screen sign-in, a redesigned client portal and matching 404/500 pages; emoji replaced by line icons, charts and palettes redone for light and dark. Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 > Older entries: [docs/CHANGELOG.md](docs/CHANGELOG.md)
 

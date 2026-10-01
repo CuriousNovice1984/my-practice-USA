@@ -48,7 +48,7 @@ holidays, bilingual PDFs, update checks); [CHANGELOG v1.0.0](CHANGELOG.md) lists
 - ✅ "How can I help?" opens the command palette from a frosted top bar that turns to glass on scroll
 - ✅ Newsreader display serif and Hanken Grotesk UI type, warm "Daylight" and deep "Night" palettes, glass surfaces over a blurred wash of each page's photo
 - ✅ Slow ambient drift on the hero photo, with a pause toggle; off automatically for reduced-motion users
-- ✅ Real-footage support per scene (`scripts/scene_media.py video`), loaded only when motion is on
+- ✅ Real footage behind the dashboard and sign-in greeting: a looping sunrise, drifting clouds, a sunset or the Milky Way, following the time of day; loaded only when motion is on, with the still photo for everyone else
 - ✅ Line icons instead of emoji throughout; charts recoloured to a palette drawn from the photography
 
 ## 🏠 Core Features

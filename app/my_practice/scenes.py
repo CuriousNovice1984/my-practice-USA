@@ -6,10 +6,14 @@ blurred to a wash of colour, behind the whole page. The dashboard and sign-in
 follow the time of day in the practice's time zone instead: morning, day, dusk
 and night each have their own scene.
 
-Every image is a real photograph, self-hosted under static/scenes/ (the
-app runs behind a tailnet and makes no outbound calls), processed with
-scripts/scene_media.py. Provenance and license for each one is recorded here and
-in static/scenes/CREDITS.md; keep the two in sync when adding a scene.
+Every image is a real photograph and every clip real footage, self-hosted
+under static/scenes/ (the app runs behind a tailnet and makes no outbound
+calls), processed with scripts/scene_media.py. Provenance and license for each
+one is recorded here and in static/scenes/CREDITS.md; keep the two in sync when
+adding a scene.
+
+A scene with footage plays it in place of the photograph while ambient motion
+is on; the photograph remains for anyone with motion off.
 """
 
 from dataclasses import dataclass
@@ -17,6 +21,16 @@ from dataclasses import dataclass
 from django.utils import timezone
 from django.utils.functional import Promise
 from django.utils.translation import gettext_lazy as _
+
+
+@dataclass(frozen=True)
+class Footage:
+    """Real video for a scene: <key>.mp4 and <key>-poster.webp."""
+
+    place: str | Promise
+    author: str
+    source_url: str
+    license: str
 
 
 @dataclass(frozen=True)
@@ -29,16 +43,20 @@ class Scene:
     license: str
     # object-position for the wide hero crop, so the subject survives it
     focus: str = "50% 50%"
-    # True when <key>.mp4 and <key>-poster.webp exist (scripts/scene_media.py video)
-    video: bool = False
+    footage: Footage | None = None
 
     @property
     def base(self) -> str:
         return f"scenes/{self.key}"
 
+    @property
+    def video(self) -> bool:
+        return self.footage is not None
+
 
 UNSPLASH = "Unsplash License"
 CC0 = "CC0 (public domain)"
+MIXKIT = "Mixkit Stock Video Free License"
 
 SCENES: dict[str, Scene] = {
     scene.key: scene
@@ -52,6 +70,12 @@ SCENES: dict[str, Scene] = {
             "https://unsplash.com/photos/Dxod5pdRtsk",
             UNSPLASH,
             "50% 55%",
+            Footage(
+                _("Sunrise over a misty valley"),
+                "Mixkit",
+                "https://mixkit.co/free-stock-video/beautiful-sunrise-landscape-1944/",
+                MIXKIT,
+            ),
         ),
         Scene(
             "day",
@@ -61,6 +85,12 @@ SCENES: dict[str, Scene] = {
             "https://github.com/BuddiesOfBudgie/budgie-backgrounds",
             CC0,
             "50% 40%",
+            Footage(
+                _("Clouds drifting over green hills"),
+                "Mixkit",
+                "https://mixkit.co/free-stock-video/time-lapse-of-a-green-meadow-4070/",
+                MIXKIT,
+            ),
         ),
         Scene(
             "dusk",
@@ -70,6 +100,12 @@ SCENES: dict[str, Scene] = {
             "https://unsplash.com/photos/ces8_Bo7bhQ",
             CC0,
             "50% 50%",
+            Footage(
+                _("Sunset over a bay of islands"),
+                "Mixkit",
+                "https://mixkit.co/free-stock-video/beautiful-sunset-on-a-bay-from-above-4999/",
+                MIXKIT,
+            ),
         ),
         Scene(
             "night",
@@ -79,6 +115,12 @@ SCENES: dict[str, Scene] = {
             "https://www.pexels.com/photo/photo-of-snow-capped-mountain-during-evening-2440024/",
             "Pexels License",
             "50% 45%",
+            Footage(
+                _("The Milky Way over the mountains"),
+                "Mixkit",
+                "https://mixkit.co/free-stock-video/milky-way-seen-at-night-4148/",
+                MIXKIT,
+            ),
         ),
         # ── Sections ──────────────────────────────────────────────────────
         Scene(

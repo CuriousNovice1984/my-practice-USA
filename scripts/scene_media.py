@@ -8,14 +8,14 @@ variants the templates expect, so swapping a scene's photo or adding footage is
 one command plus a line in app/my_practice/scenes.py.
 
     scripts/scene_media.py image dawn ~/Pictures/lake.jpg
-    scripts/scene_media.py video dawn ~/Videos/lake-at-dawn.mp4
+    scripts/scene_media.py video dawn ~/Videos/lake-at-dawn.mp4 --start 10 --loop fade
 
 image  -> <key>-2560.webp, <key>-1280.webp (hero sizes, srcset) and
           <key>-ambient.webp (48px wide; the browser blurs it into the page
           backdrop, so the whole page carries the scene's light for ~1 KB).
-video  -> <key>.mp4 (H.264, no audio, faststart, <=1920px wide, trimmed to
-          --seconds) and <key>-poster.webp (first frame, shown until the video
-          plays and to anyone with reduced motion).
+video  -> <key>.mp4 (H.264, no audio, faststart, <=1920px wide; --start and
+          --seconds pick the segment, --loop fade|bounce makes it loop with no
+          visible jump) and <key>-poster.webp (its first frame).
 
 Needs Pillow and, for video, ffmpeg on PATH. Record the photographer, source
 URL and license in scenes.py and app/static/scenes/CREDITS.md whenever
@@ -53,7 +53,32 @@ def process_image(key: str, src: Path, quality: int) -> None:
     print(f"  average colour #{avg[0]:02x}{avg[1]:02x}{avg[2]:02x}")
 
 
-def process_video(key: str, src: Path, seconds: int, crf: int) -> None:
+def _loop_filter(seconds: float, loop: str, fade: float) -> str:
+    """Video filter that makes the kept segment loop without a visible jump.
+
+    fade:   the last `fade` seconds dissolve into the first ones, so the final
+            frame is the opening frame again (good for clips with steady motion,
+            e.g. a drone push or a cloud time-lapse).
+    bounce: the segment plays forward then backward (good for very slow drift,
+            where reversed motion is imperceptible: stars, a gentle pan).
+    """
+    scale = "scale='min(1920,iw)':-2"
+    if loop == "bounce":
+        return f"[0:v]{scale},split[f][r];[r]reverse[b];[f][b]concat=n=2:v=1:a=0[v]"
+    if loop == "fade":
+        body = seconds - fade
+        return (
+            f"[0:v]{scale},split[x][y];"
+            f"[x]trim=start={fade}:end={seconds},setpts=PTS-STARTPTS[a];"
+            f"[y]trim=start=0:end={fade},setpts=PTS-STARTPTS[b];"
+            f"[a][b]xfade=transition=fade:duration={fade}:offset={body - fade}[v]"
+        )
+    return f"[0:v]{scale}[v]"
+
+
+def process_video(
+    key: str, src: Path, start: float, seconds: float, crf: int, loop: str, fade: float
+) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         sys.exit("ffmpeg not found on PATH")
@@ -64,12 +89,16 @@ def process_video(key: str, src: Path, seconds: int, crf: int) -> None:
             "-y",
             "-loglevel",
             "error",
-            "-i",
-            str(src),
+            "-ss",
+            str(start),
             "-t",
             str(seconds),
-            "-vf",
-            "scale='min(1920,iw)':-2,fps=30",
+            "-i",
+            str(src),
+            "-filter_complex",
+            _loop_filter(seconds, loop, fade),
+            "-map",
+            "[v]",
             "-an",
             "-c:v",
             "libx264",
@@ -103,7 +132,17 @@ def main() -> None:
     parser.add_argument("key", help="scene key, e.g. dawn, clients, focus")
     parser.add_argument("src", type=Path)
     parser.add_argument("--quality", type=int, default=74, help="WebP quality (image)")
-    parser.add_argument("--seconds", type=int, default=20, help="clip length to keep (video)")
+    parser.add_argument(
+        "--start", type=float, default=0, help="where the kept segment starts (video)"
+    )
+    parser.add_argument("--seconds", type=float, default=20, help="segment length to keep (video)")
+    parser.add_argument(
+        "--loop",
+        choices=("fade", "bounce", "none"),
+        default="fade",
+        help="how the clip loops seamlessly (video)",
+    )
+    parser.add_argument("--fade", type=float, default=1.5, help="crossfade length for --loop fade")
     parser.add_argument(
         "--crf", type=int, default=26, help="H.264 quality, lower is better (video)"
     )
@@ -113,7 +152,7 @@ def main() -> None:
     if args.kind == "image":
         process_image(args.key, args.src, args.quality)
     else:
-        process_video(args.key, args.src, args.seconds, args.crf)
+        process_video(args.key, args.src, args.start, args.seconds, args.crf, args.loop, args.fade)
 
 
 if __name__ == "__main__":

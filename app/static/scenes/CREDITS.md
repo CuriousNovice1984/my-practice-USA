@@ -1,7 +1,7 @@
 # Scene photography credits
 
-Every image the interface shows is a real photograph, self-hosted here. None of
-them is an illustration or AI-generated. Each one is used under the license
+Every image the interface shows is a real photograph, and every clip real
+footage, self-hosted here. None of them is an illustration or AI-generated. Each one is used under the license
 listed, and they were obtained from the curated wallpaper collections named in
 the last column, which record the original source and license per image.
 
@@ -32,6 +32,19 @@ Files per scene are made with `scripts/scene_media.py`: `<key>-2560.webp`,
 | `notfound` | Dunes at dusk | Jared Evans | https://unsplash.com/photos/Wwg1TzCuV9E | CC0 | Pop!_OS wallpapers |
 | `tags` | Blue periwinkle | Wikimedia Commons | Wikimedia Commons | CC0 | Budgie Backgrounds |
 
+## Footage
+
+While ambient motion is on, these scenes play real footage instead of the
+photograph above (the clip's first frame is `<key>-poster.webp`). Clips were
+trimmed, made to loop and re-encoded with `scripts/scene_media.py video`.
+
+| Scene | Clip | Author | Source | License |
+|---|---|---|---|---|
+| `dawn` | Sunrise over a misty valley | Mixkit | https://mixkit.co/free-stock-video/beautiful-sunrise-landscape-1944/ | Mixkit Stock Video Free License |
+| `day` | Clouds drifting over green hills | Mixkit | https://mixkit.co/free-stock-video/time-lapse-of-a-green-meadow-4070/ | Mixkit Stock Video Free License |
+| `dusk` | Sunset over a bay of islands | Mixkit | https://mixkit.co/free-stock-video/beautiful-sunset-on-a-bay-from-above-4999/ | Mixkit Stock Video Free License |
+| `night` | The Milky Way over the mountains | Mixkit | https://mixkit.co/free-stock-video/milky-way-seen-at-night-4148/ | Mixkit Stock Video Free License |
+
 Collections:
 
 - elementary OS wallpapers: https://github.com/elementary/wallpapers (licensing in the
@@ -40,6 +53,7 @@ Collections:
 - Budgie Backgrounds: https://github.com/BuddiesOfBudgie/budgie-backgrounds (CC0, every
   image reviewed for compliance; sources in the commit history)
 
-Licenses: [Unsplash License](https://unsplash.com/license),
+Licenses: [Mixkit Stock Video Free License](https://mixkit.co/license/#videoFree),
+[Unsplash License](https://unsplash.com/license),
 [Pexels License](https://www.pexels.com/license/),
 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

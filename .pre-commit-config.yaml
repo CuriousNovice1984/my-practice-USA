@@ -63,6 +63,9 @@ repos:
       - id: check-json
       - id: check-added-large-files
         args: [--maxkb=1000]
+        # Scene footage (app/static/scenes/*.mp4) is a few MB per clip by
+        # nature; test_scenes.py enforces its own per-clip ceiling instead.
+        exclude: ^app/static/scenes/[a-z]+\.mp4$
       - id: check-merge-conflict
       - id: check-case-conflict
 

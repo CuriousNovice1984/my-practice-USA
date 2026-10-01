@@ -2,6 +2,14 @@
 
 Major features and milestones in chronological order.
 
+## 2026-10-01 — Real footage on the time-of-day scenes
+
+- **Footage**: the dashboard and sign-in now play a real, seamlessly looping clip behind the greeting — sunrise over a misty valley (dawn), clouds over green hills (day), sunset over a bay of islands (dusk) and the Milky Way over mountains (night). Four Mixkit clips under the Mixkit Stock Video Free License, self-hosted as H.264 MP4 (about 14 MB in total) with WebP posters, credited in `scenes.py` and `CREDITS.md`.
+- **Loading**: the clip's `src` is attached only once ambient motion is on, so reduced-motion users never download it and keep the still photo. The hero credit switches between the photo and the clip.
+- **Scenes**: `Scene.video` became `Scene.footage`, a `Footage` credit (place, author, source, license) next to the photo's.
+- **`scripts/scene_media.py video`**: `--start`/`--seconds` pick the segment; `--loop fade` crossfades the tail into the head and `--loop bounce` plays forward then reversed, so the loop point never jumps.
+- **Guardrails**: `.mp4` clips under `static/scenes/` are exempt from the pre-commit 1 MB limit; `test_scenes.py` caps each clip at 8 MB and each poster at 300 KB, checks every clip has a `CREDITS.md` row, and checks the rendered markup (deferred `data-src`, both credits, no video on photo-only scenes).
+
 ## 2026-10-01 — Photographic interface
 
 The whole UI was redesigned around real photography and an assistant's voice.

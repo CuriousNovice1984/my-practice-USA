@@ -16,6 +16,10 @@
                 var motion = localStorage.getItem('motion');
                 if (motion) root.dataset.motion = motion;
             } catch (e) { /* storage blocked: keep the defaults */ }
+            // Footage scenes show the clip's first frame from first paint when
+            // motion is on, instead of flashing the photograph first.
+            var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (root.dataset.motion ? root.dataset.motion === 'on' : !reduce) root.classList.add('motion-on');
         })();
     </script>
     <link rel="preload" href="{% static 'fonts/hanken-grotesk.woff2' %}" as="font" type="font/woff2" crossorigin>
@@ -120,7 +124,7 @@
     </div>
     {% endif %}
 
-    <header class="scene {% block scene_class %}{% endblock %}" data-scene="{{ scene.key }}">
+    <header class="scene{% if scene.video %} scene--footage{% endif %} {% block scene_class %}{% endblock %}" data-scene="{{ scene.key }}">
         <div class="scene__media">
             {% scene_image scene %}
             {% scene_video scene %}
@@ -132,8 +136,14 @@
             <p class="scene__subtitle">{% filter strip_emoji %}{% block page_subtitle %}{% trans "Practice management" %}{% endblock %}{% endfilter %}</p>
             {% endblock %}
         </div>
-        <a class="scene__credit" href="{{ scene.source_url }}" target="_blank" rel="noopener noreferrer"
-           title="{% blocktrans with license=scene.license %}Photo: {{ license }}{% endblocktrans %}">{{ scene.place }} · {{ scene.photographer }}</a>
+        <p class="scene__credit">
+            <a class="scene__credit-photo" href="{{ scene.source_url }}" target="_blank" rel="noopener noreferrer"
+               title="{% blocktrans with license=scene.license %}Photo: {{ license }}{% endblocktrans %}">{{ scene.place }} · {{ scene.photographer }}</a>
+            {% if scene.footage %}
+            <a class="scene__credit-footage" href="{{ scene.footage.source_url }}" target="_blank" rel="noopener noreferrer"
+               title="{% blocktrans with license=scene.footage.license %}Footage: {{ license }}{% endblocktrans %}">{{ scene.footage.place }} · {{ scene.footage.author }}</a>
+            {% endif %}
+        </p>
     </header>
 
     {% block main %}
@@ -211,10 +221,15 @@
                 root.classList.toggle('motion-paused', !motionOn());
                 videos.forEach(function (video) {
                     if (on) {
-                        if (!video.src) video.src = video.dataset.src;
+                        if (!video.src) {
+                            video.src = video.dataset.src;
+                            // Keeps the footage (and its credit) shown even if motion is paused later
+                            var scene = video.closest('.scene');
+                            if (scene) scene.classList.add('has-footage');
+                        }
                         var playing = video.play();
-                        if (playing && playing.then) {
-                            playing.then(function () { video.classList.add('is-playing'); }, function () { /* autoplay refused */ });
+                        if (playing && playing.catch) {
+                            playing.catch(function () { /* autoplay refused: the clip's first frame stays */ });
                         }
                     } else if (video.src) {
                         video.pause();
