@@ -8,17 +8,21 @@ from django.core.mail import EmailMessage
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
 from django.views import View
 
 from ..email_forms import InvoiceEmailForm
 from ..models import Client, Invoice, Practice
+from ..models.portal import PortalLink
 from ..utils.email_utils import (
     get_invoice_email_content,
+    get_portal_link_email_content,
     get_questionnaire_pdf_email_content,
 )
 from ..utils.formatting import format_currency
+from ..utils.portal import portal_url
 from ..utils.questionnaire_content import QuestionnaireNotFoundError, load_questionnaire
 from .api_views import (
     _prepare_practice_images,
@@ -473,6 +477,43 @@ class SendCancellationEmailView(BaseClientEmailView):
 
     def get_success_html(self, recipient: str) -> str:
         return _success_html(_("✅ Cancellation sent to {recipient}"), recipient)
+
+
+class SendPortalLinkEmailView(BaseClientEmailView):
+    """Email the client their most recent active forms-portal link."""
+
+    template_name = "my_practice/send_portal_link_email.html"
+
+    def _active_link(self, client: Client) -> PortalLink | None:
+        return next(
+            (
+                link
+                for link in client.portal_links.filter(revoked_at__isnull=True)
+                if link.is_active
+            ),
+            None,
+        )
+
+    def extra_get_checks(
+        self, request: HttpRequest, client: Client, practice: Practice, pk: int
+    ) -> HttpResponse | None:
+        if self._active_link(client) is None:
+            messages.error(request, _("Create an upload link first."))
+            return self._redirect_to_detail(pk)
+        return None
+
+    def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
+        link = self._active_link(client)
+        assert link is not None  # guarded by extra_get_checks
+        return get_portal_link_email_content(
+            client,
+            practice,
+            portal_url(self.request, link),
+            link.expires_at.astimezone(timezone.get_current_timezone()).strftime("%d %b %y"),
+        )
+
+    def get_success_html(self, recipient: str) -> str:
+        return _success_html(_("✅ Upload link sent to {recipient}"), recipient)
 
 
 class SendQuestionnairePdfEmailView(BaseClientEmailView):

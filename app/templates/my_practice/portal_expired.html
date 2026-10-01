@@ -1,0 +1,11 @@
+{% extends 'my_practice/portal_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Link not available" %}{% endblock %}
+
+{% block content %}
+<div class="portal-card">
+    <h1>{% trans "This link is no longer available" %}</h1>
+    <p>{% trans "Upload links expire after a while for your privacy. Please ask your counselor for a new link." %}</p>
+</div>
+{% endblock %}

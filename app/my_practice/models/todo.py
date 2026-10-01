@@ -63,6 +63,7 @@ class PracticeTodo(TimestampedModel):
         OPERATIONAL_CHECKLIST = "operational_checklist"
         BANK_UNMATCHED = "bank_unmatched"
         LICENSE_RENEWAL = "license_renewal"
+        PORTAL_UPLOADS = "portal_uploads"
 
     TASK_TYPE_CHOICES = [
         (TaskType.MANUAL, _("Manual")),
@@ -74,6 +75,7 @@ class PracticeTodo(TimestampedModel):
         (TaskType.OPERATIONAL_CHECKLIST, _("Operational checklist")),
         (TaskType.BANK_UNMATCHED, _("Unmatched bank transactions")),
         (TaskType.LICENSE_RENEWAL, _("License renewal")),
+        (TaskType.PORTAL_UPLOADS, _("Client uploads to review")),
     ]
 
     # Aggregate task types carry no related_object — one row stands for a whole
@@ -82,6 +84,7 @@ class PracticeTodo(TimestampedModel):
     # which is what _RELATED_OBJECT_URL_NAMES above covers.
     TASK_TYPE_URL_NAMES: dict[str, str] = {
         TaskType.BANK_UNMATCHED: "bank_import",
+        TaskType.PORTAL_UPLOADS: "portal_uploads",
     }
 
     CATEGORY_CHOICES = [

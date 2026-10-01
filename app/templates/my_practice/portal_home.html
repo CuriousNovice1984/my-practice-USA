@@ -1,0 +1,68 @@
+{% extends 'my_practice/portal_base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="portal-card">
+    <h1>{% blocktrans with name=practice.name %}Secure document upload for {{ name }}{% endblocktrans %}</h1>
+    <p class="portal-muted">{% blocktrans with date=link.expires_at|date:"d M y" %}This private link works until {{ date }}. Please don't share it.{% endblocktrans %}</p>
+
+    {% if uploaded %}
+    <div class="portal-notice portal-notice--success">
+        <strong>{% trans "Thank you — your documents were received:" %}</strong>
+        <ul>{% for name in uploaded %}<li>{{ name }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if errors %}
+    <div class="portal-notice portal-notice--error">
+        <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+</div>
+
+{% if practice_forms %}
+<div class="portal-card">
+    <h2>{% trans "1. Download your forms" %}</h2>
+    <ul class="portal-form-list">
+        {% for practice_form in practice_forms %}
+        <li>
+            <a href="{% url 'portal_form_download' link.token practice_form.pk %}">📄 {{ practice_form.title }}</a>
+            {% if practice_form.description %}<div class="portal-muted">{{ practice_form.description }}</div>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    <p class="portal-muted">{% trans "Fill them in on your computer, or print, sign and take a clear photo of each page." %}</p>
+</div>
+{% endif %}
+
+<div class="portal-card">
+    <h2>{% if practice_forms %}{% trans "2. Upload completed forms" %}{% else %}{% trans "Upload your documents" %}{% endif %}</h2>
+    {% if max_files > 0 %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if practice_forms %}
+        <div class="form-group">
+            <label for="portal-form-select">{% trans "Which form is this?" %}</label>
+            <select name="form" id="portal-form-select" class="form-control">
+                {% for practice_form in practice_forms %}
+                <option value="{{ practice_form.pk }}">{{ practice_form.title }}</option>
+                {% endfor %}
+                <option value="">{% trans "Something else" %}</option>
+            </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label for="portal-files">{% trans "Files (PDF or photos)" %}</label>
+            <input type="file" name="files" id="portal-files" class="form-control" accept="{{ accept }}" multiple required>
+            <div class="portal-muted">{% blocktrans with n=max_files %}Up to {{ n }} files at a time, 20 MB each.{% endblocktrans %}</div>
+        </div>
+        <div class="form-group">
+            <label for="portal-note">{% trans "Note (optional)" %}</label>
+            <input type="text" name="note" id="portal-note" class="form-control" maxlength="200">
+        </div>
+        <button type="submit" class="btn">📤 {% trans "Upload" %}</button>
+    </form>
+    {% else %}
+    <p>{% trans "The upload limit for this link has been reached. Please ask your counselor for a new link." %}</p>
+    {% endif %}
+</div>
+{% endblock %}

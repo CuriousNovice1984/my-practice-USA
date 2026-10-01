@@ -269,6 +269,25 @@ class ClientDocument(TimestampedModel):
         verbose_name=_("Document date"),
         help_text=_("Date of the document (e.g. signing date)"),
     )
+    uploaded_via_portal = models.BooleanField(
+        default=False,
+        verbose_name=_("Uploaded by client"),
+        help_text=_("Uploaded through the client forms portal"),
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Reviewed"),
+        help_text=_("When a portal upload was looked at; staff uploads need no review"),
+    )
+
+    # Uploading one of these document types completes the matching onboarding
+    # step on the client: {document type: (Client date field, step name)}
+    ONBOARDING_STEPS: dict[str, tuple[str, str]] = {
+        DocumentType.INTAKE: ("intake_sent_date", "intake"),
+        DocumentType.CONSENT: ("contract_signed_date", "contract"),
+        DocumentType.HEALTH_HISTORY: ("questionnaire_sent_date", "questionnaire"),
+    }
 
     class Meta:
         ordering = ["-document_date", "-created_at"]
@@ -279,6 +298,21 @@ class ClientDocument(TimestampedModel):
         return (
             f"{self.client.client_code} — {self.get_document_type_display()} ({self.document_date})"
         )
+
+    def complete_onboarding_step(self) -> str | None:
+        """Mark the client's onboarding step for this document type done, if not already.
+
+        Returns the step name that was completed, or None if nothing changed.
+        """
+        step = self.ONBOARDING_STEPS.get(str(self.document_type))
+        if step is None:
+            return None
+        field, name = step
+        if getattr(self.client, field):
+            return None
+        setattr(self.client, field, self.document_date)
+        self.client.save(update_fields=[field])
+        return name
 
     @property
     def filename(self) -> str:

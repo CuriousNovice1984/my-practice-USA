@@ -162,6 +162,24 @@ def get_records_deletion_email_content(client: "Client", practice: "Practice") -
     return subject, _with_signature(body, practice)
 
 
+def get_portal_link_email_content(
+    client: "Client", practice: "Practice", url: str, expires_on: str
+) -> tuple[str, str]:
+    """Get default email content (subject, body) for sending a forms-portal link."""
+    salutation = get_salutation_for_client(client)
+    subject = "Your intake forms — secure upload link"
+    body = (
+        f"{salutation},\n\n"
+        "please use the private link below to download the forms for our work "
+        "together and upload them once completed and signed:\n\n"
+        f"{url}\n\n"
+        f"The link is personal to you and works until {expires_on}. You can upload "
+        "PDFs or photos of the signed pages.\n\n"
+        "Feel free to get in touch at any time if you have any questions."
+    )
+    return subject, _with_signature(body, practice)
+
+
 def get_questionnaire_pdf_email_content(client: "Client", practice: "Practice") -> tuple[str, str]:
     """Get default email content (subject, body) for sending a questionnaire PDF.
 

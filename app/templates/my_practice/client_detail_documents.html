@@ -1,5 +1,32 @@
 <!-- P-026: Client Documents -->
 {% load i18n %}
+<div class="section-card" id="client-portal">
+    <h3>📤 {% trans "Forms portal" %}</h3>
+    {% for entry in portal_links %}
+    <div class="portal-link-row">
+        <span class="portal-link-url">{{ entry.url }}</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-copy="{{ entry.url }}"
+                x-data="{ copied: false }"
+                x-on:click="navigator.clipboard.writeText($el.dataset.copy).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
+                x-text="copied ? '✓ {% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
+        {% if client.email %}<a href="{% url 'send_portal_link_email' client.pk %}" class="btn btn-secondary btn-sm">📧 {% trans "Email" %}</a>{% endif %}
+        <form method="post" action="{% url 'portal_link_revoke' entry.link.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm">{% trans "Revoke" %}</button>
+        </form>
+        <span class="text-muted">{% blocktrans with date=entry.link.expires_at|date:"d M y" count counter=entry.link.upload_count %}Until {{ date }} · {{ counter }} upload{% plural %}Until {{ date }} · {{ counter }} uploads{% endblocktrans %}</span>
+    </div>
+    {% empty %}
+    <p class="cn-empty-state">{% trans "Give the client a private link to download your forms and upload them completed — no account needed." %}</p>
+    {% endfor %}
+    <form method="post" action="{% url 'portal_link_create' client.pk %}" class="portal-link-row">
+        {% csrf_token %}
+        <label for="portal-link-days">{% trans "Valid for (days)" %}</label>
+        <input type="number" name="days" id="portal-link-days" value="{{ portal_link_days }}" min="1" max="90" class="form-control w-auto">
+        <button type="submit" class="btn btn-sm">➕ {% trans "New upload link" %}</button>
+        <a href="{% url 'portal_forms' %}" class="btn btn-secondary btn-sm">{% trans "Manage forms" %}</a>
+    </form>
+</div>
 <div class="section-card" id="client-documents">
     <h3>📎 {% trans "Documents" %}</h3>
 
@@ -11,6 +38,13 @@
             <span class="doc-type-badge sidebar-doc-badge">{{ doc.get_document_type_display }}</span>
             <a href="{{ doc.file.url }}" target="_blank" class="sidebar-doc-name" title="{{ doc.filename }}">{% if doc.description %}{{ doc.description }}{% else %}{{ doc.filename }}{% endif %}</a>
             <span class="sidebar-doc-date">{{ doc.document_date|date:"d M y" }}</span>
+            {% if doc.uploaded_via_portal and not doc.reviewed_at %}
+            <form method="post" action="{% url 'portal_upload_mark_reviewed' doc.pk %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="client">
+                <button type="submit" class="badge--warn" title="{% trans 'Mark reviewed' %}">{% trans "New from client" %} ✓</button>
+            </form>
+            {% endif %}
             <button class="btn btn-danger btn-sm" onclick="docDelete(this)"
                     data-doc-id="{{ doc.pk }}"
                     data-csrf="{{ csrf_token }}">🗑️</button>

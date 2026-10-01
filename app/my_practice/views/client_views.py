@@ -8,6 +8,7 @@ import os
 from datetime import date, timedelta
 from typing import cast
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from django.core.mail import EmailMessage
@@ -30,6 +31,7 @@ from ..utils import (
 )
 from ..utils.email_utils import get_records_deletion_email_content
 from ..utils.file_processing import process_upload
+from ..utils.portal import portal_url
 from ..utils.view_helpers import get_object_or_403
 from .crud_mixins import NextRedirectMixin, PracticeScopedListView, PracticeScopedUpdateView
 
@@ -273,6 +275,12 @@ def client_detail(request, pk):
         pk=pk,
     )
     context = ClientDetailContextBuilder(client, request).build()
+    context["portal_links"] = [
+        {"link": link, "url": portal_url(request, link)}
+        for link in client.portal_links.filter(revoked_at__isnull=True)
+        if link.is_active
+    ]
+    context["portal_link_days"] = settings.PORTAL_LINK_DAYS
     return render(request, "my_practice/client_detail.html", context)
 
 
@@ -350,19 +358,7 @@ def client_document_upload(request: HttpRequest, pk: int) -> JsonResponse:
         document_date=doc_date,
     )
 
-    onboarding_step_completed = None
-    dt = ClientDocument.DocumentType
-    onboarding_map = {
-        dt.INTAKE: ("intake_sent_date", "intake"),
-        dt.CONSENT: ("contract_signed_date", "contract"),
-        dt.HEALTH_HISTORY: ("questionnaire_sent_date", "questionnaire"),
-    }
-    if doc_type in onboarding_map:
-        field, step = onboarding_map[doc_type]
-        if not getattr(client, field):
-            setattr(client, field, doc_date)
-            client.save(update_fields=[field])
-            onboarding_step_completed = step
+    onboarding_step_completed = doc.complete_onboarding_step()
 
     return JsonResponse(
         {

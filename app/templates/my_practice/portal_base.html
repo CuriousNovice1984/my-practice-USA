@@ -1,0 +1,17 @@
+{% load static i18n %}<!DOCTYPE html>
+{% get_current_language as CURRENT_LANGUAGE %}
+<html lang="{{ CURRENT_LANGUAGE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}{% trans "Secure document upload" %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
+</head>
+<body class="portal-body">
+    {# Standalone layout: clients must never see the practitioner's navigation. #}
+    <main class="portal-container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

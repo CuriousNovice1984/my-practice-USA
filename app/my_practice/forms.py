@@ -11,6 +11,7 @@ from .models import (
     CompanyExpense,
     CompanyWithdrawal,
     Practice,
+    PracticeForm,
     ProviderLicense,
     TaxYearNote,
     TimeOff,
@@ -322,3 +323,24 @@ class TaxYearNoteForm(StyledFormMixin, forms.ModelForm):
         labels = {
             "allocation_note": _("Allocation note"),
         }
+
+
+class PracticeFormUploadForm(StyledFormMixin, forms.ModelForm):
+    """Upload a blank form that clients download from the forms portal."""
+
+    class Meta:
+        model = PracticeForm
+        fields = ["title", "description", "document_type", "file", "sort_order"]
+        labels = {
+            "title": _("Title"),
+            "description": _("Instructions"),
+            "document_type": _("Document type"),
+            "file": _("File"),
+            "sort_order": _("Order"),
+        }
+
+    def clean_file(self):
+        upload = self.cleaned_data["file"]
+        if upload and not upload.name.lower().endswith((".pdf", ".docx")):
+            raise forms.ValidationError(_("Upload blank forms as PDF or DOCX."))
+        return upload

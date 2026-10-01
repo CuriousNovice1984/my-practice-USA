@@ -19,6 +19,38 @@ urlpatterns = [
     ),
     path("practice/create/", views.PracticeCreateView.as_view(), name="practice_create"),
     path("practice/licenses/", views.license_list, name="license_list"),
+    # Client forms portal — public (token-protected, no login)
+    path("portal/<str:token>/", views.portal_home, name="portal_home"),
+    path(
+        "portal/<str:token>/forms/<int:form_id>/",
+        views.portal_form_download,
+        name="portal_form_download",
+    ),
+    # Client forms portal — staff
+    path("practice/portal-forms/", views.portal_forms, name="portal_forms"),
+    path(
+        "practice/portal-forms/<int:pk>/toggle/",
+        views.portal_form_toggle,
+        name="portal_form_toggle",
+    ),
+    path(
+        "practice/portal-forms/<int:pk>/delete/",
+        views.portal_form_delete,
+        name="portal_form_delete",
+    ),
+    path("practice/portal-uploads/", views.portal_uploads, name="portal_uploads"),
+    path(
+        "practice/portal-uploads/<int:pk>/reviewed/",
+        views.portal_upload_mark_reviewed,
+        name="portal_upload_mark_reviewed",
+    ),
+    path("clients/<int:pk>/portal-link/", views.portal_link_create, name="portal_link_create"),
+    path(
+        "clients/<int:pk>/portal-link/email/",
+        views.SendPortalLinkEmailView.as_view(),
+        name="send_portal_link_email",
+    ),
+    path("portal-links/<int:pk>/revoke/", views.portal_link_revoke, name="portal_link_revoke"),
     path(
         "practice/<slug:slug>/edit/",
         views.PracticeUpdateView.as_view(),

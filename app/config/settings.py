@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.FunnelPathGuardMiddleware",  # internet traffic: portal only
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Static files with Gunicorn
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -314,6 +315,20 @@ SECURE_CSP = {
     "connect-src": [CSP.SELF],  # AJAX/fetch calls
     "font-src": [CSP.SELF],
 }
+
+# Client forms portal. PORTAL_BASE_URL is the public origin clients reach the
+# upload page on (e.g. the Tailscale Funnel hostname); links default to the
+# current host when unset. That origin must also be trusted for CSRF, because
+# Funnel terminates TLS and the app sees plain HTTP.
+PORTAL_BASE_URL = os.environ.get("PORTAL_BASE_URL", "")
+PORTAL_LINK_DAYS = int(os.environ.get("PORTAL_LINK_DAYS", "14"))
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if PORTAL_BASE_URL and PORTAL_BASE_URL.rstrip("/") not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(PORTAL_BASE_URL.rstrip("/"))
 
 # Plaid bank connection (optional). Link runs from Plaid's CDN in an iframe;
 # the server calls Plaid's API with these credentials. Leave unset to disable.

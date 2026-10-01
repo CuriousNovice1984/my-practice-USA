@@ -89,6 +89,7 @@ from .email_views import (
     SendCancellationEmailView,
     SendInvoiceEmailView,
     SendPaymentReminderView,
+    SendPortalLinkEmailView,
     SendQuestionnairePdfEmailView,
 )
 
@@ -157,6 +158,19 @@ from .plaid_views import (
     plaid_toggle_account,
 )
 
+# Client forms portal
+from .portal_views import (
+    portal_form_delete,
+    portal_form_download,
+    portal_form_toggle,
+    portal_forms,
+    portal_home,
+    portal_link_create,
+    portal_link_revoke,
+    portal_upload_mark_reviewed,
+    portal_uploads,
+)
+
 # Practice views
 from .practice_views import (
     PracticeCreateView,
@@ -211,6 +225,16 @@ from .withdrawal_views import (
 
 __all__ = [
     "license_list",
+    "portal_form_delete",
+    "portal_form_download",
+    "portal_form_toggle",
+    "portal_forms",
+    "portal_home",
+    "portal_link_create",
+    "portal_link_revoke",
+    "portal_upload_mark_reviewed",
+    "portal_uploads",
+    "SendPortalLinkEmailView",
     "plaid_exchange",
     "plaid_home",
     "plaid_link_token",
