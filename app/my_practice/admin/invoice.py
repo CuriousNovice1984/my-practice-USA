@@ -159,7 +159,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     @admin.display(description=gettext_lazy("Total"))
     def total_formatted(self, obj):
-        return format_html("<strong>{} €</strong>", f"{obj.total:.2f}")
+        return format_html("<strong>${}</strong>", f"{obj.total:.2f}")
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

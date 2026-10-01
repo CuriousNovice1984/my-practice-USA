@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
 {% load static i18n %}
+{% load icons %}
+{% load payment_tags %}
 
 {% block title %}{% if expense %}{% trans "Edit expense" %}{% else %}{% trans "New expense" %}{% endif %}{% endblock %}
 
-{% block page_icon %}💸{% endblock %}
 {% block page_title %}{% if expense %}{% trans "Edit expense" %}{% else %}{% trans "New expense" %}{% endif %}{% endblock %}
 
 {% block content %}
@@ -84,7 +85,7 @@
                 <input type="file" name="receipts" id="id_receipts"
                        accept="application/pdf,image/*" class="receipt-input" multiple>
                 <div class="dropzone-content">
-                    <div class="dropzone-icon">📄</div>
+                    <div class="dropzone-icon">{% icon "file" %}</div>
                     <div class="dropzone-text">{% blocktrans %}Drag files here or <span class="dropzone-link">click</span>{% endblocktrans %}</div>
                     <div class="dropzone-hint">{% trans "PDF, JPG or PNG — multiple files possible" %}</div>
                 </div>
@@ -112,13 +113,13 @@
     <div class="receipts-list" id="receipts-existing">
         {% for r in existing_receipts %}
         <div class="receipt-item">
-            <span class="receipt-icon">📎</span>
+            <span class="receipt-icon">{% icon "paperclip" %}</span>
             <a href="{{ r.file.url }}" target="_blank" class="receipt-filename">
                 {{ r.file.name|slice:"6:" }}
             </a>
             <form method="post" action="{% url 'expense_receipt_delete' r.pk %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="receipt-delete-form">
                 {% csrf_token %}
-                <button type="submit" class="btn-link receipt-delete-btn" title="{% trans 'Delete receipt' %}">🗑</button>
+                <button type="submit" class="btn-link receipt-delete-btn" title="{% trans 'Delete receipt' %}">{% icon "trash" %}</button>
             </form>
         </div>
         {% endfor %}
@@ -146,16 +147,16 @@
         <div class="bank-tx-list">
             {% for tx in linked %}
             <div class="bank-tx-row bank-tx-row--linked">
-                <span class="bank-tx-date">{{ tx.transaction_date|date:"d.m.Y" }}</span>
+                <span class="bank-tx-date">{{ tx.transaction_date|date:"d M y" }}</span>
                 <span class="bank-tx-payer">{{ tx.payer_name }}</span>
                 <span class="bank-tx-ref">{{ tx.reference|truncatechars:60 }}</span>
-                <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount }} €</span>
+                <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount|currency }}</span>
                 <form method="post"
                       action="{% url 'expense_unlink_transaction' expense.pk tx.pk %}"
                       class="bank-tx-action-form">
                     {% csrf_token %}
                     <button type="submit" class="btn-link bank-tx-unlink-btn"
-                            title="{% trans 'Remove link' %}">✕</button>
+                            title="{% trans 'Remove link' %}">{% icon "x" %}</button>
                 </form>
             </div>
             {% endfor %}
@@ -183,10 +184,10 @@
             <div class="bank-tx-list bank-tx-list--available">
                 {% for tx in available_transactions %}
                 <div class="bank-tx-row bank-tx-row--available">
-                    <span class="bank-tx-date">{{ tx.transaction_date|date:"d.m.Y" }}</span>
+                    <span class="bank-tx-date">{{ tx.transaction_date|date:"d M y" }}</span>
                     <span class="bank-tx-payer">{{ tx.payer_name }}</span>
                     <span class="bank-tx-ref">{{ tx.reference|truncatechars:60 }}</span>
-                    <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount }} €</span>
+                    <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount|currency }}</span>
                     <form method="post"
                           action="{% url 'expense_link_transaction' expense.pk %}"
                           class="bank-tx-action-form">
@@ -224,7 +225,7 @@
                     <option value="">{% trans "— Select source …" %}</option>
                     {% for candidate in merge_candidates %}
                     <option value="{{ candidate.pk }}">
-                        {{ candidate.date|date:"d.m.Y" }} – {{ candidate.amount }} € – {{ candidate.description|truncatechars:40|default:no_description }}
+                        {{ candidate.date|date:"d M y" }} – {{ candidate.amount|currency }} – {{ candidate.description|truncatechars:40|default:no_description }}
                     </option>
                     {% endfor %}
                 </select>

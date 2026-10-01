@@ -152,12 +152,12 @@ class CalculateTimeoffForYearTestCase(TestCase):
         result = calculate_timeoff_for_year(2025)
         # Non-holiday working days per entry (in 2025):
         # - Winter (Feb 7-14): 6 (no holidays in range)
-        # - Summer (Aug 9-25): 11 (no Berlin holidays in range)
-        # - Xmas 2024-25 (Jan 1-5 in 2025): 2 (Jan 1 = Neujahr excluded; Jan 2,3 = 2 days)
-        # - Xmas 2025-26 (Dec 22-31 in 2025): 6 (Dec 25+26 Weihnachten excluded; 8−2=6)
+        # - Summer (Aug 9-25): 11 (no federal holidays in range)
+        # - Xmas 2024-25 (Jan 1-5 in 2025): 2 (Jan 1 = New Year's Day excluded; Jan 2,3 = 2 days)
+        # - Xmas 2025-26 (Dec 22-31 in 2025): 7 (Dec 25 Christmas excluded; 8−1=7)
         # - Sick (May 5-8): 4 (no holidays in range)
-        # Total: 29
-        self.assertEqual(result["total_workdays"], 29)
+        # Total: 30
+        self.assertEqual(result["total_workdays"], 30)
 
     def test_entries_detail(self):
         """Returned entries should have correct details"""

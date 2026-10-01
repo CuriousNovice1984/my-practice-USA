@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static i18n %}
-{% get_current_language as CURRENT_LANGUAGE %}
+{% load icons %}
+{% load payment_tags %}
 
 {% block title %}{% trans "Approve calendar events" %}{% endblock %}
 {% block page_title %}{% trans "Approve calendar events" %}{% endblock %}
@@ -14,7 +15,7 @@
 
 {% if not grouped %}
 <div class="info-box">
-    <strong class="text-primary">✅ {% trans "No pending calendar events" %}</strong><br>
+    <strong class="text-primary">{% trans "No pending calendar events" %}</strong><br>
     <span class="text-muted">{% trans "All events have already been approved or skipped." %}</span>
 </div>
 {% else %}
@@ -35,7 +36,7 @@
         </span>
     </span>
     <button type="button" class="btn btn-secondary btn-sm" id="skip-duplicates-btn">
-        🚫 {% trans "Mark as done" %}
+        {% trans "Mark as done" %}
     </button>
 </div>
 {% endif %}
@@ -48,11 +49,11 @@
                 {% if group.client %}
                     <a href="{% url 'client_detail' group.client.pk %}"
                        class="queue-group-header__title-link">
-                        👤 {{ group.client.client_code }}
+                        {{ group.client.client_code }}
                         <span class="sensitive-data"> — {{ group.client.full_name }}</span>
                     </a>
                 {% else %}
-                    <span class="queue-group-header__unknown">❓ {% trans "Client not identified" %}</span>
+                    <span class="queue-group-header__unknown">{% trans "Client not identified" %}</span>
                 {% endif %}
             </h3>
             <div class="queue-group-header__subtitle">
@@ -65,7 +66,7 @@
                     data-client="{{ group.client.pk }}" data-month="{{ group.month|date:'Y-m' }}">
                 <option value="">{% trans "Select invoice…" %}</option>
                 {% for invoice in group.invoices %}
-                <option value="{{ invoice.pk }}">{{ invoice.invoice_number }} ({{ invoice.invoice_date|date:"d.m.Y" }}){% if invoice.item_count %} · {% blocktrans count counter=invoice.item_count %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktrans %}{% endif %}{% if invoice.total %} · {{ invoice.total|floatformat:0 }} €{% endif %}</option>
+                <option value="{{ invoice.pk }}">{{ invoice.invoice_number }} ({{ invoice.invoice_date|date:"d M y" }}){% if invoice.item_count %} · {% blocktrans count counter=invoice.item_count %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktrans %}{% endif %}{% if invoice.total %} · {{ invoice.total|currency_rounded }}{% endif %}</option>
                 {% endfor %}
                 <option value="new">+ {% trans "Create new invoice" %}</option>
             </select>
@@ -74,7 +75,7 @@
                     data-group="{{ forloop.counter }}"
                     data-client="{{ group.client.pk }}"
                     data-month="{{ group.month|date:'Y-m' }}">
-                📥 {% trans "Import" %}
+                {% trans "Import" %}
             </button>
         </div>
         {% endif %}
@@ -103,7 +104,7 @@
                         <input type="checkbox" class="event-checkbox event-checkbox-group-{{ forloop.parentloop.counter }}"
                                name="event_ids" value="{{ event.pk }}" checked>
                     </td>
-                    <td class="text-primary">{{ event.event_date|date:"d.m.Y" }}</td>
+                    <td class="text-primary">{{ event.event_date|date:"d M y" }}</td>
                     <td class="text-muted">
                         {% if event.event_time %}{{ event.event_time|time:"H:i" }}{% else %}–{% endif %}
                     </td>
@@ -111,7 +112,7 @@
                     <td class="text-primary">{{ event.summary }}</td>
                     <td class="text-muted text-sm">
                         {% if event.suggested_service_type %}
-                            {% if CURRENT_LANGUAGE == "en" %}{{ event.suggested_service_type.name_en|default:event.suggested_service_type.name }}{% else %}{{ event.suggested_service_type.name_de|default:event.suggested_service_type.name }}{% endif %}
+                            {{ event.suggested_service_type.name }}
                         {% else %}
                             <em>—</em>
                         {% endif %}
@@ -119,8 +120,8 @@
                     <td>
                         <button type="button" class="btn btn-skip skip-event-btn"
                                 data-event-id="{{ event.pk }}"
-                                title="{% trans 'Skip event' %}">
-                            🚫
+                                title="{% trans 'Skip event' %}" aria-label="{% trans 'Skip event' %}">
+                            {% icon "x" %}
                         </button>
                     </td>
                 </tr>
@@ -160,12 +161,12 @@ if (skipDuplicatesBtn) {
             } else {
                 alert('{% trans "Error while skipping." %}');
                 this.disabled = false;
-                this.textContent = '🚫 {% trans "Skip all duplicates" %}';
+                this.textContent = '{% trans "Skip all duplicates" %}';
             }
         } catch (e) {
             alert('{% trans "Network error." %}');
             this.disabled = false;
-            this.textContent = '🚫 {% trans "Skip all duplicates" %}';
+            this.textContent = '{% trans "Skip all duplicates" %}';
         }
     });
 }
@@ -259,19 +260,19 @@ document.querySelectorAll('.import-group-btn').forEach(btn => {
                 const toast = document.createElement('div');
                 toast.className = 'alert-box success';
                 toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:1000;min-width:260px;';
-                toast.innerHTML = `<strong>✅ ${data.created} ${importedLabel}</strong>` +
+                toast.innerHTML = `<strong>${data.created} ${importedLabel}</strong>` +
                     (data.skipped ? `<br><small>${data.skipped} {% trans "skipped" %}</small>` : '');
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 4000);
             } else {
                 alert('{% trans "Error" %}: ' + (data.error || '{% trans "Unknown error" %}'));
                 btn.disabled = false;
-                btn.textContent = '📥 {% trans "Import" %}';
+                btn.textContent = '{% trans "Import" %}';
             }
         } catch (e) {
             alert('{% trans "Network error while importing." %}');
             btn.disabled = false;
-            btn.textContent = '📥 {% trans "Import" %}';
+            btn.textContent = '{% trans "Import" %}';
         }
     });
 });

@@ -2,17 +2,15 @@
 {% load payment_tags %}
 {% load static %}
 {% load i18n %}
+{% load icons %}
 
 {% block title %}{% trans "Company Expenses" %}{% endblock %}
+{% block page_title %}{% trans "Company Expenses" %}{% endblock %}
+{% block page_subtitle %}{% if current_year != 'all' %}{{ current_year }}{% else %}{% trans "All years" %}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="expenses-container">
     <div class="page-header">
-        <h1>💸 {% trans "Company Expenses" %}
-            {% if current_year != 'all' %}
-            <span class="text-muted text-[0.6em]">/ {{ current_year }}</span>
-            {% endif %}
-        </h1>
         <a href="{% url 'expense_create' %}" class="btn-primary">+ {% trans "New expense" %}</a>
     </div>
 
@@ -33,7 +31,7 @@
     <div class="yearly-summary">
         <h2>{% trans "Expenses by year" %}
             {% if current_year != 'all' %}
-            <a href="{% url 'expense_list' %}" class="clear-filter">✕ {% trans "Clear filter" %}</a>
+            <a href="{% url 'expense_list' %}" class="clear-filter">{% trans "Clear filter" %}</a>
             {% endif %}
         </h2>
         <div class="yearly-grid">
@@ -67,7 +65,7 @@
             ({{ expenses.count }})
             {% if show_missing %}
             <span class="badge badge-warning">{% trans "Missing receipts" %}</span>
-            <a href="{% url 'expense_list' %}{% if current_year != 'all' %}?year={{ current_year }}{% endif %}" class="clear-filter">✕ {% trans "Clear filter" %}</a>
+            <a href="{% url 'expense_list' %}{% if current_year != 'all' %}?year={{ current_year }}{% endif %}" class="clear-filter">{% trans "Clear filter" %}</a>
             {% else %}
             <a href="?{% if current_year != 'all' %}year={{ current_year }}&{% endif %}missing_receipt=1" class="btn-filter-missing">{% trans "Show missing receipts" %}</a>
             {% endif %}
@@ -89,7 +87,7 @@
                 <tbody>
                     {% for expense in expenses %}
                     <tr{% if not expense.receipts.all and not expense.has_invoice %} class="row-missing-receipt"{% endif %}>
-                        <td>{{ expense.date|date:"d.m.Y" }}</td>
+                        <td>{{ expense.date|date:"d M y" }}</td>
                         <td><a href="{% url 'expense_update' expense.pk %}?next={{ request.get_full_path|urlencode }}" class="row-link">{{ expense.description|truncatewords:10 }}</a></td>
                         <td>
                             <span class="badge badge-{{ expense.category }}">
@@ -102,9 +100,9 @@
                             {% if receipts %}
                             <a href="{{ receipts.0.file.url }}" target="_blank"
                                title="{% blocktrans count count=receipts|length %}{{ count }} receipt{% plural %}{{ count }} receipts{% endblocktrans %}"
-                               class="receipt-link">📎{% if receipts|length > 1 %}<sup>{{ receipts|length }}</sup>{% endif %}</a>
+                               class="receipt-link">{% if receipts|length > 1 %}<sup>{{ receipts|length }}</sup>{% endif %}</a>
                             {% elif expense.has_invoice %}
-                            <span class="icon-check" title="{% trans 'Paper receipt available' %}">✓</span>
+                            <span class="icon-check" title="{% trans 'Paper receipt available' %}">{% icon "check" %}</span>
                             {% else %}
                             <span class="icon-cross" title="{% trans 'No receipt' %}">–</span>
                             {% endif %}
@@ -112,21 +110,21 @@
                         </td>
                         <td class="center">
                             {% if expense.is_tax_deductible %}
-                            <span class="icon-check">✓</span>
+                            <span class="icon-check">{% icon "check" %}</span>
                             {% else %}
                             <span class="icon-cross">-</span>
                             {% endif %}
                         </td>
                         <td class="center">
                             {% if expense.is_filed_in_tax_return %}
-                            <span class="icon-check" title="{% trans 'Filed in tax return' %}">✓</span>
+                            <span class="icon-check" title="{% trans 'Filed in tax return' %}">{% icon "check" %}</span>
                             {% else %}
                             <span class="icon-cross" title="{% trans 'Not filed yet' %}">–</span>
                             {% endif %}
                         </td>
                         <td class="actions">
-                            <a href="{% url 'expense_update' expense.pk %}?next={{ request.get_full_path|urlencode }}" class="action-btn edit" title="{% trans 'Edit' %}">✎</a>
-                            <a href="{% url 'expense_delete' expense.pk %}?next={{ request.get_full_path|urlencode }}" class="action-btn delete" title="{% trans 'Delete' %}">🗑</a>
+                            <a href="{% url 'expense_update' expense.pk %}?next={{ request.get_full_path|urlencode }}" class="action-btn edit" title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
+                            <a href="{% url 'expense_delete' expense.pk %}?next={{ request.get_full_path|urlencode }}" class="action-btn delete" title="{% trans 'Delete' %}">{% icon "trash" %}</a>
                         </td>
                     </tr>
                     {% empty %}

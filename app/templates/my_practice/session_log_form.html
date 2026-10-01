@@ -3,7 +3,7 @@
 {% load markdown_filters %}
 
 {% block title %}{% trans "Session log" %} – {{ client.client_code }}{% endblock %}
-{% block page_title %}📝 {% trans "Session log" %}{% endblock %}
+{% block page_title %}{% trans "Session log" %}{% endblock %}
 {% block page_subtitle %}{{ client.client_code }}{% endblock %}
 
 
@@ -31,7 +31,7 @@
         <div>
             <label class="cn-label">{% trans "Session date" %}</label>
             <div class="text-secondary py-2">
-                {{ log.session.session_date|date:"d.m.Y" }}
+                {{ log.session.session_date|date:"d M y" }}
             </div>
         </div>
         {% endif %}
@@ -82,7 +82,7 @@
                       placeholder="{% trans "How did I feel? Countertransference impulses…" %}">{% if is_edit %}{{ log.therapist_reflection }}{% endif %}</textarea>
             {% if is_edit and log.therapist_reflection %}
             <details class="cn-notes-preview">
-                <summary>📖 {% trans "Preview (saved state)" %}</summary>
+                <summary>{% trans "Preview (saved state)" %}</summary>
                 <div class="md-rendered">{{ log.therapist_reflection|render_markdown }}</div>
             </details>
             {% endif %}
@@ -101,7 +101,7 @@
                   placeholder="{% trans "Reflection after the session…" %}">{% if is_edit %}{{ log.content }}{% else %}{{ content_template }}{% endif %}</textarea>
         {% if is_edit and log.content %}
         <details class="cn-notes-preview">
-            <summary>📖 {% trans "Preview (saved state)" %}</summary>
+            <summary>{% trans "Preview (saved state)" %}</summary>
             <div class="md-rendered">{{ log.content|render_markdown }}</div>
         </details>
         {% endif %}

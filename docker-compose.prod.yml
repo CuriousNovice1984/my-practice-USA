@@ -16,7 +16,11 @@ services:
       retries: 5
 
   django:
-    image: ghcr.io/dholbach/my-practice:v0.7.1
+    # Built from this checkout (./prod.py setup / update) — this fork publishes no images
+    build:
+      context: ./app
+      target: production
+    image: my-practice-usa:v1.0.0
     container_name: my-practice-django
     restart: unless-stopped
     ports:
@@ -24,8 +28,8 @@ services:
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_DEBUG=False
-      - DJANGO_LANGUAGE_CODE=${DJANGO_LANGUAGE_CODE:-de-de}
-      - DJANGO_TIME_ZONE=${DJANGO_TIME_ZONE:-Europe/Berlin}
+      - DJANGO_TIME_ZONE=${DJANGO_TIME_ZONE:-America/Chicago}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-false}
       - POSTGRES_DB=${POSTGRES_DB:-my_practice}
       - POSTGRES_USER=${POSTGRES_USER:-my_practice}
@@ -41,6 +45,12 @@ services:
       - GOOGLE_CALENDAR_CLIENT_ID=${GOOGLE_CALENDAR_CLIENT_ID:-}
       - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-}
       - FERNET_KEY=${FERNET_KEY}
+      - PLAID_CLIENT_ID=${PLAID_CLIENT_ID:-}
+      - PLAID_SECRET=${PLAID_SECRET:-}
+      - PLAID_ENV=${PLAID_ENV:-sandbox}
+      - PORTAL_BASE_URL=${PORTAL_BASE_URL:-}
+      - PORTAL_LINK_DAYS=${PORTAL_LINK_DAYS:-14}
+      - DJANGO_CSRF_TRUSTED_ORIGINS=${DJANGO_CSRF_TRUSTED_ORIGINS:-}
       - MY_PRACTICE_DATA_DIR=/my-practice-data
     extra_hosts:
       - "host.docker.internal:host-gateway"

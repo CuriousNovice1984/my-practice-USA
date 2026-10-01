@@ -68,7 +68,7 @@ class VersionConsistencyTests(SimpleTestCase):
         )
         image_version = self._read(
             "docker-compose.prod.yml",
-            r"^\s*image:\s*ghcr\.io/dholbach/my-practice:(\S+)",
+            r"^\s*image:\s*my-practice-usa:(\S+)",
             "the app image tag",
         )
 
@@ -88,10 +88,9 @@ class VersionConsistencyTests(SimpleTestCase):
         )
 
     def test_version_is_tag_shaped(self):
-        """`./prod.py update` matches this against GitHub release tags."""
+        """Release tags are vX.Y.Z; the image tag and prod.py follow them."""
         self.assertRegex(
             VERSION,
             r"^v\d+\.\d+\.\d+$",
-            "VERSION must look like a release tag (vX.Y.Z) — it is compared "
-            "directly against tag_name from the GitHub releases API.",
+            "VERSION must look like a release tag (vX.Y.Z).",
         )

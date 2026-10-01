@@ -28,7 +28,7 @@ def withdrawal_list(request: HttpRequest) -> HttpResponse:
 
     all_qs = CompanyWithdrawal.objects.for_current_practice(request)
 
-    # Build stat cards (grand_total, yearly_totals) from outgoing-only so that    # Kapitaleinlagen (stored as positive amounts) don't inflate the totals.
+    # Build stat cards (grand_total, yearly_totals) from outgoing-only so that    # owner contributions (stored as positive amounts) don't inflate the totals.
     outgoing_qs = all_qs.filter(category__in=CompanyWithdrawal.OUTGOING_CATEGORIES)
     builder = FinancialListContextBuilder(outgoing_qs, year_filter=year_filter)
     context, outgoing = builder.build_context()
@@ -39,7 +39,7 @@ def withdrawal_list(request: HttpRequest) -> HttpResponse:
     incoming = incoming_qs.order_by("-date")
 
     outgoing_total = outgoing.aggregate(t=Sum("amount"))["t"] or 0
-    # Contributions (Kapitaleinlagen) are stored as positive amounts but represent
+    # Owner contributions are stored as positive amounts but represent
     # money flowing INTO the business, so they offset corrections in the net total.
     corrections_total = incoming.filter(category="correction").aggregate(t=Sum("amount"))["t"] or 0
     contributions_total = (
@@ -67,7 +67,7 @@ class WithdrawalCreateView(NextRedirectMixin, PracticeScopedCreateView):
     form_class = CompanyWithdrawalForm
     template_name = "my_practice/withdrawal_form.html"
     success_url = reverse_lazy("withdrawal_list")
-    success_message = gettext_lazy("Withdrawal from {obj.date:%d.%m.%Y} created successfully.")
+    success_message = gettext_lazy("Withdrawal from {obj.date:%d %b %y} created successfully.")
 
     def get_initial(self):
         """Pre-fill category from ?category= query param (e.g. ?category=tax)."""
@@ -86,7 +86,7 @@ class WithdrawalUpdateView(NextRedirectMixin, PracticeScopedUpdateView):
     form_class = CompanyWithdrawalForm
     template_name = "my_practice/withdrawal_form.html"
     success_url = reverse_lazy("withdrawal_list")
-    success_message = gettext_lazy("Withdrawal from {obj.date:%d.%m.%Y} updated successfully.")
+    success_message = gettext_lazy("Withdrawal from {obj.date:%d %b %y} updated successfully.")
     context_object_name = "withdrawal"
 
 
@@ -98,5 +98,5 @@ class WithdrawalDeleteView(NextRedirectMixin, PracticeScopedDeleteView):
     success_url = reverse_lazy("withdrawal_list")
     context_object_name = "withdrawal"
     success_message = gettext_lazy(
-        "Withdrawal from {obj.date:%d.%m.%Y} of {obj.amount}€ deleted successfully."
+        "Withdrawal from {obj.date:%d %b %y} of ${obj.amount} deleted successfully."
     )

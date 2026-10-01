@@ -11,16 +11,17 @@ from .client_alias import ClientAlias
 from .clinical import ClientNote, ClientProfile, MoodTag, SessionLog, SupervisionItem
 from .expense_category_rule import ExpenseCategoryRule
 from .financial import CompanyExpense, CompanyWithdrawal, ExpenseReceipt, TaxYearNote
-from .gebueh import GebuhZiffer, Leistungserfassung
 from .inquiry import (
-    INQUIRY_LANGUAGE_CHOICES,
     ClientInquiry,
     InquirySource,
     InquiryStatus,
     MarketingPeriod,
 )
 from .invoice import Invoice, InvoiceItem, InvoiceQuerySet
+from .licensure import ProviderLicense
 from .operational import ChecklistItemPause, OperationalChecklistCompletion
+from .plaid import PlaidAccount, PlaidItem
+from .portal import PortalLink, PracticeForm
 from .practice import CapacityPeriod, Practice, UserPractice
 from .service import ServiceType
 from .session import Session
@@ -35,7 +36,6 @@ __all__ = [
     "Client",
     "ClientDocument",
     "ClientInquiry",
-    "INQUIRY_LANGUAGE_CHOICES",
     "InquirySource",
     "InquiryStatus",
     "MarketingPeriod",
@@ -60,10 +60,13 @@ __all__ = [
     "PendingCalendarEvent",
     "TimeOff",
     "PracticeTodo",
+    "ProviderLicense",
+    "PlaidAccount",
+    "PlaidItem",
+    "PortalLink",
+    "PracticeForm",
     "BankTransaction",
     "OperationalChecklistCompletion",
     "ChecklistItemPause",
     "TimestampedModel",
-    "GebuhZiffer",
-    "Leistungserfassung",
 ]

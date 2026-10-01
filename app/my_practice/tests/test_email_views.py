@@ -3,15 +3,13 @@ Tests for email sending views.
 """
 
 import logging
-import tempfile
 from datetime import date, timedelta
 from decimal import Decimal
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import Client as TestClient
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from my_practice.models import Client, Invoice, Practice, UserPractice
@@ -30,7 +28,7 @@ class MakeFromEmailTest(TestCase):
             title="Test Practitioner",
             email="practice@test.com",
             email_from_name="Dr. Test Practitioner",
-            city="Berlin",
+            city="Austin",
         )
         self.assertEqual(_make_from_email(practice), "Dr. Test Practitioner <practice@test.com>")
 
@@ -40,7 +38,7 @@ class MakeFromEmailTest(TestCase):
             slug="from-email-bare-test",
             title="Test Practitioner",
             email="practice@test.com",
-            city="Berlin",
+            city="Austin",
         )
         self.assertEqual(_make_from_email(practice), "practice@test.com")
 
@@ -61,7 +59,7 @@ class SendInvoiceEmailViewTest(TestCase):
             slug="email-test-practice",  # Unique slug for this test
             title="Test Practitioner",
             email="practice@test.com",
-            city="Berlin",
+            city="Austin",
         )
 
         # Create and login user
@@ -301,85 +299,6 @@ class SendInvoiceEmailViewTest(TestCase):
         self.assertEqual(self.invoice.invoice_date, date.today())
 
 
-class SendIntakeFormEmailViewTest(TestCase):
-    """Tests for SendIntakeFormEmailView"""
-
-    def setUp(self):
-        logging.getLogger("my_practice.email").setLevel(logging.ERROR)
-
-        self.client_http = TestClient()
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="intake-email-test-practice",
-            title="Test Practitioner",
-            email="practice@test.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(username="intakeemailuser", password="testpass123")
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http.login(username="intakeemailuser", password="testpass123")
-
-        self.test_client = Client.objects.create(
-            client_code="TC",
-            full_name="Max Mustermann",
-            email="max@example.com",
-            practice=self.practice,
-        )
-
-    def test_form_loads_prefilled(self):
-        """GET renders the form with default subject/body and recipient."""
-        response = self.client_http.get(
-            reverse("send_intake_form_email", kwargs={"pk": self.test_client.pk})
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "my_practice/send_intake_form_email.html")
-        form = response.context["form"]
-        self.assertEqual(form.initial["recipient"], "max@example.com")
-        self.assertEqual(form.initial["subject"], "Aufnahmebogen")
-        self.assertEqual(response.context["filename"], "Aufnahmebogen_TC.pdf")
-
-    def test_redirects_without_client_email(self):
-        """Client without email → redirect to client detail with error."""
-        self.test_client.email = ""
-        self.test_client.save()
-
-        response = self.client_http.get(
-            reverse("send_intake_form_email", kwargs={"pk": self.test_client.pk})
-        )
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-
-    @patch("my_practice.views.email_views.EmailMessage")
-    def test_send_attaches_pdf_and_sets_intake_sent_date(self, mock_email):
-        """POST sends the email with the fillable PDF attached and marks the step done."""
-        mock_instance = MagicMock()
-        mock_email.return_value = mock_instance
-        mock_instance.send.return_value = 1
-
-        self.assertIsNone(self.test_client.intake_sent_date)
-
-        response = self.client_http.post(
-            reverse("send_intake_form_email", kwargs={"pk": self.test_client.pk}),
-            {
-                "recipient": "max@example.com",
-                "subject": "Aufnahmebogen",
-                "body": "Hallo",
-            },
-        )
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-        mock_instance.send.assert_called_once()
-
-        # PDF attachment
-        mock_instance.attach.assert_called_once()
-        fname, fbytes, fmime = mock_instance.attach.call_args.args
-        self.assertEqual(fname, "Aufnahmebogen_TC.pdf")
-        self.assertEqual(fmime, "application/pdf")
-        self.assertTrue(fbytes.startswith(b"%PDF"))
-
-        # Onboarding step marked as done
-        self.test_client.refresh_from_db()
-        self.assertEqual(self.test_client.intake_sent_date, date.today())
-
-
 class SendPaymentReminderViewTest(TestCase):
     """Tests for SendPaymentReminderView."""
 
@@ -391,10 +310,8 @@ class SendPaymentReminderViewTest(TestCase):
             slug="reminder-email-test-practice",
             title="Test Practitioner",
             email="practice@test.com",
-            city="Berlin",
-            bank_name="Testbank",
-            iban="DE00 0000 0000 0000 0000 00",
-            bic="TESTDEFFXXX",
+            city="Austin",
+            payment_instructions="Zelle: payments@practice.example",
         )
         self.user = User.objects.create_user(username="reminderemailuser", password="testpass123")
         UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
@@ -413,13 +330,12 @@ class SendPaymentReminderViewTest(TestCase):
         response = self.client_http.get(self._url(test_client))
         self.assertRedirects(response, reverse("client_detail", kwargs={"pk": test_client.pk}))
 
-    def test_english_client_singular_wording_and_bank_details(self):
+    def test_singular_wording_and_payment_instructions(self):
         test_client = Client.objects.create(
             client_code="EN",
             full_name="John Doe",
             email="john@example.com",
             practice=self.practice,
-            language="en",
         )
         Invoice.objects.create(
             client=test_client,
@@ -435,10 +351,10 @@ class SendPaymentReminderViewTest(TestCase):
         body = response.context["form"].initial["body"]
         self.assertIn("1 outstanding invoice", subject)
         self.assertIn("this invoice", body)
-        self.assertIn("Testbank: DE00 0000 0000 0000 0000 00", body)
+        self.assertIn("Zelle: payments@practice.example", body)
         self.assertEqual(response.context["open_invoices_total"], 100.00)
 
-    def test_german_client_plural_wording_and_total(self):
+    def test_plural_wording_and_total(self):
         test_client = Client.objects.create(
             client_code="DE",
             full_name="Max Mustermann",
@@ -464,13 +380,13 @@ class SendPaymentReminderViewTest(TestCase):
         response = self.client_http.get(self._url(test_client))
         subject = response.context["form"].initial["subject"]
         body = response.context["form"].initial["body"]
-        self.assertIn("2 offene Rechnungen", subject)
-        self.assertIn("diese Rechnungen", body)
-        self.assertIn("Gesamtbetrag offen: 150", body)
+        self.assertIn("2 outstanding invoices", subject)
+        self.assertIn("these invoices", body)
+        self.assertIn("Total outstanding: $150.00", body)
         self.assertEqual(response.context["open_invoices_total"], 150.00)
 
-    def test_no_iban_omits_bank_lines(self):
-        self.practice.iban = ""
+    def test_no_payment_instructions_omits_payment_lines(self):
+        self.practice.payment_instructions = ""
         self.practice.save()
         test_client = Client.objects.create(
             client_code="NB",
@@ -488,7 +404,7 @@ class SendPaymentReminderViewTest(TestCase):
         )
         response = self.client_http.get(self._url(test_client))
         body = response.context["form"].initial["body"]
-        self.assertNotIn("Testbank", body)
+        self.assertNotIn("You can pay by", body)
 
     @patch("my_practice.views.email_views.EmailMessage")
     def test_post_sends_reminder(self, mock_email):
@@ -529,7 +445,7 @@ class SendCancellationEmailViewTest(TestCase):
             slug="cancellation-email-test-practice",
             title="Test Practitioner",
             email="practice@test.com",
-            city="Berlin",
+            city="Austin",
         )
         self.user = User.objects.create_user(
             username="cancellationemailuser", password="testpass123"
@@ -540,26 +456,12 @@ class SendCancellationEmailViewTest(TestCase):
     def _url(self, client_obj):
         return reverse("send_cancellation_email", kwargs={"pk": client_obj.pk})
 
-    def test_german_content_default(self):
-        test_client = Client.objects.create(
-            client_code="DE",
-            full_name="Anna Schmidt",
-            email="anna@example.com",
-            practice=self.practice,
-        )
-        response = self.client_http.get(self._url(test_client))
-        self.assertEqual(response.status_code, 200)
-        form = response.context["form"]
-        self.assertEqual(form.initial["subject"], "Absage unserer morgigen Sitzung")
-        self.assertIn("Liebe/r Anna,", form.initial["body"])
-
     def test_english_content(self):
         test_client = Client.objects.create(
             client_code="EN",
             full_name="Jane Doe",
             email="jane@example.com",
             practice=self.practice,
-            language="en",
         )
         response = self.client_http.get(self._url(test_client))
         form = response.context["form"]
@@ -572,11 +474,11 @@ class SendCancellationEmailViewTest(TestCase):
             full_name="Someone Else",
             email="someone@example.com",
             practice=self.practice,
-            salutation="Hallo Herr Else",
+            salutation="Hi Mr. Else",
         )
         response = self.client_http.get(self._url(test_client))
         form = response.context["form"]
-        self.assertIn("Hallo Herr Else,", form.initial["body"])
+        self.assertIn("Hi Mr. Else,", form.initial["body"])
 
     @patch("my_practice.views.email_views.EmailMessage")
     def test_post_sends_cancellation(self, mock_email):
@@ -592,7 +494,11 @@ class SendCancellationEmailViewTest(TestCase):
         )
         response = self.client_http.post(
             self._url(test_client),
-            {"recipient": "send@example.com", "subject": "Absage", "body": "Leider..."},
+            {
+                "recipient": "send@example.com",
+                "subject": "Cancellation",
+                "body": "Unfortunately...",
+            },
         )
         self.assertRedirects(response, reverse("client_detail", kwargs={"pk": test_client.pk}))
         mock_instance.send.assert_called_once()
@@ -655,148 +561,6 @@ class SendCancellationEmailViewTest(TestCase):
         self.assertTrue(any(m.tags == "error" for m in messages_list))
 
 
-class SendQuestionnaireEmailViewTest(TestCase):
-    """Tests for SendQuestionnaireEmailView — the Anamnesebogen .docx flow.
-
-    Uses a scratch MY_PRACTICE_DATA_DIR so the test is deterministic
-    regardless of whether a real instance's documents/ happens to be
-    mounted — never read or depend on real practice data.
-    """
-
-    def setUp(self):
-        logging.getLogger("my_practice.email").setLevel(logging.ERROR)
-        self.client_http = TestClient()
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="questionnaire-email-test-practice",
-            title="Test Practitioner",
-            email="practice@test.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(
-            username="questionnaireemailuser", password="testpass123"
-        )
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http.login(username="questionnaireemailuser", password="testpass123")
-        self.test_client = Client.objects.create(
-            client_code="QC",
-            full_name="Quest Client",
-            email="quest@example.com",
-            practice=self.practice,
-        )
-        self._tmpdir = tempfile.TemporaryDirectory()
-        self.addCleanup(self._tmpdir.cleanup)
-        self.data_dir = Path(self._tmpdir.name)
-
-    def _url(self):
-        return reverse("send_questionnaire_docx", kwargs={"pk": self.test_client.pk})
-
-    def test_redirects_with_error_when_docx_missing(self):
-        with override_settings(MY_PRACTICE_DATA_DIR=self.data_dir):
-            response = self.client_http.get(self._url())
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-
-    def test_get_form_loads_prefilled_when_docx_present(self):
-        docs_dir = self.data_dir / "documents"
-        docs_dir.mkdir(parents=True)
-        (docs_dir / "Anamnesebogen.docx").write_bytes(b"fake-docx-bytes")
-
-        with override_settings(MY_PRACTICE_DATA_DIR=self.data_dir):
-            response = self.client_http.get(self._url())
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["docx_name"], "Anamnesebogen.docx")
-        self.assertEqual(response.context["form"].initial["recipient"], "quest@example.com")
-
-    @patch("my_practice.views.email_views.EmailMessage")
-    def test_post_attaches_docx_and_sets_questionnaire_sent_date(self, mock_email):
-        mock_instance = MagicMock()
-        mock_email.return_value = mock_instance
-        mock_instance.send.return_value = 1
-
-        docs_dir = self.data_dir / "documents"
-        docs_dir.mkdir(parents=True)
-        (docs_dir / "Anamnesebogen.docx").write_bytes(b"fake-docx-bytes")
-
-        self.assertIsNone(self.test_client.questionnaire_sent_date)
-
-        with override_settings(MY_PRACTICE_DATA_DIR=self.data_dir):
-            response = self.client_http.post(
-                self._url(),
-                {"recipient": "quest@example.com", "subject": "Fragebogen", "body": "Hallo"},
-            )
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-        mock_instance.attach.assert_called_once()
-        fname, fbytes, _fmime = mock_instance.attach.call_args.args
-        self.assertEqual(fname, "Anamnesebogen.docx")
-        self.assertEqual(fbytes, b"fake-docx-bytes")
-
-        self.test_client.refresh_from_db()
-        self.assertEqual(self.test_client.questionnaire_sent_date, date.today())
-
-
-class SendContractEmailViewTest(TestCase):
-    """Tests for SendContractEmailView."""
-
-    def setUp(self):
-        logging.getLogger("my_practice.email").setLevel(logging.ERROR)
-        self.client_http = TestClient()
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="contract-email-test-practice",
-            title="Test Practitioner",
-            email="practice@test.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(username="contractemailuser", password="testpass123")
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http.login(username="contractemailuser", password="testpass123")
-        self.test_client = Client.objects.create(
-            client_code="TC",
-            full_name="Contract Client",
-            email="contract@example.com",
-            practice=self.practice,
-        )
-
-    def test_form_loads_with_filename(self):
-        response = self.client_http.get(
-            reverse("send_contract_email", kwargs={"pk": self.test_client.pk})
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["filename"], "Behandlungsvertrag_TC.pdf")
-
-    @patch("my_practice.views.email_views.EmailMessage")
-    def test_post_attaches_pdf_and_sends(self, mock_email):
-        mock_instance = MagicMock()
-        mock_email.return_value = mock_instance
-        mock_instance.send.return_value = 1
-
-        response = self.client_http.post(
-            reverse("send_contract_email", kwargs={"pk": self.test_client.pk}),
-            {
-                "recipient": "contract@example.com",
-                "subject": "Behandlungsvertrag",
-                "body": "Hallo",
-            },
-        )
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-        mock_instance.attach.assert_called_once()
-        fname, fbytes, fmime = mock_instance.attach.call_args.args
-        self.assertEqual(fname, "Behandlungsvertrag_TC.pdf")
-        self.assertEqual(fmime, "application/pdf")
-        self.assertTrue(fbytes.startswith(b"%PDF"))
-
-    @patch("my_practice.views.email_views.generate_contract_pdf_bytes")
-    def test_post_attachment_generation_failure_redirects_with_error(self, mock_generate):
-        """Shared BaseClientEmailView.post(): get_attachment() raising is caught."""
-        mock_generate.side_effect = RuntimeError("PDF engine crashed")
-
-        response = self.client_http.post(
-            reverse("send_contract_email", kwargs={"pk": self.test_client.pk}),
-            {"recipient": "contract@example.com", "subject": "x", "body": "y"},
-        )
-        self.assertRedirects(response, reverse("client_detail", kwargs={"pk": self.test_client.pk}))
-
-
 class SendQuestionnairePdfEmailViewTest(TestCase):
     """Tests for SendQuestionnairePdfEmailView."""
 
@@ -808,7 +572,7 @@ class SendQuestionnairePdfEmailViewTest(TestCase):
             slug="questionnaire-pdf-email-test-practice",
             title="Test Practitioner",
             email="practice@test.com",
-            city="Berlin",
+            city="Austin",
         )
         self.user = User.objects.create_user(
             username="questionnairepdfemailuser", password="testpass123"

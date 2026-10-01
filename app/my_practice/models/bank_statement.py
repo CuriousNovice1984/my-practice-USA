@@ -2,24 +2,17 @@
 
 from enum import StrEnum
 
-from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
 from .base import PracticeScopedManager
 
 
-def _normalize_iban(iban: str) -> str:
-    """Remove spaces and uppercase for IBAN comparison."""
-    return iban.replace(" ", "").upper()
-
-
 class BankTransaction(models.Model):
     """
-    Bank statement transaction from CSV import.
+    Bank transaction from a CSV import or a Plaid sync.
 
-    Represents a single transaction line from a bank statement CSV.
+    Represents a single transaction line from the practice's bank account.
     Used for automatic invoice payment matching and reconciliation.
     """
 
@@ -36,14 +29,14 @@ class BankTransaction(models.Model):
 
     CONFIDENCE_CHOICES = [
         (Confidence.EXACT, gettext_lazy("Exact Match")),
-        (Confidence.FUZZY, gettext_lazy("Fuzzy Match (±5€)")),
+        (Confidence.FUZZY, gettext_lazy("Fuzzy Match (±$5)")),
         (Confidence.MANUAL, gettext_lazy("Manual Assignment")),
         (Confidence.IGNORED, gettext_lazy("Ignored (Expense/Duplicate)")),
         (Confidence.UNMATCHED, gettext_lazy("Unmatched")),
         (Confidence.AUTO_WITHDRAWAL, gettext_lazy("Auto-Created Withdrawal")),
         (Confidence.AUTO_EXPENSE, gettext_lazy("Auto-Created Expense")),
-        (Confidence.AUTO_CONTRIBUTION, gettext_lazy("Auto-Created Contribution (Kapitaleinlage)")),
-        (Confidence.AUTO_CORRECTION, gettext_lazy("Auto-Created Correction (Fehlbuchung)")),
+        (Confidence.AUTO_CONTRIBUTION, gettext_lazy("Auto-Created Owner Contribution")),
+        (Confidence.AUTO_CORRECTION, gettext_lazy("Auto-Created Correction")),
     ]
 
     # Practice relationship
@@ -60,18 +53,18 @@ class BankTransaction(models.Model):
         help_text=gettext_lazy("Transaction booking date"),
     )
     value_date = models.DateField(
-        verbose_name=gettext_lazy("Value date"),
-        help_text=gettext_lazy("Value date"),
+        verbose_name=gettext_lazy("Posted date"),
+        help_text=gettext_lazy("Date the transaction posted (same as the date if unknown)"),
     )
     payer_name = models.CharField(
         max_length=200,
         verbose_name=gettext_lazy("Payer/payee name"),
         help_text=gettext_lazy("Name of payer/payee"),
     )
-    payer_iban = models.CharField(
-        max_length=34,
+    payer_account = models.CharField(
+        max_length=64,
         blank=True,
-        verbose_name=gettext_lazy("Payer/payee IBAN"),
+        verbose_name=gettext_lazy("Payer/payee account"),
     )
     reference = models.TextField(
         verbose_name=gettext_lazy("Payment reference"),
@@ -86,6 +79,8 @@ class BankTransaction(models.Model):
     balance_after = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        null=True,
+        blank=True,
         verbose_name=gettext_lazy("Balance after transaction"),
         help_text=gettext_lazy("Account balance after transaction"),
     )
@@ -153,13 +148,20 @@ class BankTransaction(models.Model):
         ),
     )
 
-    # Source validation
-    account_iban = models.CharField(
-        max_length=34,
+    # Source
+    source_account = models.CharField(
+        max_length=64,
         blank=True,
-        verbose_name=gettext_lazy("Account IBAN"),
+        verbose_name=gettext_lazy("Account"),
+        help_text=gettext_lazy("Bank account the transaction belongs to"),
+    )
+    external_id = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        verbose_name=gettext_lazy("External ID"),
         help_text=gettext_lazy(
-            "IBAN of the source account from the CSV export – must match the practice IBAN"
+            "Transaction ID from the bank connection (Plaid), for deduplication"
         ),
     )
 
@@ -178,7 +180,7 @@ class BankTransaction(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.transaction_date} - {self.payer_name}: {self.amount}€"
+        return f"{self.transaction_date} - {self.payer_name}: ${self.amount}"
 
     @property
     def is_income(self) -> bool:
@@ -194,18 +196,3 @@ class BankTransaction(models.Model):
     def is_matched(self) -> bool:
         """Check if transaction is matched to an invoice"""
         return self.matched_invoice is not None
-
-    def clean(self) -> None:
-        """Validate that account_iban matches the practice's IBAN."""
-        if self.account_iban and self.practice_id:
-            practice_iban = _normalize_iban(self.practice.iban)
-            csv_iban = _normalize_iban(self.account_iban)
-            if practice_iban and csv_iban != practice_iban:
-                raise ValidationError(
-                    {
-                        "account_iban": _(
-                            "Account IBAN %(csv_iban)s does not match the practice IBAN %(practice_iban)s."
-                        )
-                        % {"csv_iban": self.account_iban, "practice_iban": self.practice.iban}
-                    }
-                )

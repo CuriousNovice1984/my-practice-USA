@@ -64,7 +64,7 @@
     </div>
 
     <div class="formset-container">
-        <div class="formset-title">📋 {% trans "Invoice items" %}</div>
+        <div class="formset-title">{% trans "Invoice items" %}</div>
 
         {{ items.management_form }}
         {{ items.non_form_errors }}
@@ -128,13 +128,13 @@
         </div>
 
         <button type="button" id="add-item" class="btn btn-secondary mt-2">
-            ➕ {% trans "Add another item" %}
+            {% trans "Add another item" %}
         </button>
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn">💾 {% trans "Create Invoice" %}</button>
-        <a href="{% url 'invoice_list' %}" class="btn btn-secondary">❌ {% trans "Cancel" %}</a>
+        <button type="submit" class="btn">{% trans "Create Invoice" %}</button>
+        <a href="{% url 'invoice_list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
     </div>
 </form>
 

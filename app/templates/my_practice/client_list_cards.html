@@ -2,6 +2,7 @@
 {% load static %}
 {% load payment_tags %}
 {% load i18n %}
+{% load icons %}
 
 {% block title %}{% trans "Client overview" %}{% endblock %}
 
@@ -23,10 +24,10 @@
             </a>
         {% endfor %}
         <a href="{% url 'tag_list' %}" class="btn btn-sm btn-secondary">
-            ⚙️ {% trans "Tags" %}
+            {% trans "Tags" %}
         </a>
     </div>
-    <a href="{% url 'client_intake' %}" class="btn">➕ {% trans "New client" %}</a>
+    <a href="{% url 'client_intake' %}" class="btn">{% trans "New client" %}</a>
 </div>
 
 <div class="client-workflow-stats">
@@ -47,7 +48,7 @@
 <!-- Active Clients - Needs Attention -->
 {% if clients_needs_attention %}
 <div class="section-header">
-    ⚠️ {% trans "Need attention" %}
+    {% trans "Need attention" %}
     <span class="count">{{ clients_needs_attention|length }}</span>
 </div>
 <div class="client-cards">
@@ -60,7 +61,7 @@
 <!-- Active Clients - All Good -->
 {% if clients_active_ok %}
 <div class="section-header">
-    ✅ {% trans "Active & OK" %}
+    {% trans "Active & OK" %}
     <span class="count">{{ clients_active_ok|length }}</span>
 </div>
 <div class="client-cards">
@@ -73,7 +74,7 @@
 <!-- Inactive Clients -->
 {% if clients_inactive %}
 <div class="section-header">
-    💤 {% trans "Inactive" %}
+    {% trans "Inactive" %}
     <span class="count">{{ clients_inactive|length }}</span>
 </div>
 {% for year, clients in clients_inactive_by_year.items %}
@@ -96,8 +97,8 @@
 {% endif %}
 
 {% if clients_deletion_eligible %}
-<div class="section-header section-header--gdpr">
-    {% trans "Clients eligible for deletion (GDPR Art. 17)" %}
+<div class="section-header section-header--retention">
+    {% trans "Records retention ended — eligible for destruction" %}
     <span class="count">{{ clients_deletion_eligible|length }}</span>
 </div>
 <div class="table-container">
@@ -116,10 +117,10 @@
         <tr>
           <td>{{ client.client_code }}</td>
           <td><span class="sensitive-data">{{ client.full_name }}</span></td>
-          <td>{{ client.last_session_date|date:"d.m.Y" }}</td>
-          <td>{% if client.email %}✓{% else %}—{% endif %}</td>
+          <td>{{ client.last_session_date|date:"d M y" }}</td>
+          <td>{% if client.email %}{% icon "check" %}{% else %}—{% endif %}</td>
           <td>
-            <a href="{% url 'client_gdpr_delete_confirm' client.pk %}"
+            <a href="{% url 'client_records_delete_confirm' client.pk %}"
                class="btn btn-sm btn-danger">
               {% if client.email %}{% trans "Delete & notify" %}{% else %}{% trans "Delete" %}{% endif %}
             </a>

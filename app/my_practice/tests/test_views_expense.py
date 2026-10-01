@@ -38,7 +38,7 @@ class ExpenseListViewTest(TestCase):
         CompanyExpense.objects.create(
             description="Rent December",
             amount=Decimal("1500.00"),
-            category="miete",
+            category="rent",
             date=date(2024, 12, 1),
             is_tax_deductible=True,
             practice=self.practice,
@@ -54,7 +54,7 @@ class ExpenseListViewTest(TestCase):
         CompanyExpense.objects.create(
             description="Office Supplies",
             amount=Decimal("45.50"),
-            category="materialien",
+            category="supplies",
             date=date(2023, 6, 10),
             is_tax_deductible=False,
             practice=self.practice,
@@ -123,7 +123,7 @@ class ExpenseCreateViewTest(TestCase):
         data = {
             "description": "New Expense",
             "amount": "250.00",
-            "category": "telefon",
+            "category": "phone_internet",
             "date": "2024-12-23",
             "is_tax_deductible": True,
             "has_invoice": False,
@@ -133,7 +133,7 @@ class ExpenseCreateViewTest(TestCase):
 
         expense = CompanyExpense.objects.get(description="New Expense")
         self.assertEqual(expense.amount, Decimal("250.00"))
-        self.assertEqual(expense.category, "telefon")
+        self.assertEqual(expense.category, "phone_internet")
         self.assertTrue(expense.is_tax_deductible)
 
     def test_expense_create_post_invalid_amount(self):
@@ -282,7 +282,6 @@ class ExpenseMergeViewTest(TestCase):
             name="Merge Practice",
             slug="merge-practice",
             email="merge@example.com",
-            iban="DE89370400440532013000",
         )
         UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
         self.client_instance = TestClient()

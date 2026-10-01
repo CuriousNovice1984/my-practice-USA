@@ -6,17 +6,19 @@
 const ChartConfig = {
     // Color palettes
     colors: {
+        // Drawn from the interface photography: evergreen and lake teal, with
+        // terracotta and ochre as the warm counterpoint (tailwind.css --color-chart-*).
         primary: {
-            main: '#667eea',
-            light: '#a8b5ff',
-            dark: '#4c5fd5',
-            gradient: ['#667eea', '#764ba2']
+            main: '#2f6b5d',
+            light: '#7fb3a3',
+            dark: '#1f4d42',
+            gradient: ['#2f6b5d', '#3d8f95']
         },
         secondary: {
-            main: '#f093fb',
-            light: '#f5d0fe',
-            dark: '#e879f9',
-            gradient: ['#f093fb', '#f5576c']
+            main: '#c0703c',
+            light: '#e9b48d',
+            dark: '#9a5428',
+            gradient: ['#c0703c', '#d6a64a']
         },
         success: {
             main: '#10b981',
@@ -47,13 +49,13 @@ const ChartConfig = {
 
     // Typography
     fonts: {
-        axis: '12px sans-serif',
-        label: '13px sans-serif',
-        labelBold: 'bold 13px sans-serif',
-        value: 'bold 16px sans-serif',
-        title: 'bold 16px sans-serif',
-        legend: '12px sans-serif',
-        tooltip: '13px sans-serif'
+        axis: '12px "Hanken Grotesk", sans-serif',
+        label: '13px "Hanken Grotesk", sans-serif',
+        labelBold: '600 13px "Hanken Grotesk", sans-serif',
+        value: '600 16px "Hanken Grotesk", sans-serif',
+        title: '600 16px "Hanken Grotesk", sans-serif',
+        legend: '12px "Hanken Grotesk", sans-serif',
+        tooltip: '13px "Hanken Grotesk", sans-serif'
     },
 
     // Spacing
@@ -95,25 +97,25 @@ const ChartConfig = {
             name: 'Revenue Trends',
             type: 'line',
             colors: {
-                line: ['#667eea', '#764ba2'],
-                area: 'rgba(102, 126, 234, 0.2)',
-                point: '#667eea',
+                line: ['#2f6b5d', '#3d8f95'],
+                area: 'rgba(47, 107, 93, 0.18)',
+                point: '#2f6b5d',
                 trendline: 'rgba(255, 107, 107, 0.6)'
             },
             showTrendline: true,
             showGrid: true,
             showPoints: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         expense: {
             name: 'Expense Trends',
             type: 'bar',
             colors: {
-                bar: ['#f093fb', '#f5576c']
+                bar: ['#c0703c', '#d6a64a']
             },
             showGrid: true,
             showValueLabels: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         comparison: {
             name: 'Year Comparison',
@@ -125,14 +127,14 @@ const ChartConfig = {
             showLegend: true,
             showGrid: true,
             barSpacing: 20,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         multibar: {
             name: 'Multi-bar Comparison',
             type: 'grouped-bar',
             showGrid: true,
             showLegend: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         }
     },
 
@@ -165,7 +167,7 @@ ChartConfig.getColor = function(path, fallback) {
         if (value === undefined) break;
     }
 
-    return value || fallback || '#667eea';
+    return value || fallback || '#2f6b5d';
 };
 
 /**

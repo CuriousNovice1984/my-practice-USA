@@ -7,6 +7,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from ..us_states import US_STATE_CHOICES
 from ..validators import validate_email_template_placeholders
 
 
@@ -34,18 +35,11 @@ class Practice(models.Model):
         verbose_name=_("URL slug"),
         help_text=_("Unique identifier for the practice (e.g. 'therapy', 'coaching')"),
     )
-    short_title_de = models.CharField(
-        max_length=50,
-        default="Therapie",
-        verbose_name=_("Short title (German)"),
-        help_text=_("Short label for the title bar, shown in the German UI (e.g. 'Therapie')"),
-    )
-    short_title_en = models.CharField(
+    short_title = models.CharField(
         max_length=50,
         default="Therapy",
-        verbose_name=_("Short title (English)"),
-        help_text=_("Short label for the title bar, shown in the English UI (e.g. 'Therapy')"),
-        blank=True,
+        verbose_name=_("Short title"),
+        help_text=_("Short label for the title bar (e.g. 'Therapy')"),
     )
     is_active = models.BooleanField(
         default=True,
@@ -54,28 +48,25 @@ class Practice(models.Model):
     )
     title = models.CharField(
         max_length=200,
-        default="Heilpraktiker für Psychotherapie",
+        default="Licensed Professional Counselor (LPC)",
         verbose_name=_("Professional title"),
     )
-    subtitle_de = models.CharField(
+    subtitle = models.CharField(
         max_length=200,
-        default="praxis für körperpsychotherapie",
-        verbose_name=_("Subtitle (German)"),
-        blank=True,
-    )
-    subtitle_en = models.CharField(
-        max_length=200,
-        default="deutsch & english",
-        verbose_name=_("Subtitle (English)"),
+        default="",
+        verbose_name=_("Subtitle"),
         blank=True,
     )
 
     # Address
-    street = models.CharField(max_length=200, default="", verbose_name=_("Street and house number"))
-    postal_code = models.CharField(max_length=20, default="", verbose_name=_("Postal code"))
+    street = models.CharField(max_length=200, default="", verbose_name=_("Street address"))
     city = models.CharField(max_length=100, default="", verbose_name=_("City"))
+    state = models.CharField(
+        max_length=2, choices=US_STATE_CHOICES, default="TX", verbose_name=_("State")
+    )
+    postal_code = models.CharField(max_length=20, default="", verbose_name=_("ZIP code"))
     country = models.CharField(
-        max_length=100, default="Deutschland", blank=True, verbose_name=_("Country")
+        max_length=100, default="United States", blank=True, verbose_name=_("Country")
     )
 
     # Contact
@@ -98,78 +89,87 @@ class Practice(models.Model):
     )
     phone = models.CharField(max_length=50, blank=True, verbose_name=_("Phone"))
 
-    # Banking
-    bank_name = models.CharField(max_length=200, default="", verbose_name=_("Bank name"))
-    iban = models.CharField(max_length=34, default="", verbose_name=_("IBAN"))
-    bic = models.CharField(max_length=11, default="", verbose_name=_("BIC"))
+    # How clients pay — printed on invoices and payment reminders
+    payment_instructions = models.TextField(
+        default="",
+        blank=True,
+        verbose_name=_("Payment instructions"),
+        help_text=_(
+            "How clients can pay, printed on invoices and payment reminders "
+            "(e.g. 'Zelle: payments@practice.example · Checks payable to Practice LLC')"
+        ),
+    )
     private_bank_account = models.CharField(
         max_length=34,
         blank=True,
-        verbose_name=_("Private bank account (IBAN)"),
+        verbose_name=_("Private bank account"),
         help_text=_(
-            "IBAN of the private account, for automatic detection of withdrawals "
-            "and capital contributions during bank import"
+            "Identifier of your personal account as it appears in bank exports "
+            "(e.g. the last four digits), for automatic detection of owner draws "
+            "and contributions during bank import"
         ),
     )
 
-    # Bank statement CSV import format (defaults match GLS Bank's export;
-    # adjust the delimiter/column names below for other banks without touching code)
+    # Bank statement CSV import format. Defaults fit the common US export shape
+    # (Date, Description, Amount); adjust per bank without touching code. Optional
+    # columns left blank are simply not read.
     csv_delimiter = models.CharField(
         max_length=1,
-        default=";",
+        default=",",
         verbose_name=_("CSV delimiter"),
-        help_text=_("Column separator used by your bank's CSV export, e.g. ';' or ','"),
+        help_text=_("Column separator used by your bank's CSV export, e.g. ',' or ';'"),
     )
     csv_column_date = models.CharField(
         max_length=100,
-        default="Buchungstag",
-        verbose_name=_("CSV column: booking date"),
-        help_text=_("Header name of the booking date column in your bank's CSV export"),
+        default="Date",
+        verbose_name=_("CSV column: date"),
+        help_text=_("Header name of the transaction date column in your bank's CSV export"),
     )
     csv_column_value_date = models.CharField(
         max_length=100,
-        default="Valutadatum",
-        verbose_name=_("CSV column: value date"),
-        help_text=_("Header name of the value date column in your bank's CSV export"),
+        default="",
+        blank=True,
+        verbose_name=_("CSV column: posted date"),
+        help_text=_("Optional: header name of the posted/settled date column"),
     )
     csv_column_payer_name = models.CharField(
         max_length=100,
-        default="Name Zahlungsbeteiligter",
+        default="Description",
         verbose_name=_("CSV column: payer/payee name"),
-        help_text=_("Header name of the payer/payee name column in your bank's CSV export"),
+        help_text=_("Header name of the payer/payee (or description) column"),
     )
-    csv_column_payer_iban = models.CharField(
+    csv_column_payer_account = models.CharField(
         max_length=100,
-        default="IBAN Zahlungsbeteiligter",
-        verbose_name=_("CSV column: payer/payee IBAN"),
-        help_text=_("Header name of the payer/payee IBAN column in your bank's CSV export"),
+        default="",
+        blank=True,
+        verbose_name=_("CSV column: payer/payee account"),
+        help_text=_("Optional: header name of a counterparty account column"),
     )
     csv_column_reference = models.CharField(
         max_length=100,
-        default="Verwendungszweck",
-        verbose_name=_("CSV column: payment reference"),
-        help_text=_("Header name of the payment reference column in your bank's CSV export"),
+        default="Description",
+        verbose_name=_("CSV column: memo"),
+        help_text=_("Header name of the memo/description column searched for invoice numbers"),
     )
     csv_column_amount = models.CharField(
         max_length=100,
-        default="Betrag",
+        default="Amount",
         verbose_name=_("CSV column: amount"),
-        help_text=_("Header name of the transaction amount column in your bank's CSV export"),
+        help_text=_("Header name of the transaction amount column (negative = money out)"),
     )
     csv_column_balance = models.CharField(
         max_length=100,
-        default="Saldo nach Buchung",
+        default="",
+        blank=True,
         verbose_name=_("CSV column: balance after transaction"),
-        help_text=_("Header name of the running balance column in your bank's CSV export"),
+        help_text=_("Optional: header name of the running balance column"),
     )
-    csv_column_account_iban = models.CharField(
+    csv_column_account = models.CharField(
         max_length=100,
-        default="IBAN Auftragskonto",
-        verbose_name=_("CSV column: account IBAN"),
-        help_text=_(
-            "Header name of the source account IBAN column in your bank's CSV export, "
-            "used to verify the file belongs to this practice's account"
-        ),
+        default="",
+        blank=True,
+        verbose_name=_("CSV column: account"),
+        help_text=_("Optional: header name of the source account column"),
     )
 
     # Invoice follow-up
@@ -183,37 +183,23 @@ class Practice(models.Model):
     )
 
     # Tax
-    tax_id = models.CharField(max_length=50, default="", verbose_name=_("Tax ID"))
-
-    # VAT exemption: Choose between Kleinunternehmer (§19) vs. Heilpraktiker (§4 Nr.14)
-    is_kleinunternehmer = models.BooleanField(
-        default=False,
-        verbose_name=_("Kleinunternehmer regulation"),
-        help_text=_(
-            "When enabled: § 19 UStG (small business) instead of § 4 No. 14 UStG (Heilpraktiker)"
-        ),
-    )
-    kleinunternehmer_text_de = models.TextField(
-        default="Der Betrag ist umsatzsteuerfrei nach § 19 UStG (Kleinunternehmerregelung).",
-        verbose_name=_("Kleinunternehmer text (German)"),
-        help_text=_("Used when 'Kleinunternehmer regulation' is enabled"),
-    )
-    kleinunternehmer_text_en = models.TextField(
-        default="This amount is VAT-exempt according to § 19 UStG (small business regulation).",
-        verbose_name=_("Kleinunternehmer text (English)"),
+    tax_id = models.CharField(
+        max_length=50,
+        default="",
         blank=True,
-        help_text=_("Used when 'Kleinunternehmer regulation' is enabled"),
+        verbose_name=_("Tax ID (EIN)"),
+        help_text=_("Employer Identification Number, printed on invoices"),
     )
 
-    vat_exempt_text_de = models.TextField(
-        default="Der Betrag ist umsatzsteuerfrei nach § 4 Nr. 14 UStG",
-        verbose_name=_("VAT exemption text (German)"),
-        help_text=_("Used when 'Kleinunternehmer regulation' is NOT enabled"),
-    )
-    vat_exempt_text_en = models.TextField(
-        default="This amount is exempt from VAT according to § 4 No. 14 UStG",
-        verbose_name=_("VAT exemption text (English)"),
-        help_text=_("Used when 'Kleinunternehmer regulation' is NOT enabled"),
+    # Records retention — when an inactive client's records may be destroyed
+    records_retention_years = models.PositiveSmallIntegerField(
+        default=7,
+        verbose_name=_("Records retention (years)"),
+        help_text=_(
+            "Years to keep records after the last session. For minors the period "
+            "runs from their 18th birthday instead, whichever ends later. Use the "
+            "longest period required by any state you are licensed in."
+        ),
     )
 
     # Free-form (non-session) invoice items — day-rate/project billing (P-122)
@@ -228,15 +214,10 @@ class Practice(models.Model):
         ),
     )
 
-    # Memberships
-    memberships_de = models.TextField(
+    # Professional memberships, printed in the invoice footer
+    professional_memberships = models.TextField(
         default="",
-        verbose_name=_("Memberships (German)"),
-        blank=True,
-    )
-    memberships_en = models.TextField(
-        default="",
-        verbose_name=_("Memberships (English)"),
+        verbose_name=_("Memberships"),
         blank=True,
     )
 
@@ -248,74 +229,45 @@ class Practice(models.Model):
 
     # Payment terms
     payment_terms_days = models.IntegerField(default=14, verbose_name=_("Payment term (days)"))
-    payment_terms_text_de = models.CharField(
+    payment_terms_text = models.CharField(
         max_length=200,
-        default="Bitte überweisen Sie den Rechnungsbetrag unter Angabe der Rechnungsnummer innerhalb von 14 Tagen auf das unten genannte Konto.",
-        verbose_name=_("Payment terms (German)"),
-    )
-    payment_terms_text_en = models.CharField(
-        max_length=200,
-        default="Please transfer the invoice amount stating the invoice number within 14 days to the account mentioned below.",
-        verbose_name=_("Payment terms (English)"),
+        default="Payment is due within 14 days of the invoice date. Please include the invoice number with your payment.",
+        verbose_name=_("Payment terms"),
     )
 
     # Email templates for invoices
-    invoice_email_subject_de = models.CharField(
-        validators=[validate_email_template_placeholders],
-        max_length=200,
-        default="Rechnung {invoice_number}",
-        verbose_name=_("Email subject (German)"),
-        help_text=_("Placeholders: {invoice_number}, {amount}, {date}, {client_name}"),
-    )
-    invoice_email_subject_en = models.CharField(
+    invoice_email_subject = models.CharField(
         validators=[validate_email_template_placeholders],
         max_length=200,
         default="Invoice {invoice_number}",
-        verbose_name=_("Email subject (English)"),
+        verbose_name=_("Email subject"),
         help_text=_("Placeholders: {invoice_number}, {amount}, {date}, {client_name}"),
     )
-    invoice_email_body_de = models.TextField(
-        validators=[validate_email_template_placeholders],
-        default="{salutation},\n\n{sessions_intro}anbei erhalten Sie die Rechnung {invoice_number} über {amount} vom {date}.\n\n"
-        "Bitte überweisen Sie den Betrag innerhalb von 14 Tagen unter Angabe der Rechnungsnummer.\n\n"
-        "Die Rechnung ist als PDF im Anhang beigefügt.",
-        verbose_name=_("Email body (German)"),
-        help_text=_(
-            "Placeholders: {salutation}, {sessions_intro}, {invoice_number}, {amount}, {date}, {client_name}"
-        ),
-    )
-    invoice_email_body_en = models.TextField(
+    invoice_email_body = models.TextField(
         validators=[validate_email_template_placeholders],
         default="{salutation},\n\n{sessions_intro}Please find attached invoice {invoice_number} for {amount} dated {date}.\n\n"
-        "Please transfer the amount within 14 days, stating the invoice number.\n\n"
+        "Payment is due within 14 days.\n\n"
         "The invoice is attached as a PDF.",
-        verbose_name=_("Email body (English)"),
+        verbose_name=_("Email body"),
         help_text=_(
             "Placeholders: {salutation}, {sessions_intro}, {invoice_number}, {amount}, {date}, {client_name}"
         ),
     )
     email_signature = models.TextField(
-        default="Mit freundlichen Grüßen / Best regards,\nHeilpraktiker für Psychotherapie",
+        default="Best regards,\nLicensed Professional Counselor (LPC)",
         verbose_name=_("Email signature"),
         help_text=_("Used for all outgoing emails"),
     )
 
-    # Commute / Fahrtkosten (P-027)
-    commute_distance_km = models.PositiveIntegerField(
+    # Home office (IRS simplified method)
+    home_office_sqft = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Distance to practice (km)"),
+        verbose_name=_("Home office area (sq ft)"),
         help_text=_(
-            "One-way distance in km (e.g. 12). Used for the distance allowance "
-            "on the tax year summary."
-        ),
-    )
-    practice_weekdays = models.JSONField(
-        default=list,
-        blank=True,
-        verbose_name=_("Practice days (weekdays)"),
-        help_text=_(
-            "Weekdays on which the practice is attended (0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri)."
+            "Square footage used regularly and exclusively for the practice, for the "
+            "simplified home office deduction ($5/sq ft, up to 300 sq ft). Leave empty "
+            "if you don't claim one."
         ),
     )
 
@@ -336,9 +288,9 @@ class Practice(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_("Monthly target: revenue (€)"),
+        verbose_name=_("Monthly target: revenue ($)"),
         help_text=_(
-            "Target revenue per month in €, e.g. 3000.00. Enables capacity "
+            "Target revenue per month in $, e.g. 3000.00. Enables capacity "
             "monitoring on the dashboard."
         ),
     )

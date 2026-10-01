@@ -1,6 +1,6 @@
 # Project Instructions
 
-Therapy practice payment/invoicing system built with Django, PostgreSQL, running in Docker.
+Solo self-pay counseling practice management (US fork: Texas LPC, licensed in TX/UT/VA/NM) built with Django, PostgreSQL, running in Docker locally behind Tailscale. Forked from a German upstream; this fork never pulls upstream updates or registry images.
 
 ## 🔒 Privacy & Data Protection (CRITICAL)
 
@@ -42,21 +42,26 @@ select widget, so selects show the code only). `KNOWN_UNPROTECTED` holds the del
 exceptions, each with a reason; shrink it, never grow it to make a new render pass. Full
 contract: [docs/guides/CODEBASE_STANDARDS.md](docs/guides/CODEBASE_STANDARDS.md) (M-PAT-08).
 
-## Current Focus (Q2 2026)
-- Django i18n bilingual UI (P-039): DONE — full sweep complete (issue #69 closed). Every template, Python view/form/util, model, `admin.py`, and the small JS surface is wrapped. See [docs/projects/done/P-039_DJANGO_I18N.md](docs/projects/done/P-039_DJANGO_I18N.md) for the sweep retrospective.
+## US Locale (standing rules)
+- **English only.** `LANGUAGE_CODE = "en-us"`, one entry in `LANGUAGES`, no `locale/` catalogs and no language switcher. Never reintroduce German UI text, a `_de`/`_en` field pair, or a per-client language.
+- **Keep wrapping user-facing strings** in `{% trans %}`/`gettext`/`gettext_lazy` (lazy for class-body attributes, eager inside functions) so translation can be added later without a sweep. `my_practice/tests/test_i18n_coverage.py` still fails if a non-PDF template skips `{% load i18n %}` or contains German characters.
+- **Time zone** `America/Chicago` (`TIME_ZONE`, overridable via `DJANGO_TIME_ZONE`; the container `TZ` should match).
+- **Dates** display as `DD MMM YY` (`05 Mar 26`) via `config/formats/en/formats.py` (`DATE_FORMAT = "d M y"`). Templates spell it `|date:"d M y"`; don't introduce other day-first or numeric formats like `d.m.Y` or `m/d/Y`. HTML date inputs stay ISO.
+- **Currency** USD via `utils/formatting.format_currency` / the `currency` template filters: `$1,234.56`, negatives `-$5.00`. Never build `€` or German number formats.
+- **Taxes**: IRS 1040-ES quarterly periods come from `utils/practice_days.estimated_tax_periods(year)`; self-employment tax estimate and simplified home office (`HomeOfficeCalculator`) live there too. No VAT anywhere.
+- **No outbound phoning home**: no update checks, no telemetry. Outbound calls are limited to Google Calendar, SMTP, and Plaid (only when `PLAID_*` is configured).
+- **Client portal** (`/portal/<token>/`) is the only path exposed beyond the tailnet (Tailscale Funnel). Its views use `@login_not_required` and must never reveal client names. `FunnelPathGuardMiddleware` 404s Funnel traffic outside `/portal/` and `/static/`. See [docs/operations/CLIENT_PORTAL.md](docs/operations/CLIENT_PORTAL.md).
 
-### i18n Conventions (P-039, now the permanent standing rule)
-- **Every template and Python file with user-facing strings must be wrapped, always** — new files ship fully wrapped in their first commit; when editing an existing file, wrap any user-facing string in it you touch. Do not write literal German (or any non-English) text as a msgid anywhere.
-- **English as msgids**: `{% trans "Switch" %}` not `{% trans "Wechseln" %}`. This applies to Python `_("...")` calls too — including form field `label=`/`Meta.labels`/`help_text`, `success_message`, and any other string passed to `gettext`/`gettext_lazy`. German text lives in `locale/de/django.po` as `msgstr`, never as the msgid itself.
-- **Templates**: load `{% load i18n %}` and wrap with `{% trans %}`/`{% blocktrans %}`. PDF templates (`invoice_pdf_*.html`, `treatment_contract_pdf.html`, `intake_form_pdf.html`, `questionnaire_pdf.html`) are exempt — they handle language per-document, not via Django i18n. Dual-language email *content* builders (`utils/email_utils.py` functions returning literal German/English subject+body pairs, e.g. for `EmailMessage`) are also exempt — that's authored bilingual content, not Django-i18n-translatable UI text. `includes/email_card.html` (the template that renders that content) is exempt for the same reason: its labels (`Betreff`/`Subject`, `Kopieren`/`Copy`) identify the language of the content beside them, not the app's UI language. Clinical scaffolding content baked into form `initial=` (`INTAKE_NOTES_TEMPLATE`/`CASE_NOTES_TEMPLATE`/`SESSION_LOG_TEMPLATE` in `models/clinical.py`) is exempt too — authored Somatic-Experiencing terminology with no English counterpart, not app UI chrome.
-- **Python — class-body/module-level vs. function-scope**: use `gettext_lazy` for anything evaluated once at import/class-definition time (`fieldsets`, `@admin.display`/`@admin.action` descriptions, model `Meta`/`verbose_name`/`help_text`, form field `label=` declarations, `success_message`). Use eager `gettext as _` only for strings evaluated per-request/per-call (view function bodies, `messages.*()` calls, `JsonResponse` values, form error strings). Getting this backwards is invisible to code review — an eager `gettext` used for a class-body attribute freezes whatever locale was active at process startup *permanently*, no matter what the user later switches to. Only a bilingual smoke test (render/instantiate under both `translation.override("de")` and `("en")`, assert the outputs differ) catches it.
-- **Per-document/per-client-language content is a different mechanism, not a bug**: fields like `ServiceType.name_de`/`name_en`, `Practice.invoice_email_subject_de`/`_en`, and PDF templates pick a language based on the *client's or document's* language, not the admin's UI language toggle — that's correct and shouldn't be "fixed" to use `{% trans %}`. But if a page is admin-facing (the therapist's own UI, not client-facing content), it must follow `{% get_current_language as CURRENT_LANGUAGE %}` and the admin's UI language, not silently default to one `_de`/`_en` field — conflating the two was a real bug found during close-out (`calendar_import.html`/`calendar_approval_queue.html` always showed `.name_de` regardless of admin UI language).
-- **`ClientTag`/other free-text data fields are not UI chrome**: seeded/system-generated tag names and descriptions are data, like a client name, not translatable UI strings — don't wrap them.
-- **Reuse existing msgids** before writing new ones — grep `locale/de/LC_MESSAGES/django.po` for the exact English word/phrase first. This sweep converged on a shared vocabulary (Status, Category, Amount, Client, Notes, month abbreviations Jan–Dec, etc.) — new code should draw from it rather than mint near-duplicates.
-- **Guardrail test**: `my_practice/tests/test_i18n_coverage.py` is a ratchet — it fails if a non-exempt template is missing `{% load i18n %}`, if a template leaks raw German text, or if either `.po` catalog has a `#, fuzzy` entry. `KNOWN_UNWRAPPED_TEMPLATES` is permanently empty now — it must stay that way; never add an entry to defer wrapping a new template. Note the guardrail only scans template source and `.po` fuzzy state — it does **not** catch a Python view feeding an already-wrapped template an unwrapped string (no diacritics needed to hide from the scan), a `.po` entry with an empty-but-non-fuzzy `msgstr`, nor a translated string hardcoded in **JavaScript** (`bank_review.js` built its tally label from four German literals for exactly this reason). All three bug classes have shown up repeatedly; when in doubt, render the page under both locales and diff.
-- **Strings needed in JS go through the template**, never as literals in the `.js` file — that's the only way the guardrail sees them. Put them in `data-*` attributes wrapped in `{% trans %}` and read them back via `dataset`: `keyboard-nav.js` reads `document.body.dataset` (populated by `data-kbd-*` in `base.html`), `bank_review.js` reads `data-tally-*` off its own `<script>` tag. Look the element up lazily inside the callback — a script in `extra_js` runs before `DOMContentLoaded`, so `document.currentScript` is already null by the time handlers fire.
-- Don't leave dead context variables (e.g. a template context key no template references) as a shortcut to avoid wrapping a string — delete unused code per the no-dead-code rule instead.
-- After changing templates or Python user-facing strings, run `./dev.py i18n` (extracts + compiles). **Check the diff of `locale/de/LC_MESSAGES/django.po` for `#, fuzzy` entries and for new msgids with an empty `msgstr ""`** — `makemessages` guesses a translation from a similarly-worded existing msgid when a string is new (frequently wrong — fix and un-fuzzy it), and leaves genuinely novel strings with no guess at all (empty, no warning). Both need a real German translation before committing. `en.po` msgstrs are deliberately left empty across the board — gettext falls back to the (English) msgid, which is already correct, so there's nothing to fill in there.
+## Photographic Interface (standing rules)
+The UI is a calm, assistant-style shell built on real photography. Every page renders inside `base.html`'s **scene**: a full-bleed photograph hero with the page title in the display serif, a frosted top bar, and the content card overlapping the photo, while a blurred wash of the same photo sits behind the whole page.
+- **Titles go in the hero.** Set `{% block page_title %}`/`{% block page_subtitle %}`; never open a page's content with its own `<h1>`. Both blocks pass through `strip_emoji`.
+- **No emoji in the UI.** Use words, or `{% icon "pencil" %}` (`templatetags/icons.py`) for a control whose only content is a glyph, and keep its `title`/`aria-label`. Add a path to `icons.PATHS` rather than reaching for an emoji.
+- **Only real photographs and footage**: no illustrations, AI images or stock vectors. Everything is self-hosted under `static/scenes/` (no hotlinking; the app makes no outbound calls), produced with `scripts/scene_media.py`, and credited in **both** `my_practice/scenes.py` and `static/scenes/CREDITS.md`. `my_practice/tests/test_scenes.py` fails on a missing file, a missing credit, an orphaned file, or footage whose `Scene.video` flag doesn't match.
+- **Which photo a page gets**: `scenes.scene_for()` maps URL-name prefixes (`SECTION_PREFIXES`) to scenes; the dashboard and sign-in follow the time of day (dawn/day/dusk/night in `TIME_ZONE`). A new section that should look different needs a prefix entry, not template code.
+- **Footage**: `scripts/scene_media.py video <key> clip.mp4`, then set `video=True` on the scene. The `<video>` only gets its `src` from `base.html`'s script when ambient motion is on, so reduced-motion users never download it. The photo stays as poster and fallback.
+- **Colour on photographs** uses the theme-independent `--color-on-photo*` tokens (light text on a darkened image in both themes); content surfaces use `--color-glass*`/`--color-surface`. Never put theme-dependent text tokens directly on a photo.
+- **Motion** (the slow drift, card rise-in, and any footage) must stop under `prefers-reduced-motion` unless the user switched motion on with the top-bar toggle (`html[data-motion]`).
+- **The dashboard briefing** (`utils/briefing.py`) speaks in the assistant's voice and shows client codes only. The hero isn't covered by privacy mode, so a name must never reach it.
 
 See [PROJECTS.md](PROJECTS.md) for numbered projects with status tracking (TODO/WIP/DONE).
 
@@ -74,9 +79,7 @@ See [PROJECTS.md](PROJECTS.md) for numbered projects with status tracking (TODO/
 ./dev.py restart --force    # Full restart (reloads .env)
 ./dev.py lint               # Run ruff format + ruff lint only (fast, no tests)
 ./dev.py quality            # Run lint + Tailwind CSS build + full test suite (pre-release)
-./dev.py i18n               # Extract + compile translation strings
 ./dev.py install-hooks      # Install the pre-commit hooks (once per clone)
-./dev.py smoke [vX.Y.Z]     # Boot a released GHCR image with throwaway DB, verify, tear down
 ```
 
 ### Git workflow
@@ -93,18 +96,10 @@ Install the hooks once per clone: `pip install pre-commit && ./dev.py install-ho
 Full contract: [docs/guides/CODEBASE_STANDARDS.md](docs/guides/CODEBASE_STANDARDS.md) § Repository Tooling & Guardrails.
 
 ### Release process
-Full checklist: [docs/operations/RELEASE.md](docs/operations/RELEASE.md). Summary:
+Full checklist: [docs/operations/RELEASE.md](docs/operations/RELEASE.md). The image is built locally; nothing is published to or pulled from a registry.
 
-1. **Open a version-bump PR** — bump all three version strings (they must match) plus the docs pass, same as any other change (branch-protected `main`):
-   - `app/my_practice/version.py` — `VERSION = "vX.Y.Z"`
-   - `prod.py` — `VERSION = "vX.Y.Z"`
-   - `docker-compose.prod.yml` — `image: ghcr.io/dholbach/my-practice:vX.Y.Z`
-   - Docs pass: `docs/CHANGELOG.md`, `docs/FEATURES.md`, `PROJECTS.md`
-2. **Merge PR**, then tag and create a GitHub release with real highlights (not just a pointer to CHANGELOG.md — required for `./prod.py update`):
-   ```bash
-   git tag vX.Y.Z && git push origin vX.Y.Z
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes "<highlights pulled from docs/CHANGELOG.md>"
-   ```
+1. Bump all three version strings (they must match): `app/my_practice/version.py`, `prod.py` (`VERSION`), and `docker-compose.prod.yml` (`image: my-practice-usa:vX.Y.Z`), plus the docs pass (`docs/CHANGELOG.md`, `docs/FEATURES.md`, `PROJECTS.md`).
+2. Merge, tag `vX.Y.Z`, then on the practice machine run `./prod.py update` (`git pull --ff-only` + rebuild + restart).
 
 ### Testing Strategy
 
@@ -213,7 +208,7 @@ here; the worked example and the failure it came from are in
 | **M-PAT-02** Date filters | Always go through `RevenueCalculator`; never hand-build `invoice_date__year` / `status` filters. |
 | **M-PAT-03** Charts in hidden tabs | A chart drawn in a `display: none` container gets zero height. Redraw from `chartRegistry` 50–100 ms after the tab becomes visible. |
 | **M-PAT-04** CSS | No inline `<style>`, no new `.css` files — everything in `tailwind.css`. Full rule in § CSS Architecture below. |
-| **M-PAT-05** Working days | `DateRangeHelper.count_working_days` with Berlin holidays; never `round(days * 5/7)`. See § Working-Day Calculations below. |
+| **M-PAT-05** Working days | `DateRangeHelper.count_working_days` with US federal holidays; never `round(days * 5/7)`. See § Working-Day Calculations below. |
 | **M-PAT-06** Form draft guard | Opt long-text forms in with `data-draft-guard` plus the three `data-draft-*` labels; reuse those msgids verbatim rather than minting new ones. |
 | **M-PAT-07** CSS tokens | Use real `--color-*` tokens (grep the `@theme` block); never invent a name, never hardcode hex on a semantic class. |
 | **M-PAT-08** Privacy mode | `.sensitive-data` for a name beside its code, `\|privacy_name` where there is no code, nothing for codes / inputs / `<option>` text. |
@@ -252,14 +247,16 @@ from my_practice.models import Client
 | Filenames (templates, CSS, JS, scripts) | **EN** | Always; rename German ones as you touch them |
 | URL slugs | **EN** | Always; 4 German slugs remain (tracked in P-038) |
 | Docs (.md files, guides, architecture) | **EN** | Always; migrate German docs as you touch them |
-| UI/app text (labels, buttons, messages, verbose_names) | **EN msgid, DE msgstr** | Wrapped via Django i18n (P-039, done) — see i18n Conventions above |
-| model `verbose_name` / `help_text` | **EN msgid, DE msgstr** | Wrapped via Django i18n (P-039, done) |
+| UI/app text (labels, buttons, messages, verbose_names) | **EN** | Wrapped in `{% trans %}`/`gettext`, see US Locale above |
+| model `verbose_name` / `help_text` | **EN** | Wrapped in `gettext_lazy` |
 
-**Practical rule for day-to-day work:** new code is always English. When editing a file that has German comments or German-named identifiers, translate them in the same commit — don't leave a file half-migrated. New user-facing strings are always wrapped with an English msgid (see i18n Conventions above), never written as literal German or literal English directly in a template/view.
+**Practical rule for day-to-day work:** new code is always English. When editing a file that still has German comments or identifiers, translate them in the same commit.
 
 ## Conventions
-- **UI Language**: bilingual (German/English) via Django i18n — see i18n Conventions and Language Policy above. German is the default/primary language (`LANGUAGE_CODE = "de-de"`)
-- **Currency Format**: German standard with non-breaking space ("2680 €")
+- **UI Language**: English only (`LANGUAGE_CODE = "en-us"`), see US Locale above
+- **Currency Format**: USD, `$1,234.56` (`format_currency`)
+- **Date Format**: `DD MMM YY` (`05 Mar 26`)
+- **Typography**: Newsreader (display serif: titles, greeting, figures) and Hanken Grotesk (UI), self-hosted in `static/fonts/`
 - **Code Style**: Black formatting, isort for imports
 - **Tests**: Place in `tests/test_<module>.py`, use Django TestCase
 - **Client Privacy**: Always use client codes in templates, respect privacy mode
@@ -372,12 +369,12 @@ rationale: [ADR-0006](docs/decisions/ADR-0006-minimum-supported-window-width.md)
 
 ## Working-Day Calculations (M-PAT-05)
 
-**Always use `DateRangeHelper.count_working_days` with Berlin public holidays. Never the `round(days * 5/7)` approximation** — it diverges badly over Easter and Christmas, producing materially wrong utilisation figures.
+**Always use `DateRangeHelper.count_working_days` with US federal holidays. Never the `round(days * 5/7)` approximation**: it diverges around holiday weeks (Thanksgiving, Christmas), producing materially wrong utilization figures.
 
 - `count_working_days(start, end)` is inclusive at both ends, Mon–Fri, no holidays.
 - Pass a holiday set to exclude them; build it **once per function call**, not inside a loop.
 - For "days elapsed before a milestone" (half-open `[start, end)`), pass `end - timedelta(days=1)` so a same-day event counts as 0.
-- `berlin_public_holidays(year)` lives in `utils/practice_days.py` and is **not** re-exported from `utils/__init__.py` — import it directly.
+- `us_federal_holidays(year)` (observed dates: Saturday → Friday, Sunday → Monday) lives in `utils/practice_days.py` and is **not** re-exported from `utils/__init__.py`; import it directly.
 
 Worked example: [CODEBASE_STANDARDS.md](docs/guides/CODEBASE_STANDARDS.md) § Patterns Reference.
 

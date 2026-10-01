@@ -62,6 +62,8 @@ class PracticeTodo(TimestampedModel):
         RECURRING_REVIEW = "recurring_review"
         OPERATIONAL_CHECKLIST = "operational_checklist"
         BANK_UNMATCHED = "bank_unmatched"
+        LICENSE_RENEWAL = "license_renewal"
+        PORTAL_UPLOADS = "portal_uploads"
 
     TASK_TYPE_CHOICES = [
         (TaskType.MANUAL, _("Manual")),
@@ -72,6 +74,8 @@ class PracticeTodo(TimestampedModel):
         (TaskType.RECURRING_REVIEW, _("Recurring review")),
         (TaskType.OPERATIONAL_CHECKLIST, _("Operational checklist")),
         (TaskType.BANK_UNMATCHED, _("Unmatched bank transactions")),
+        (TaskType.LICENSE_RENEWAL, _("License renewal")),
+        (TaskType.PORTAL_UPLOADS, _("Client uploads to review")),
     ]
 
     # Aggregate task types carry no related_object — one row stands for a whole
@@ -80,6 +84,7 @@ class PracticeTodo(TimestampedModel):
     # which is what _RELATED_OBJECT_URL_NAMES above covers.
     TASK_TYPE_URL_NAMES: dict[str, str] = {
         TaskType.BANK_UNMATCHED: "bank_import",
+        TaskType.PORTAL_UPLOADS: "portal_uploads",
     }
 
     CATEGORY_CHOICES = [
@@ -205,6 +210,8 @@ class PracticeTodo(TimestampedModel):
                 reverse("session_log_create", kwargs={"pk": session.client_id})
                 + f"?session_date={session.session_date.isoformat()}"
             )
+        if model_name == "providerlicense":
+            return reverse("license_list")
         if model_name == "supervisionitem":
             # SupervisionItem has no page of its own — it lives (and gets
             # toggled) on its client's detail page.

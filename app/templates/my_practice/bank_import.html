@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% load static i18n %}
+{% load payment_tags %}
 
 {% block title %}{% trans "Bank import" %}{% endblock %}
+{% block page_title %}{% trans "Bank import" %}{% endblock %}
+{% block page_subtitle %}{% trans "Upload a CSV export from your bank" %}{% endblock %}
 
 {% block content %}
 <div class="bank-import-page">
     <div class="flex-between mb-4">
-        <h1 class="mb-0">💳 {% trans "Bank import" %}</h1>
-        <a href="{% url 'bank_review' %}" class="btn btn-secondary">
-            📋 {% trans "Go to review" %}
-        </a>
+        <div class="plaid-actions">
+            <a href="{% url 'plaid_home' %}" class="btn btn-secondary">
+                {% trans "Bank connection (Plaid)" %}
+            </a>
+            <a href="{% url 'bank_review' %}" class="btn btn-secondary">
+                {% trans "Go to review" %}
+            </a>
+        </div>
     </div>
 
     <!-- Upload Form -->
@@ -55,7 +62,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary upload-submit-btn">
-                📤 {% trans "Import & process" %}
+                {% trans "Import & process" %}
             </button>
         </form>
     </div>
@@ -64,10 +71,10 @@
     <div class="format-info-box">
         <h3 class="format-info-box__title">ℹ️ {% trans "Supported formats" %}</h3>
         <ul class="format-info-box__list">
-            <li>{% trans "CSV bank statement (semicolon-separated)" %}</li>
+            <li>{% trans "CSV bank statement — columns are set in practice settings (default: Date, Description, Amount)" %}</li>
             <li>{% trans "UTF-8 encoding" %}</li>
-            <li>{% trans "German decimal format (90,00 €)" %}</li>
-            <li>{% trans "Date format: DD.MM.YYYY" %}</li>
+            <li>{% trans "US decimal format (1,090.00); negative or (parenthesized) amounts are money out" %}</li>
+            <li>{% trans "Date format: MM/DD/YYYY or YYYY-MM-DD" %}</li>
         </ul>
     </div>
 
@@ -91,18 +98,18 @@
                     <tbody>
                         {% for trans in recent_transactions %}
                         <tr>
-                            <td>{{ trans.transaction_date|date:"d.m.Y" }}</td>
+                            <td>{{ trans.transaction_date|date:"d M y" }}</td>
                             <td><span class="sensitive-data">{{ trans.payer_name }}</span></td>
                             <td class="td-reference">
                                 {{ trans.reference }}
                             </td>
                             <td class="td-amount {% if trans.amount > 0 %}text-success{% else %}text-secondary{% endif %}">
-                                {{ trans.amount|floatformat:2 }}&nbsp;€
+                                {{ trans.amount|currency }}
                             </td>
                             <td>
                                 {% if trans.match_confidence == 'exact' %}
                                     <span class="import-badge import-badge--matched">
-                                        ✓ {% trans "Exact" %}
+                                        {% trans "Exact" %}
                                     </span>
                                 {% elif trans.match_confidence == 'fuzzy' %}
                                     <span class="import-badge import-badge--fuzzy">
@@ -110,19 +117,19 @@
                                     </span>
                                 {% elif trans.match_confidence == 'manual' %}
                                     <span class="import-badge import-badge--manual">
-                                        ✍️ {% trans "Manual" %}
+                                        {% trans "Manual" %}
                                     </span>
                                 {% elif trans.match_confidence == 'ignored' %}
                                     <span class="import-badge import-badge--neutral">
-                                        ➖ {% trans "Ignored" %}
+                                        {% trans "Ignored" %}
                                     </span>
                                 {% elif trans.match_confidence == 'auto-withdrawal' %}
                                     <span class="import-badge import-badge--neutral">
-                                        💸 {% trans "Withdrawal" %}
+                                        {% trans "Withdrawal" %}
                                     </span>
                                 {% elif trans.match_confidence == 'auto-expense' %}
                                     <span class="import-badge import-badge--neutral">
-                                        📋 {% trans "Expense" %}
+                                        {% trans "Expense" %}
                                     </span>
                                 {% else %}
                                     <a href="{% url 'bank_review' %}#trans-{{ trans.id }}" class="import-badge import-badge--open">

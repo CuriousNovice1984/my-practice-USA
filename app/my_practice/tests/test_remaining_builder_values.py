@@ -81,10 +81,10 @@ class ClientDetailStatsTest(BuilderTestBase):
         self.practice.allows_free_form_items = True
         self.practice.save(update_fields=["allows_free_form_items"])
         self.service_type = ServiceType.objects.create(
-            practice=self.practice, code="EINZEL", name="E", name_de="E", name_en="E"
+            practice=self.practice, code="EINZEL", name="E"
         )
         self.cancel_type = ServiceType.objects.create(
-            practice=self.practice, code="CANCEL", name="A", name_de="A", name_en="A"
+            practice=self.practice, code="CANCEL", name="A"
         )
         self.invoice = self.make_invoice(invoice_date=date(YEAR, 3, 10))
 

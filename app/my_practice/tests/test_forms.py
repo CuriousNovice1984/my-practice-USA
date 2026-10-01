@@ -29,7 +29,6 @@ class InvoiceFormTestCase(TestCase):
             client_code="TC",
             full_name="Test Client",
             email="test@example.com",
-            language="de",
             practice=self.practice,
         )
 

@@ -1,8 +1,34 @@
 """
-Middleware for development cache control and practice scoping
+Middleware for development cache control, practice scoping and the public
+portal boundary
 """
 
+from django.http import Http404
 from django.utils.deprecation import MiddlewareMixin
+
+# The only paths reachable from the public internet (Tailscale Funnel)
+PUBLIC_PATH_PREFIXES = ("/portal/", "/static/")
+
+
+class FunnelPathGuardMiddleware:
+    """
+    Refuse anything but the client portal for requests arriving via Tailscale Funnel.
+
+    Funnel marks the requests it proxies from the internet with a
+    ``Tailscale-Funnel-Request`` header. The documented setup only mounts
+    /portal/ and /static/ on the Funnel port anyway; this keeps a mistaken
+    mount (say, ``/``) from exposing the login page and the rest of the app.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if "Tailscale-Funnel-Request" in request.headers and not request.path.startswith(
+            PUBLIC_PATH_PREFIXES
+        ):
+            raise Http404
+        return self.get_response(request)
 
 
 class NoCacheMiddleware(MiddlewareMixin):

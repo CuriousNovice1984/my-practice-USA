@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Callable
 
-from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
 from django.http import HttpRequest, HttpResponse
@@ -16,19 +15,18 @@ from django.views import View
 
 from ..email_forms import InvoiceEmailForm
 from ..models import Client, Invoice, Practice
+from ..models.portal import PortalLink
 from ..utils.email_utils import (
-    get_contract_email_content,
-    get_intake_email_content,
     get_invoice_email_content,
-    get_questionnaire_email_content,
+    get_portal_link_email_content,
     get_questionnaire_pdf_email_content,
 )
+from ..utils.formatting import format_currency
+from ..utils.portal import portal_url
 from ..utils.questionnaire_content import QuestionnaireNotFoundError, load_questionnaire
 from .api_views import (
     _prepare_practice_images,
     _render_invoice_pdf_bytes,
-    generate_contract_pdf_bytes,
-    generate_intake_form_pdf_bytes,
     generate_questionnaire_pdf_bytes,
 )
 
@@ -329,7 +327,7 @@ class SendInvoiceEmailView(View):
             messages.info(
                 request,
                 _("Invoice date was updated to %(date)s")
-                % {"date": invoice.invoice_date.strftime("%d.%m.%Y")},
+                % {"date": invoice.invoice_date.strftime("%d %b %y")},
             )
 
         try:
@@ -340,11 +338,7 @@ class SendInvoiceEmailView(View):
             messages.error(request, _("Error creating the PDF: %(error)s") % {"error": e})
             return redirect("invoice_detail", pk=invoice.id)
 
-        filename = (
-            f"Rechnung_{invoice.invoice_number}.pdf"
-            if invoice.client.language == "de"
-            else f"Invoice_{invoice.invoice_number}.pdf"
-        )
+        filename = f"Invoice_{invoice.invoice_number}.pdf"
         msg = EmailMessage(
             subject=subject,
             body=body,
@@ -362,7 +356,7 @@ class SendInvoiceEmailView(View):
         return _dispatch_email(
             request,
             msg,
-            success_html=_success_html(_("✅ Invoice successfully sent to {recipient}"), recipient),
+            success_html=_success_html(_("Invoice successfully sent to {recipient}"), recipient),
             redirect_url=reverse("invoice_detail", kwargs={"pk": invoice.id}),
             on_success=_mark_invoice_sent,
         )
@@ -418,7 +412,7 @@ class SendPaymentReminderView(BaseClientEmailView):
         }
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Payment reminder sent to {recipient}"), recipient)
+        return _success_html(_("Payment reminder sent to {recipient}"), recipient)
 
     def _build_email_content(
         self, client: Client, practice: Practice, open_invoices: list[Invoice]
@@ -426,71 +420,31 @@ class SendPaymentReminderView(BaseClientEmailView):
         """Build default subject and body for the payment reminder."""
         total = sum(float(inv.total) for inv in open_invoices)
         count = len(open_invoices)
-        lang = client.language  # 'de' or 'en'
+        invoice_word = "invoice" if count == 1 else "invoices"
 
-        lines = []
-
-        # Invoice table (shared by both languages)
         max_num_len = max(len(inv.invoice_number) for inv in open_invoices)
         invoice_rows = []
         for inv in open_invoices:
             num = inv.invoice_number.ljust(max_num_len)
-            date_str = inv.invoice_date.strftime("%d.%m.%Y")
-            invoice_rows.append(f"  {num}  {date_str}  {float(inv.total):,.2f} €".replace(",", "."))
+            date_str = inv.invoice_date.strftime("%d %b %y")
+            invoice_rows.append(f"  {num}  {date_str}  {format_currency(inv.total)}")
 
-        if lang == "en":
-            invoice_word = "invoice" if count == 1 else "invoices"
-            lines.append(client.salutation + "," if client.salutation else "Hi,")
-            lines.append("")
-            lines.append(
-                f"Can you take a look and see if you received {'this invoice' if count == 1 else 'these invoices'}?"
-            )
-            lines.append("")
-            lines.extend(invoice_rows)
-            lines.append("")
-            lines.append(f"Total outstanding: {total:,.2f} €".replace(",", "."))
-            lines.append("")
-            lines.append(
-                "I'm happy to re-send if they got lost in transit. "
-                "If I made a mistake and missed your payment, please disregard. "
-                "Otherwise please transfer the amount to the usual bank account:"
-            )
-            if practice.iban:
-                lines.append(f"  {practice.bank_name}: {practice.iban}")
-                if practice.bic:
-                    lines.append(f"  BIC: {practice.bic}")
-            lines.append("")
-            lines.append("All the best,")
-            lines.append("-- ")
-            lines.append(practice.email_signature)
-            subject = f"Payment Reminder – {count} outstanding {invoice_word}"
-        else:
-            # German (default)
-            invoice_word_plural = "Rechnungen" if count != 1 else "Rechnung"
-            lines.append(client.salutation + "," if client.salutation else "Hallo,")
-            lines.append("")
-            lines.append(
-                f"kannst du mal schauen, ob du {'diese Rechnungen' if count != 1 else 'diese Rechnung'} erhalten hast?"
-            )
-            lines.append("")
-            lines.extend(invoice_rows)
-            lines.append("")
-            lines.append(f"Gesamtbetrag offen: {total:,.2f} €".replace(",", "."))
-            lines.append("")
-            lines.append(
-                "Ich schicke sie gerne noch einmal, falls sie verloren gegangen sind. "
-                "Falls ich einen Fehler gemacht habe und deine Zahlung übersehen habe, bitte einfach ignorieren. "
-                "Ansonsten bitte den Betrag auf das übliche Konto überweisen:"
-            )
-            if practice.iban:
-                lines.append(f"  {practice.bank_name}: {practice.iban}")
-                if practice.bic:
-                    lines.append(f"  BIC: {practice.bic}")
-            lines.append("")
-            lines.append("Liebe Grüße,")
-            lines.append("-- ")
-            lines.append(practice.email_signature)
-            subject = f"Zahlungserinnerung – {count} offene {invoice_word_plural}"
+        lines = [
+            client.salutation + "," if client.salutation else "Hi,",
+            "",
+            f"Can you take a look and see if you received {'this invoice' if count == 1 else 'these invoices'}?",
+            "",
+            *invoice_rows,
+            "",
+            f"Total outstanding: {format_currency(total)}",
+            "",
+            "I'm happy to re-send if they got lost in transit. "
+            "If I made a mistake and missed your payment, please disregard.",
+        ]
+        if practice.payment_instructions:
+            lines += ["", "You can pay by:", practice.payment_instructions]
+        lines += ["", "All the best,", "-- ", practice.email_signature]
+        subject = f"Payment Reminder – {count} outstanding {invoice_word}"
 
         return subject, "\n".join(lines)
 
@@ -501,41 +455,20 @@ class SendCancellationEmailView(BaseClientEmailView):
     template_name = "my_practice/send_cancellation_email.html"
 
     def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
-        lang = client.language
         first_name = client.full_name.split()[0] if client.full_name else client.client_code
-        if client.salutation:
-            greeting = client.salutation + ","
-        elif lang == "en":
-            greeting = f"Dear {first_name},"
-        else:
-            greeting = f"Liebe/r {first_name},"
-
-        if lang == "en":
-            subject = "Cancellation of tomorrow's session"
-            lines = [
-                greeting,
-                "",
-                (
-                    "Unfortunately I will have to cancel tomorrow's session due to illness. "
-                    "I expect to be well again the following week. "
-                    "We can already arrange a new appointment."
-                ),
-                "",
-                "All the best,",
-            ]
-        else:
-            subject = "Absage unserer morgigen Sitzung"
-            lines = [
-                greeting,
-                "",
-                (
-                    "Leider werde ich unsere morgige Sitzung aus Krankheitsgründen absagen müssen. "
-                    "Ich denke aber, dass ich in der darauffolgenden Woche wieder gesund sein werde. "
-                    "Wir können auch gleich schon einen neuen Termin ausmachen."
-                ),
-                "",
-                "Liebe Grüße und alles Gute,",
-            ]
+        greeting = client.salutation + "," if client.salutation else f"Dear {first_name},"
+        subject = "Cancellation of tomorrow's session"
+        lines = [
+            greeting,
+            "",
+            (
+                "Unfortunately I will have to cancel tomorrow's session due to illness. "
+                "I expect to be well again the following week. "
+                "We can already arrange a new appointment."
+            ),
+            "",
+            "All the best,",
+        ]
 
         if practice.email_signature:
             lines += ["-- ", practice.email_signature]
@@ -543,126 +476,44 @@ class SendCancellationEmailView(BaseClientEmailView):
         return subject, "\n".join(lines)
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Cancellation sent to {recipient}"), recipient)
+        return _success_html(_("Cancellation sent to {recipient}"), recipient)
 
 
-class SendQuestionnaireEmailView(BaseClientEmailView):
-    """Send the Anamnesebogen .docx as an email attachment with editable body."""
+class SendPortalLinkEmailView(BaseClientEmailView):
+    """Email the client their most recent active forms-portal link."""
 
-    template_name = "my_practice/send_questionnaire_email.html"
+    template_name = "my_practice/send_portal_link_email.html"
 
-    def _get_docx(self, lang: str) -> tuple[str, bytes] | None:
-        """Return (filename, bytes) for the docx, or None if not found."""
-        docx_name = "Anamnesebogen.docx" if lang == "de" else "Anamnesebogen (eng).docx"
-        docx_path = settings.MY_PRACTICE_DATA_DIR / "documents" / docx_name
-        if not docx_path.exists():
-            return None
-        return docx_name, docx_path.read_bytes()
+    def _active_link(self, client: Client) -> PortalLink | None:
+        return next(
+            (
+                link
+                for link in client.portal_links.filter(revoked_at__isnull=True)
+                if link.is_active
+            ),
+            None,
+        )
 
     def extra_get_checks(
         self, request: HttpRequest, client: Client, practice: Practice, pk: int
     ) -> HttpResponse | None:
-        lang = client.language or "de"
-        if self._get_docx(lang) is None:
-            docx_name = "Anamnesebogen.docx" if lang == "de" else "Anamnesebogen (eng).docx"
-            messages.error(
-                request,
-                _(
-                    "File not found: %(path)s. "
-                    "Please place the .docx file under MY_PRACTICE_DATA_DIR/documents/."
-                )
-                % {"path": settings.MY_PRACTICE_DATA_DIR / "documents" / docx_name},
-            )
+        if self._active_link(client) is None:
+            messages.error(request, _("Create an upload link first."))
             return self._redirect_to_detail(pk)
         return None
 
     def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
-        return get_questionnaire_email_content(client, practice)
-
-    def get_extra_context(self, client: Client, practice: Practice) -> dict:
-        result = self._get_docx(client.language or "de")
-        return {"docx_name": result[0] if result else ""}
-
-    def get_attachment(self, client: Client, practice: Practice) -> tuple[str, bytes, str] | None:
-        lang = client.language or "de"
-        result = self._get_docx(lang)
-        if result is None:
-            docx_name = "Anamnesebogen.docx" if lang == "de" else "Anamnesebogen (eng).docx"
-            raise FileNotFoundError(
-                _("File not found: %(path)s.")
-                % {"path": settings.MY_PRACTICE_DATA_DIR / "documents" / docx_name}
-            )
-        docx_name, docx_bytes = result
-        return (
-            docx_name,
-            docx_bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        link = self._active_link(client)
+        assert link is not None  # guarded by extra_get_checks
+        return get_portal_link_email_content(
+            client,
+            practice,
+            portal_url(self.request, link),
+            link.expires_at.astimezone(timezone.get_current_timezone()).strftime("%d %b %y"),
         )
 
-    def after_send(self, client: Client) -> None:
-        client.questionnaire_sent_date = timezone.localdate()
-        client.save(update_fields=["questionnaire_sent_date"])
-
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Questionnaire sent to {recipient}"), recipient)
-
-
-class SendContractEmailView(BaseClientEmailView):
-    """Email the pre-filled Behandlungsvertrag PDF to the client for signing."""
-
-    template_name = "my_practice/send_contract_email.html"
-
-    def _get_filename(self, client: Client) -> str:
-        lang = client.language or "de"
-        safe_code = client.client_code.replace("/", "-")
-        return (
-            f"Behandlungsvertrag_{safe_code}.pdf"
-            if lang == "de"
-            else f"TreatmentContract_{safe_code}.pdf"
-        )
-
-    def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
-        return get_contract_email_content(client, practice)
-
-    def get_extra_context(self, client: Client, practice: Practice) -> dict:
-        return {"filename": self._get_filename(client)}
-
-    def get_attachment(self, client: Client, practice: Practice) -> tuple[str, bytes, str] | None:
-        lang = client.language or "de"
-        pdf_bytes, _filename = generate_contract_pdf_bytes(client, practice, lang)
-        return (self._get_filename(client), pdf_bytes, "application/pdf")
-
-    def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Treatment contract sent to {recipient}"), recipient)
-
-
-class SendIntakeFormEmailView(BaseClientEmailView):
-    """Email the pre-filled, fillable Aufnahmebogen PDF to the client."""
-
-    template_name = "my_practice/send_intake_form_email.html"
-
-    def _get_filename(self, client: Client) -> str:
-        lang = client.language or "de"
-        safe_code = client.client_code.replace("/", "-")
-        return f"Aufnahmebogen_{safe_code}.pdf" if lang == "de" else f"IntakeForm_{safe_code}.pdf"
-
-    def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
-        return get_intake_email_content(client, practice)
-
-    def get_extra_context(self, client: Client, practice: Practice) -> dict:
-        return {"filename": self._get_filename(client)}
-
-    def get_attachment(self, client: Client, practice: Practice) -> tuple[str, bytes, str] | None:
-        lang = client.language or "de"
-        pdf_bytes, _filename = generate_intake_form_pdf_bytes(client, practice, lang)
-        return (self._get_filename(client), pdf_bytes, "application/pdf")
-
-    def after_send(self, client: Client) -> None:
-        client.intake_sent_date = timezone.localdate()
-        client.save(update_fields=["intake_sent_date"])
-
-    def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Intake form sent to {recipient}"), recipient)
+        return _success_html(_("Upload link sent to {recipient}"), recipient)
 
 
 class SendQuestionnairePdfEmailView(BaseClientEmailView):
@@ -692,10 +543,9 @@ class SendQuestionnairePdfEmailView(BaseClientEmailView):
         return None
 
     def _get_filename(self, client: Client) -> str:
-        lang = client.language or "de"
         content = load_questionnaire(self.questionnaire_code)
         label = content.filename_label or self.questionnaire_code.upper()
-        return f"{label}_{lang}.pdf"
+        return f"{label}.pdf"
 
     def get_default_content(self, client: Client, practice: Practice) -> tuple[str, str]:
         return get_questionnaire_pdf_email_content(client, practice)
@@ -707,11 +557,8 @@ class SendQuestionnairePdfEmailView(BaseClientEmailView):
         }
 
     def get_attachment(self, client: Client, practice: Practice) -> tuple[str, bytes, str] | None:
-        lang = client.language or "de"
-        pdf_bytes, _filename = generate_questionnaire_pdf_bytes(
-            self.questionnaire_code, practice, lang
-        )
+        pdf_bytes, _filename = generate_questionnaire_pdf_bytes(self.questionnaire_code, practice)
         return (self._get_filename(client), pdf_bytes, "application/pdf")
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Questionnaire sent to {recipient}"), recipient)
+        return _success_html(_("Questionnaire sent to {recipient}"), recipient)

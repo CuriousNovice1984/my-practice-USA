@@ -61,7 +61,7 @@ function drawAxes(ctx, padding, chartWidth, chartHeight) {
 /**
  * Draw Y-axis labels
  */
-function drawYAxisLabels(ctx, padding, chartHeight, maxValue, suffix = '€', divisions = 4) {
+function drawYAxisLabels(ctx, padding, chartHeight, maxValue, suffix = '$', divisions = 4) {
     const textSecondary = getCSSVariable('--text-secondary', '#718096');
     ctx.fillStyle = textSecondary;
     ctx.font = '12px sans-serif';
@@ -73,8 +73,10 @@ function drawYAxisLabels(ctx, padding, chartHeight, maxValue, suffix = '€', di
 
         // Format value based on suffix
         let displayValue;
-        if (suffix === 'k€') {
-            displayValue = Math.round(value / 1000) + suffix;
+        if (suffix === 'k$') {
+            displayValue = '$' + Math.round(value / 1000) + 'k';
+        } else if (suffix === '$') {
+            displayValue = '$' + Math.round(value).toLocaleString('en-US');
         } else {
             displayValue = Math.round(value) + suffix;
         }

@@ -108,7 +108,6 @@ class ClientModelTestCase(TestCase):
         self.assertEqual(client.hourly_rate_60, Decimal("90.00"))
         self.assertEqual(client.hourly_rate_90, Decimal("130.00"))
         self.assertEqual(client.cancellation_fee, Decimal("0.00"))
-        self.assertEqual(client.language, "de")
         self.assertTrue(client.active)
         self.assertFalse(client.is_online_client)
 
@@ -179,19 +178,6 @@ class ServiceTypeModelTestCase(TestCase):
         ServiceType.objects.create(code="therapy_60", name="Session 1", practice=self.practice)
         with self.assertRaises(IntegrityError):
             ServiceType.objects.create(code="therapy_60", name="Session 2", practice=self.practice)
-
-    def test_service_type_get_name(self):
-        """Test get_name method with language fallback"""
-        st = ServiceType.objects.create(
-            code="therapy_60",
-            name="Default Name",
-            name_de="Deutsche Sitzung",
-            name_en="English Session",
-            practice=self.practice,
-        )
-        self.assertEqual(st.get_name("de"), "Deutsche Sitzung")
-        self.assertEqual(st.get_name("en"), "English Session")
-        self.assertEqual(st.get_name("fr"), "Default Name")  # Fallback
 
 
 class InvoiceModelTestCase(TestCase):
@@ -463,7 +449,7 @@ class CompanyWithdrawalModelTestCase(TestCase):
         )
         # Check it contains key info
         self.assertIn("500", str(withdrawal))
-        self.assertIn("2025", str(withdrawal))
+        self.assertIn("24 Dec 25", str(withdrawal))
 
     def test_withdrawal_ordering(self):
         """Test withdrawal ordering (newest first)"""
@@ -557,12 +543,13 @@ class TimeOffModelTestCase(TestCase):
         """Test duration_days property counts working days only, excluding public holidays"""
         timeoff = TimeOff.objects.create(
             title="Test",
-            # Dec 24 2025 is a Wednesday (workday); Dec 25/26 are Berlin public holidays
+            # Dec 24 2025 is a Wednesday (workday); Dec 25 is a federal holiday,
+            # Dec 26 (Friday) is a workday
             start_date=date(2025, 12, 24),
             end_date=date(2025, 12, 26),
             type="vacation",
         )
-        self.assertEqual(timeoff.duration_days, 1)
+        self.assertEqual(timeoff.duration_days, 2)
 
     def test_timeoff_duration_days_excludes_weekend(self):
         """Test duration_days excludes weekend days from the count"""

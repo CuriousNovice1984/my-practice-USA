@@ -50,7 +50,7 @@ class InquiryModelTestCase(TestCase):
     def test_str(self):
         inquiry = _make_inquiry(self.practice, full_name="Anna Schmidt")
         self.assertIn("Anna Schmidt", str(inquiry))
-        self.assertIn("Neu", str(inquiry))
+        self.assertIn("New", str(inquiry))
 
     def test_is_closed_converted(self):
         inquiry = _make_inquiry(self.practice, status=InquiryStatus.CONVERTED)
@@ -166,7 +166,6 @@ class InquiryCRUDViewTestCase(TestCase):
                 "email": "test@example.com",
                 "phone": "",
                 "source": "website",
-                "language": "de",
                 "status": "new",
                 "inquiry_date": "2026-03-01",
                 "notes": "",
@@ -186,7 +185,6 @@ class InquiryCRUDViewTestCase(TestCase):
                 "email": inquiry.email,
                 "phone": "",
                 "source": "referral",
-                "language": "de",
                 "status": "contacted",
                 "inquiry_date": "2026-03-01",
                 "notes": "Updated",

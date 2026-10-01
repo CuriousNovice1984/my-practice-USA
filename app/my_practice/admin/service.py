@@ -17,7 +17,7 @@ class ServiceTypeAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             gettext_lazy("Service Type"),
-            {"fields": ("code", "name", "name_de", "name_en", "practice")},
+            {"fields": ("code", "name", "practice")},
         ),
         (gettext_lazy("Settings"), {"fields": ("default_duration",)}),
     )

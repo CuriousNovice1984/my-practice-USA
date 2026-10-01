@@ -6,7 +6,7 @@
  * the transaction amount.
  *
  * Option label format (from TransactionMatchForm._invoice_label):
- *   "XX-1 (2025-12-15): 90.00 €"  (thousands separated by space, decimal by dot)
+ *   "XX-1 (2025-12-15): $1,090.00"
  */
 
 (function () {
@@ -23,19 +23,15 @@
     }
 
     function parseOptionAmount(optionText) {
-        // Extract the amount from "XX-1 (2025-12-15): 1 234.56 €"
-        const match = optionText.match(/:\s*([\d\s]+\.?\d*)\s*€\s*$/);
+        // Extract the amount from "XX-1 (2025-12-15): $1,234.56"
+        const match = optionText.match(/:\s*\$([\d,]+\.?\d*)\s*$/);
         if (!match) return NaN;
-        // Spaces are used as thousands separators – remove them before parsing
-        return parseFloat(match[1].replace(/\s/g, ""));
+        return parseFloat(match[1].replace(/,/g, ""));
     }
 
     function formatAmount(value) {
-        // Simple German-style: 1234.56 → "1.234,56"
-        return value
-            .toFixed(2)
-            .replace(".", ",")
-            .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        // 1234.56 → "$1,234.56"
+        return "$" + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
     function updateTally(select, tally, transactionAmount) {
@@ -75,7 +71,7 @@
                 const diffFormatted = formatAmount(Math.abs(total - transactionAmount));
                 const sign = total > transactionAmount ? "+" : "−";
                 icon = "⚠️";
-                extraInfo = ` — ${i18n().tallyDifference} ${sign}${diffFormatted} €`;
+                extraInfo = ` — ${i18n().tallyDifference} ${sign}${diffFormatted}`;
             }
         } else {
             icon = "📊";
@@ -86,7 +82,7 @@
             selected.length === 1 ? i18n().tallyInvoice : i18n().tallyInvoices;
         const countLabel = `${selected.length} ${noun}`;
 
-        tally.innerHTML = `${icon} <strong>${countLabel}:</strong> ${formattedTotal} €<span style="font-size:0.8em;opacity:0.85;">${extraInfo}</span>`;
+        tally.innerHTML = `${icon} <strong>${countLabel}:</strong> ${formattedTotal}<span style="font-size:0.8em;opacity:0.85;">${extraInfo}</span>`;
         tally.style.display = "block";
 
         if (matches) {

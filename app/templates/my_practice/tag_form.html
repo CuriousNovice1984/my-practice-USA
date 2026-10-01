@@ -53,7 +53,7 @@
 
         <div class="flex gap-4 mt-4">
             <button type="submit" class="btn">
-                {% if object.pk %}💾 {% trans "Save" %}{% else %}➕ {% trans "Create" %}{% endif %}
+                {% if object.pk %}{% trans "Save" %}{% else %}{% trans "Create" %}{% endif %}
             </button>
             <a href="{% if next %}{{ next }}{% else %}{% url 'tag_list' %}{% endif %}" class="btn btn-secondary">
                 {% trans "Cancel" %}

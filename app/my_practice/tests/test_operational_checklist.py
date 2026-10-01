@@ -94,11 +94,11 @@ class ChecklistItemPauseIsActiveTests(TestCase):
 
     def test_str_indefinite(self):
         pause = self._make_pause(paused_until=None)
-        self.assertIn("unbegrenzt", str(pause))
+        self.assertIn("indefinite", str(pause))
 
     def test_str_with_date(self):
         pause = self._make_pause(paused_until=date(2026, 6, 15))
-        self.assertIn("15.06.2026", str(pause))
+        self.assertIn("15 Jun 26", str(pause))
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ class OperationalChecklistViewTests(TestCase):
     def test_monthly_checklist_renders(self):
         resp = self.http.get(reverse("checklist", kwargs={"checklist_type": "monthly"}))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "Monatlicher Restore-Test")
+        self.assertContains(resp, "Monthly restore test")
 
     def test_items_have_pause_annotation(self):
         """Context items should have 'pause' key."""
@@ -190,7 +190,7 @@ class OperationalChecklistViewTests(TestCase):
         )
         checklist.mark_complete(notes="Done")
         resp = self.http.get(reverse("checklist", kwargs={"checklist_type": "monthly"}))
-        self.assertContains(resp, "Abgeschlossen am")
+        self.assertContains(resp, "Completed on")
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +233,7 @@ class ChecklistCompleteViewTests(TestCase):
             follow=True,
         )
         messages = list(resp.context["messages"])
-        self.assertTrue(any("bereits" in str(m) for m in messages))
+        self.assertTrue(any("already" in str(m) for m in messages))
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +300,7 @@ class ChecklistPauseViewTests(TestCase):
             follow=True,
         )
         messages = list(resp.context["messages"])
-        self.assertTrue(any("Unbekanntes" in str(m) for m in messages))
+        self.assertTrue(any("Unknown checklist item" in str(m) for m in messages))
         self.assertEqual(ChecklistItemPause.objects.count(), 0)
 
     def test_unpause_deletes_record(self):

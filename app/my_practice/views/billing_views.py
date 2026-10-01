@@ -204,24 +204,27 @@ def _determine_client_billing_status(
     pending_count: int,
     cancelled_billed_count: int,
 ) -> tuple[str, str, str]:
-    """Return (status, label, icon) for a client row in the billing overview."""
+    """Return (status, label, icon name) for a client row in the billing overview.
+
+    The icon name is a key of templatetags/icons.py PATHS.
+    """
     if cancelled_billed_count > 0:
-        return "warning", _("Cancelled session billed"), "🚫"
+        return "warning", _("Cancelled session billed"), "x"
     if pending_count > 0:
-        return "warning", _("Appointments pending"), "⚠️"
+        return "warning", _("Appointments pending"), "alert"
     if unbilled_count > 0:
-        return "warning", _("Not billed"), "📝"
+        return "warning", _("Not billed"), "note"
     if not client_invoices:
-        return "ok", _("OK"), "✅"
+        return "ok", _("OK"), "check"
 
     statuses = {i.status for i in client_invoices}
     if statuses == {Invoice.Status.DRAFT}:
-        return "draft", _("Draft"), "📄"
+        return "draft", _("Draft"), "file"
     if Invoice.Status.SENT in statuses:
-        return "sent", _("Sent"), "📤"
+        return "sent", _("Sent"), "mail"
     if statuses == {Invoice.Status.PAID}:
-        return "ok", _("Paid"), "✅"
-    return "ok", _("OK"), "✅"
+        return "ok", _("Paid"), "check"
+    return "ok", _("OK"), "check"
 
 
 @login_required

@@ -18,6 +18,39 @@ urlpatterns = [
         name="practice_management",
     ),
     path("practice/create/", views.PracticeCreateView.as_view(), name="practice_create"),
+    path("practice/licenses/", views.license_list, name="license_list"),
+    # Client forms portal — public (token-protected, no login)
+    path("portal/<str:token>/", views.portal_home, name="portal_home"),
+    path(
+        "portal/<str:token>/forms/<int:form_id>/",
+        views.portal_form_download,
+        name="portal_form_download",
+    ),
+    # Client forms portal — staff
+    path("practice/portal-forms/", views.portal_forms, name="portal_forms"),
+    path(
+        "practice/portal-forms/<int:pk>/toggle/",
+        views.portal_form_toggle,
+        name="portal_form_toggle",
+    ),
+    path(
+        "practice/portal-forms/<int:pk>/delete/",
+        views.portal_form_delete,
+        name="portal_form_delete",
+    ),
+    path("practice/portal-uploads/", views.portal_uploads, name="portal_uploads"),
+    path(
+        "practice/portal-uploads/<int:pk>/reviewed/",
+        views.portal_upload_mark_reviewed,
+        name="portal_upload_mark_reviewed",
+    ),
+    path("clients/<int:pk>/portal-link/", views.portal_link_create, name="portal_link_create"),
+    path(
+        "clients/<int:pk>/portal-link/email/",
+        views.SendPortalLinkEmailView.as_view(),
+        name="send_portal_link_email",
+    ),
+    path("portal-links/<int:pk>/revoke/", views.portal_link_revoke, name="portal_link_revoke"),
     path(
         "practice/<slug:slug>/edit/",
         views.PracticeUpdateView.as_view(),
@@ -79,23 +112,6 @@ urlpatterns = [
     ),
     path("invoices/<int:pk>/delete/", views.invoice_delete, name="invoice_delete"),
     path("invoices/<int:pk>/pdf/", views.invoice_pdf, name="invoice_pdf"),
-    path("clients/<int:pk>/contract-pdf/", views.contract_pdf, name="contract_pdf"),
-    path(
-        "clients/<int:pk>/send-contract/",
-        views.SendContractEmailView.as_view(),
-        name="send_contract_email",
-    ),
-    path("clients/<int:pk>/intake-form-pdf/", views.intake_form_pdf, name="intake_form_pdf"),
-    path(
-        "clients/<int:pk>/send-intake-form/",
-        views.SendIntakeFormEmailView.as_view(),
-        name="send_intake_form_email",
-    ),
-    path(
-        "clients/<int:pk>/send-questionnaire/",
-        views.SendQuestionnaireEmailView.as_view(),
-        name="send_questionnaire_docx",
-    ),
     path("questionnaires/<str:code>/pdf/", views.questionnaire_pdf, name="questionnaire_pdf"),
     path(
         "clients/<int:pk>/send-questionnaire-pdf/<str:code>/",
@@ -116,14 +132,14 @@ urlpatterns = [
         name="client_document_delete",
     ),
     path(
-        "clients/<int:pk>/gdpr-delete/",
-        views.client_gdpr_delete_confirm,
-        name="client_gdpr_delete_confirm",
+        "clients/<int:pk>/records-delete/",
+        views.client_records_delete_confirm,
+        name="client_records_delete_confirm",
     ),
     path(
-        "clients/<int:pk>/gdpr-delete/confirm/",
-        views.client_gdpr_delete,
-        name="client_gdpr_delete",
+        "clients/<int:pk>/records-delete/confirm/",
+        views.client_records_delete,
+        name="client_records_delete",
     ),
     path(
         "invoices/<int:invoice_id>/send-email/",
@@ -216,7 +232,6 @@ urlpatterns = [
     path("reports/revenue/", views.revenue_report, name="revenue_report"),
     path("reports/tax-summary/", views.tax_year_summary, name="tax_year_summary"),
     path("reports/tax-summary/note/", views.save_tax_year_note, name="save_tax_year_note"),
-    path("reports/tax-workday-audit/", views.tax_workday_audit, name="tax_workday_audit"),
     path("reports/tax-quarter/", views.tax_quarter_overview, name="tax_quarter_overview"),
     # Google Calendar integration
     path("calendar/authorize/", views.calendar_authorize, name="calendar_authorize"),
@@ -292,6 +307,16 @@ urlpatterns = [
     ),
     # Bank statement import
     path("bank/import/", views.BankImportView.as_view(), name="bank_import"),
+    path("bank/plaid/", views.plaid_home, name="plaid_home"),
+    path("bank/plaid/link-token/", views.plaid_link_token, name="plaid_link_token"),
+    path("bank/plaid/exchange/", views.plaid_exchange, name="plaid_exchange"),
+    path("bank/plaid/sync/", views.plaid_sync, name="plaid_sync"),
+    path(
+        "bank/plaid/accounts/<int:pk>/toggle/",
+        views.plaid_toggle_account,
+        name="plaid_toggle_account",
+    ),
+    path("bank/plaid/<int:pk>/remove/", views.plaid_remove, name="plaid_remove"),
     path("bank/review/", views.BankReviewView.as_view(), name="bank_review"),
     path(
         "bank/expenses/",
@@ -373,11 +398,6 @@ urlpatterns = [
         "clients/<int:pk>/sessions/<int:session_pk>/bill/",
         views.session_bill,
         name="session_bill",
-    ),
-    path(
-        "clients/<int:client_pk>/sessions/<int:session_pk>/gebueh/",
-        views.gebueh_leistung_create,
-        name="gebueh_leistung_create",
     ),
     path(
         "clients/<int:pk>/supervision/new/",

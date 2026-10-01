@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% load number_filters %}
 {% load static i18n %}
-{% get_current_language as CURRENT_LANGUAGE %}
 
 {% block title %}{% trans "Calendar import" %}{% endblock %}
+{% block page_title %}{% trans "Google Calendar import" %}{% endblock %}
+{% block page_subtitle %}{% trans "Bring your appointments in as sessions" %}{% endblock %}
 
 {% block content %}
 <div class="content-container">
-    <h1>📅 {% trans "Google Calendar import" %}</h1>
     <p class="mb-3">
         <a href="{% url 'calendar_approval_queue' %}" class="btn btn-secondary btn-sm">→ {% trans "Approval queue" %}</a>
         <form method="post" class="inline-block">
             {% csrf_token %}
             <button type="submit" name="clear_calendar" value="1" class="btn btn-secondary btn-sm">
-                🔁 {% trans "Change calendar" %}
+                {% trans "Change calendar" %}
             </button>
         </form>
     </p>
@@ -35,7 +35,7 @@
                        value="{{ end_date|date:'Y-m-d' }}">
             </div>
             <button type="submit" class="btn btn-primary">
-                🔍 {% trans "Load" %}
+                {% trans "Load" %}
             </button>
         </form>
     </div>
@@ -47,24 +47,24 @@
             <div class="value">{{ total_events }}</div>
         </div>
         <div class="stat-card stat-card--success">
-            <h3>✅ {% trans "New & Ready" %}</h3>
+            <h3>{% trans "New & Ready" %}</h3>
             <div class="value">{{ ready_count }}</div>
         </div>
         <div class="stat-card stat-card--info">
-            <h3>🔄 {% trans "Duplicates" %}</h3>
+            <h3>{% trans "Duplicates" %}</h3>
             <div class="value">{{ duplicate_count }}</div>
         </div>
         <div class="stat-card stat-card--warning">
-            <h3>⚠️ {% trans "Unknown" %}</h3>
+            <h3>{% trans "Unknown" %}</h3>
             <div class="value">{{ unknown_count }}</div>
         </div>
         <div class="stat-card stat-card--danger">
-            <h3>❌ {% trans "Cancelled" %}</h3>
+            <h3>{% trans "Cancelled" %}</h3>
             <div class="value">{{ cancelled_count }}</div>
         </div>
         {% if already_imported_count %}
         <div class="stat-card stat-card--muted">
-            <h3>✓ {% trans "Already imported" %}</h3>
+            <h3>{% trans "Already imported" %}</h3>
             <div class="value">{{ already_imported_count }}</div>
         </div>
         {% endif %}
@@ -74,13 +74,13 @@
     <div class="bulk-actions" id="bulkActions">
         <span id="selectedCount">0 {% trans "selected" %}</span>
         <button class="action-btn primary" id="js-import-top">
-            ✅ {% trans "Import selected" %}
+            {% trans "Import selected" %}
         </button>
         <button class="action-btn secondary" id="toggleDuplicatesTop">
-            🚫 {% trans "Hide duplicates" %}
+            {% trans "Hide duplicates" %}
         </button>
         <button class="action-btn secondary" id="js-clear-selection">
-            ❌ {% trans "Cancel" %}
+            {% trans "Cancel" %}
         </button>
     </div>
 
@@ -113,7 +113,7 @@
                                {% if event.is_cancelled or event.is_duplicate %}disabled{% endif %}>
                     </td>
                     <td>
-                        {% if event.start %}{{ event.start|date:'d.m.Y' }}{% else %}-{% endif %}
+                        {% if event.start %}{{ event.start|date:"d M y" }}{% else %}-{% endif %}
                     </td>
                     <td>
                         {% if event.start %}{{ event.start|date:'H:i' }}{% else %}-{% endif %}
@@ -145,20 +145,20 @@
                             {% for service in service_types %}
                             <option value="{{ service.id }}"
                                     {% if event.suggested_service_type_obj and event.suggested_service_type_obj.id == service.id %}selected{% endif %}>
-                                {% if CURRENT_LANGUAGE == "en" %}{{ service.name_en|default:service.name }}{% else %}{{ service.name_de|default:service.name }}{% endif %}
+                                {{ service.name }}
                             </option>
                             {% endfor %}
                         </select>
                     </td>
                     <td>
                         {% if event.is_duplicate %}
-                            <span class="badge badge-info" title="{% trans 'Already imported as invoice item' %}">🔄 {% trans "Duplicate" %}</span>
+                            <span class="badge badge-info" title="{% trans 'Already imported as invoice item' %}">{% trans "Duplicate" %}</span>
                         {% elif event.matched_client and not event.is_cancelled %}
-                            <span class="badge badge-success" title="{% trans 'Client recognized, ready for import' %}">✅ {% trans "Ready" %}</span>
+                            <span class="badge badge-success" title="{% trans 'Client recognized, ready for import' %}">{% trans "Ready" %}</span>
                         {% elif event.is_cancelled %}
-                            <span class="badge badge-danger" title="{% trans 'Event was cancelled' %}">❌ {% trans "Cancelled" %}</span>
+                            <span class="badge badge-danger" title="{% trans 'Event was cancelled' %}">{% trans "Cancelled" %}</span>
                         {% else %}
-                            <span class="badge badge-warning" title="{% trans 'Client not recognized – please assign manually' %}">⚠️ {% trans "Unknown" %}</span>
+                            <span class="badge badge-warning" title="{% trans 'Client not recognized – please assign manually' %}">{% trans "Unknown" %}</span>
                         {% endif %}
                     </td>
                     <td class="td-actions">
@@ -174,10 +174,10 @@
 
     <div class="cal-import-bottom-bar">
         <button class="action-btn primary" id="js-import-bottom">
-            ✅ {% trans "Import selected events" %}
+            {% trans "Import selected events" %}
         </button>
         <button class="action-btn secondary" id="toggleDuplicates">
-            🚫 {% trans "Hide duplicates" %}
+            {% trans "Hide duplicates" %}
         </button>
     </div>
 
@@ -205,7 +205,7 @@ function toggleDuplicates() {
         row.style.display = duplicatesHidden ? 'none' : '';
     });
 
-    const newText = duplicatesHidden ? '🔄 {% trans "Show duplicates" %}' : '🚫 {% trans "Hide duplicates" %}';
+    const newText = duplicatesHidden ? '{% trans "Show duplicates" %}' : '{% trans "Hide duplicates" %}';
     if (toggleBtn) toggleBtn.textContent = newText;
     if (toggleBtnTop) toggleBtnTop.textContent = newText;
 }
@@ -341,7 +341,7 @@ async function importSelected(btnElement) {
     if (eventsData.length === 0) {
         alert('{% trans "Please select a client and service type for all events." %}');
         btnElement.disabled = false;
-        btnElement.textContent = '✅ {% trans "Import selected" %}';
+        btnElement.textContent = '{% trans "Import selected" %}';
         return;
     }
 
@@ -358,9 +358,9 @@ async function importSelected(btnElement) {
         const result = await response.json();
 
         if (result.success) {
-            let message = `✅ {% trans "Success!" %}\n\n${result.created} {% trans "events imported" %}\n${result.skipped} {% trans "skipped" %}`;
+            let message = `{% trans "Success!" %}\n\n${result.created} {% trans "events imported" %}\n${result.skipped} {% trans "skipped" %}`;
             if (result.errors && result.errors.length > 0) {
-                message += `\n\n❌ ${result.errors.length} {% trans "errors" %}:\n\n`;
+                message += `\n\n${result.errors.length} {% trans "errors" %}:\n\n`;
                 result.errors.forEach((err, idx) => {
                     message += `${idx + 1}. ${err}\n`;
                 });
@@ -372,13 +372,13 @@ async function importSelected(btnElement) {
                 window.location.reload();
             }
         } else {
-            alert(`❌ {% trans "Error" %}: ${result.error}`);
+            alert(`{% trans "Error" %}: ${result.error}`);
         }
     } catch (error) {
-        alert(`❌ {% trans "Error during import" %}: ${error.message}`);
+        alert(`{% trans "Error during import" %}: ${error.message}`);
     } finally {
         btnElement.disabled = false;
-        btnElement.textContent = '✅ {% trans "Import selected" %}';
+        btnElement.textContent = '{% trans "Import selected" %}';
     }
 }
 </script>

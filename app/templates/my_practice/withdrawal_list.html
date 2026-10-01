@@ -1,4 +1,5 @@
 {% extends 'base.html' %}{% load payment_tags %}{% load i18n %}
+{% load icons %}
 {% block title %}{% trans "Company Withdrawals" %}{% endblock %}
 
 {% block page_title %}{% trans "Company Withdrawals" %}{% if current_year != 'all' %} {{ current_year }}{% endif %}{% endblock %}
@@ -9,11 +10,11 @@
 <!-- Quick Actions -->
 <div class="mt-3 mb-4 flex gap-4 justify-end">
     <a href="{% url 'withdrawal_create' %}" class="btn btn-success btn-sm">
-        ➕ {% trans "New Withdrawal" %}
+        {% trans "New Withdrawal" %}
     </a>
 
     <a href="{% url 'analytics' %}" class="btn btn-secondary btn-sm">
-        📊 {% trans "Analytics" %}
+        {% trans "Analytics" %}
     </a>
 </div>
 
@@ -21,7 +22,7 @@
 <div class="mb-3">
     <h2 class="mb-2">{% trans "Withdrawals by Year" %}
         {% if current_year != 'all' %}
-        <a href="{% url 'withdrawal_list' %}" class="btn btn-sm btn-secondary">✕ {% trans "Clear filter" %}</a>
+        <a href="{% url 'withdrawal_list' %}" class="btn btn-sm btn-secondary">{% trans "Clear filter" %}</a>
         {% endif %}
     </h2>
 </div>
@@ -41,11 +42,11 @@
     {% endfor %}
 </div>
 
-<!-- Entnahmen (outgoing) -->
+<!-- Withdrawals (outgoing) -->
 <div class="card mb-4">
     <div class="flex justify-between items-center mb-3">
         <h3 class="m-0">
-            💸 {% trans "Withdrawals" %}{% if current_year != 'all' %} {{ current_year }}{% endif %}
+            {% trans "Withdrawals" %}{% if current_year != 'all' %} {{ current_year }}{% endif %}
             <span class="text-sm text-secondary">({{ outgoing.count }})</span>
         </h3>
         <span class="text-lg font-bold">{{ outgoing_total|currency }}</span>
@@ -66,7 +67,7 @@
             <tbody>
                 {% for withdrawal in outgoing %}
                 <tr>
-                    <td>{{ withdrawal.date|date:"d.m.Y" }}</td>
+                    <td>{{ withdrawal.date|date:"d M y" }}</td>
                     <td class="text-right font-bold">
                         {{ withdrawal.amount|currency }}
                     </td>
@@ -77,8 +78,8 @@
                     </td>
                     <td class="text-secondary">{{ withdrawal.description|default:"–" }}</td>
                     <td class="text-center whitespace-nowrap">
-                        <a href="{% url 'withdrawal_update' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">✏️</a>
-                        <a href="{% url 'withdrawal_delete' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">🗑️</a>
+                        <a href="{% url 'withdrawal_update' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
+                        <a href="{% url 'withdrawal_delete' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">{% icon "trash" %}</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -96,7 +97,7 @@
 <div class="card">
     <div class="flex justify-between items-center mb-3">
         <h3 class="m-0">
-            💰 {% trans "Deposits & Corrections" %}{% if current_year != 'all' %} {{ current_year }}{% endif %}
+            {% trans "Deposits & Corrections" %}{% if current_year != 'all' %} {{ current_year }}{% endif %}
             <span class="text-sm text-secondary">({{ incoming.count }})</span>
         </h3>
         <span class="text-lg font-bold">{{ incoming_total|currency }}</span>
@@ -117,19 +118,19 @@
             <tbody>
                 {% for withdrawal in incoming %}
                 <tr>
-                    <td>{{ withdrawal.date|date:"d.m.Y" }}</td>
+                    <td>{{ withdrawal.date|date:"d M y" }}</td>
                     <td class="text-right font-bold {{ withdrawal.amount|highlight_diff }}">
                         {% if withdrawal.category == 'contribution' %}-{% endif %}{{ withdrawal.amount|currency }}
                     </td>
                     <td>
                         <span class="badge {% if withdrawal.category == 'correction' %}badge-cancelled{% else %}badge-success{% endif %}">
-                            {% if withdrawal.category == 'contribution' %}💰 {% endif %}{{ withdrawal.get_category_display }}
+                            {{ withdrawal.get_category_display }}
                         </span>
                     </td>
                     <td class="text-secondary">{{ withdrawal.description|default:"–" }}</td>
                     <td class="text-center whitespace-nowrap">
-                        <a href="{% url 'withdrawal_update' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">✏️</a>
-                        <a href="{% url 'withdrawal_delete' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">🗑️</a>
+                        <a href="{% url 'withdrawal_update' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
+                        <a href="{% url 'withdrawal_delete' withdrawal.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">{% icon "trash" %}</a>
                     </td>
                 </tr>
                 {% endfor %}

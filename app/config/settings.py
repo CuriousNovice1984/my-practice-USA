@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.FunnelPathGuardMiddleware",  # internet traffic: portal only
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Static files with Gunicorn
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -88,8 +89,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "my_practice.context_processors.update_check",
                 "django.template.context_processors.i18n",
+                "my_practice.context_processors.scene",
             ],
             # Disable template caching in DEBUG mode for instant updates
             "debug": DEBUG,
@@ -114,10 +115,7 @@ DATABASES = {
 # Cache
 #
 # Without this block Django falls back to per-process LocMemCache: each gunicorn
-# worker warms its own copy and every restart starts cold. The only thing cached
-# today is the GitHub release lookup in context_processors.update_check, which
-# runs on every authenticated page render — so a cold or per-worker cache means
-# that outbound call happens far more often than its 24-hour TTL implies.
+# worker warms its own copy and every restart starts cold.
 #
 # The database backend is the one that needs no extra service. Its table is
 # created by migration 0032 rather than a manual `createcachetable`, so there is
@@ -147,13 +145,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = os.getenv("DJANGO_LANGUAGE_CODE", "de-de")
-LANGUAGES = [
-    ("de", "Deutsch"),
-    ("en", "English"),
-]
+LANGUAGE_CODE = "en-us"
+LANGUAGES = [("en", "English")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
-TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Europe/Berlin")
+# config/formats/en/formats.py overrides Django's stock US formats with
+# DD MMM YY dates ("01 Oct 26").
+FORMAT_MODULE_PATH = ["config.formats"]
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "America/Chicago")
 USE_I18N = True
 USE_TZ = True
 
@@ -319,6 +317,29 @@ SECURE_CSP = {
     "font-src": [CSP.SELF],
 }
 
+# Client forms portal. PORTAL_BASE_URL is the public origin clients reach the
+# upload page on (e.g. the Tailscale Funnel hostname); links default to the
+# current host when unset. That origin must also be trusted for CSRF, because
+# Funnel terminates TLS and the app sees plain HTTP.
+PORTAL_BASE_URL = os.environ.get("PORTAL_BASE_URL", "")
+PORTAL_LINK_DAYS = int(os.environ.get("PORTAL_LINK_DAYS", "14"))
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if PORTAL_BASE_URL and PORTAL_BASE_URL.rstrip("/") not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(PORTAL_BASE_URL.rstrip("/"))
+
+# Plaid bank connection (optional). Link runs from Plaid's CDN in an iframe;
+# the server calls Plaid's API with these credentials. Leave unset to disable.
+PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID", "")
+PLAID_SECRET = os.environ.get("PLAID_SECRET", "")
+PLAID_ENV = os.environ.get("PLAID_ENV", "sandbox")
+if PLAID_CLIENT_ID:
+    SECURE_CSP["script-src"].append("https://cdn.plaid.com")
+    SECURE_CSP["frame-src"] = [CSP.SELF, "https://cdn.plaid.com"]
+
 # Security settings for production
 if not DEBUG:
     # HTTPS — disable when running behind a plain HTTP reverse proxy or on a local
@@ -337,7 +358,3 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
 DEFAULT_EXCEPTION_REPORTER_FILTER = "config.exception_reporter.PIIExceptionReporterFilter"
-
-# Update check — context processor polls GitHub releases API (once per day, cached).
-# Set UPDATE_CHECK_DISABLED=true in .env to opt out.
-UPDATE_CHECK_DISABLED = os.environ.get("UPDATE_CHECK_DISABLED", "false").lower() == "true"

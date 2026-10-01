@@ -2,13 +2,19 @@
 {% load i18n %}
 
 {% block title %}{% trans "Sign in" %}{% endblock %}
-{% block page_title %}{% trans "Sign in" %}{% endblock %}
-{% block page_subtitle %}{% trans "Practice management" %}{% endblock %}
+{% block scene_class %}scene--full{% endblock %}
 
-{% block content %}
-<div class="form-container max-w-[400px] my-16 mx-auto">
-    <form method="post">
+{% block hero %}
+<div class="signin">
+    <div class="signin__greeting">
+        <p class="scene__eyebrow">{% now "l, d M" %}</p>
+        <h1 class="scene__title greeting__title">{% blocktrans %}{{ greeting }}.{% endblocktrans %}</h1>
+        <p class="scene__subtitle greeting__summary">{% trans "Welcome back. Your practice is right where you left it." %}</p>
+    </div>
+
+    <form method="post" class="signin__card">
         {% csrf_token %}
+        <h2 class="signin__title">{% trans "Sign in" %}</h2>
         {% if form.errors %}
         <div class="alert alert-error">{% trans "Username or password incorrect." %}</div>
         {% endif %}
@@ -20,7 +26,10 @@
             <label for="id_password">{% trans "Password" %}</label>
             {{ form.password }}
         </div>
-        <button type="submit" class="btn btn-primary">{% trans "Sign in" %}</button>
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <button type="submit" class="btn btn-lg signin__submit">{% trans "Sign in" %}</button>
     </form>
 </div>
 {% endblock %}
+
+{% block main %}{% endblock %}

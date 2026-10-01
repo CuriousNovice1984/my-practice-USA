@@ -26,7 +26,6 @@ from ..utils.billing_helpers import (
     create_invoice_item_for_session,
 )
 from ..utils.calendar_preflight import CalendarPreflightChecker
-from ..utils.gebueh_helpers import build_gebueh_blocks, gebueh_total_for_blocks, get_arbeitsdiagnose
 from ..utils.invoice_filter_helper import InvoiceFilterHelper
 from ..utils.view_helpers import get_year_from_request, safe_next
 from .crud_mixins import (
@@ -249,10 +248,7 @@ class InvoiceDetailView(DetailView):
         return (
             Invoice.objects.for_current_practice(self.request)
             .select_related("client")
-            .prefetch_related(
-                "items__service_type",
-                "items__session__gebueh_leistungen__ziffer",
-            )
+            .prefetch_related("items__service_type")
         )
 
     def get_object(self, queryset=None):
@@ -268,10 +264,6 @@ class InvoiceDetailView(DetailView):
             checker = CalendarPreflightChecker(invoice)
             if checker.has_calendar_events():
                 context["calendar_preflight"] = checker.check()
-        if invoice.client.needs_gebueh_invoice:
-            context["gebueh_blocks"] = build_gebueh_blocks(invoice)
-            context["gebueh_total"] = gebueh_total_for_blocks(context["gebueh_blocks"])
-            context["arbeitsdiagnose"] = get_arbeitsdiagnose(invoice.client)
         return context
 
 

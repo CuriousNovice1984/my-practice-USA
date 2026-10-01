@@ -38,22 +38,16 @@ class HeatmapIntegrationTest(TestCase):
 
         self.service_60 = ServiceType.objects.create(
             code="individual",
-            name_en="Individual Session",
-            name_de="Einzelsitzung",
             practice=self.practice,
         )
 
         self.service_90 = ServiceType.objects.create(
             code="double",
-            name_en="Extended Session",
-            name_de="Doppelsitzung",
             practice=self.practice,
         )
 
         self.service_cancel = ServiceType.objects.create(
             code="cancel_fee",
-            name_en="Cancellation Fee",
-            name_de="Ausfallgebühr",
             practice=self.practice,
         )
 
@@ -214,22 +208,16 @@ class BusiestMonthsIntegrationTest(TestCase):
 
         self.service_60 = ServiceType.objects.create(
             code="individual",
-            name_en="Individual Session",
-            name_de="Einzelsitzung",
             practice=self.practice,
         )
 
         self.service_90 = ServiceType.objects.create(
             code="double",
-            name_en="Extended Session",
-            name_de="Doppelsitzung",
             practice=self.practice,
         )
 
         self.service_cancel = ServiceType.objects.create(
             code="cancel_fee",
-            name_en="Cancellation Fee",
-            name_de="Ausfallgebühr",
             practice=self.practice,
         )
 
@@ -375,22 +363,16 @@ class TopClientsIntegrationTest(TestCase):
 
         self.service_60 = ServiceType.objects.create(
             code="individual",
-            name_en="Individual Session",
-            name_de="Einzelsitzung",
             practice=self.practice,
         )
 
         self.service_90 = ServiceType.objects.create(
             code="double",
-            name_en="Extended Session",
-            name_de="Doppelsitzung",
             practice=self.practice,
         )
 
         self.service_cancel = ServiceType.objects.create(
             code="cancel_fee",
-            name_en="Cancellation Fee",
-            name_de="Ausfallgebühr",
             practice=self.practice,
         )
 

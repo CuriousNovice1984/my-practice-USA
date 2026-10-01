@@ -4,7 +4,7 @@ Widget Base Template - P-003 Phase 3
 Collapsible widget card with state persistence via LocalStorage
 
 Usage:
-{% include 'includes/widget_base.html' with widget_id="agenda" widget_title="📅 Today" widget_content="..." %}
+{% include 'includes/widget_base.html' with widget_id="agenda" widget_title="Today" widget_content="..." %}
 
 Required parameters:
 - widget_id: Unique identifier for the widget (used for LocalStorage key)
@@ -19,7 +19,7 @@ Optional parameters:
 {% endcomment %}
 
 <div class="dashboard-widget {% if widget_class %}{{ widget_class }}{% endif %}"
-     data-widget-id="{{ widget_id }}"
+     id="widget-{{ widget_id }}" data-widget-id="{{ widget_id }}"
      {% if default_collapsed %}data-default-collapsed="true"{% endif %}>
 
     <div class="widget-header">

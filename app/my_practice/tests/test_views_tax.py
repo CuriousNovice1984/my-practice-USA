@@ -51,7 +51,6 @@ class TaxYearSummaryViewTest(TestCase):
         self.service_type = ServiceType.objects.create(
             code="therapy_60",
             name="Therapy Session 60min",
-            name_de="Psychotherapie, 60 Min.",
             practice=self.practice,
         )
 
@@ -133,7 +132,7 @@ class TaxYearSummaryViewTest(TestCase):
         CompanyExpense.objects.create(
             description="Rent 2024",
             amount=Decimal("1500.00"),
-            category="miete",
+            category="rent",
             date=date(2024, 12, 31),
             is_tax_deductible=True,
             practice=self.practice,
@@ -151,7 +150,7 @@ class TaxYearSummaryViewTest(TestCase):
         CompanyExpense.objects.create(
             description="Rent 2023",
             amount=Decimal("1200.00"),
-            category="miete",
+            category="rent",
             date=date(2023, 12, 31),
             is_tax_deductible=True,
             practice=self.practice,
@@ -223,10 +222,10 @@ class TaxYearSummaryViewTest(TestCase):
         response = self.client_instance.get(reverse("tax_year_summary") + "?year=2024")
 
         # Check context data for profit calculation
-        self.assertIn("gross_profit", response.context)
+        self.assertIn("net_profit", response.context)
         # Profit should be revenue - expenses = 300 - 1599 = -1299
         expected_profit = 300.00 - 1599.00
-        self.assertAlmostEqual(float(response.context["gross_profit"]), expected_profit, places=2)
+        self.assertAlmostEqual(float(response.context["net_profit"]), expected_profit, places=2)
 
     def test_tax_summary_monthly_breakdown(self):
         """Test that monthly revenue breakdown is shown."""
@@ -259,7 +258,7 @@ class TaxYearSummaryViewTest(TestCase):
         response = self.client_instance.get(reverse("tax_year_summary"))
 
         # Should have print-friendly elements
-        self.assertContains(response, "Steuererklärung")
+        self.assertContains(response, "tax return")
 
     def test_tax_summary_expense_categories(self):
         """Test that expense categories are grouped correctly."""

@@ -207,7 +207,7 @@ class CalendarEventParser:
             if min_dur <= duration_minutes <= max_dur:
                 service_type = ServiceType.objects.filter(code=service_code).first()
                 if service_type:
-                    return (service_type, service_type.name_de or service_type.name)
+                    return (service_type, service_type.name)
                 # A code with no ServiceType row degrades silently: the event just
                 # gets no suggestion, and every rule keyed on the code (free-consult
                 # rate, auto-skip) stops firing. This mapping pointed at two codes

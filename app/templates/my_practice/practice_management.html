@@ -11,7 +11,8 @@
     <div>
         <h2>{% blocktrans with count=practices_with_ownership|length %}My practices ({{ count }}){% endblocktrans %}</h2>
     </div>
-    <a href="{% url 'practice_create' %}" class="btn">➕ {% trans "Create new practice" %}</a>
+    <a href="{% url 'practice_create' %}" class="btn">{% trans "Create new practice" %}</a>
+    <a href="{% url 'license_list' %}" class="btn btn-secondary">{% trans "Licenses" %}</a>
 </div>
 
 {% if practices_with_ownership %}
@@ -21,16 +22,16 @@
     <div class="practice-item {% if practice.id == request.current_practice.id %}current{% endif %}">
         <div class="practice-info">
             <h3>
-                {% if practice.logo %}<img src="{{ practice.logo.url }}" alt="{{ practice.name }}" class="practice-list-logo">{% else %}🏥{% endif %} {{ practice.name }}
+                {% if practice.logo %}<img src="{{ practice.logo.url }}" alt="{{ practice.name }}" class="practice-list-logo">{% endif %} {{ practice.name }}
                 {% if is_owner %}<span class="badge badge-owner">{% trans "Owner" %}</span>{% endif %}
-                {% if practice.id == request.current_practice.id %}<span class="badge badge-current">✓ {% trans "Active" %}</span>{% endif %}
+                {% if practice.id == request.current_practice.id %}<span class="badge badge-current">{% trans "Active" %}</span>{% endif %}
                 {% if not practice.is_active %}<span class="badge badge-inactive">{% trans "Inactive" %}</span>{% endif %}
             </h3>
             <div class="text-secondary">{{ practice.title }}</div>
             <div class="practice-meta">
-                📍 {{ practice.city|default:"–" }} |
-                📧 {{ practice.email }} |
-                🔗 <code>{{ practice.slug }}</code>
+                {{ practice.city|default:"–" }} |
+                {{ practice.email }} |
+                <code>{{ practice.slug }}</code>
             </div>
         </div>
         <div class="practice-actions">
@@ -41,11 +42,11 @@
             {% endif %}
             {% if is_owner %}
             <a href="{% url 'practice_edit' practice.slug %}" class="btn btn-secondary">
-                ⚙️ {% trans "Edit" %}
+                {% trans "Edit" %}
             </a>
             {% if practice.is_active %}
             <a href="{% url 'practice_delete' practice.slug %}" class="btn btn-secondary bg-danger-bg text-danger">
-                🗑️ {% trans "Deactivate" %}
+                {% trans "Deactivate" %}
             </a>
             {% endif %}
             {% endif %}

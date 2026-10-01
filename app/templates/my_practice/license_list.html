@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Licenses" %}{% endblock %}
+{% block page_title %}{% trans "Licenses" %}{% endblock %}
+{% block page_subtitle %}{% trans "States you are licensed to practice in" %}{% endblock %}
+
+{% block content %}
+<form method="post" class="form-container">
+    {% csrf_token %}
+    <div class="form-section">
+        <p class="form-hint">
+            {% trans "You need a current license in the state where a client is located during a session — including telehealth. Clients whose state isn't covered are flagged on their detail page, and licenses expiring within 90 days appear in the Focus Queue." %}
+        </p>
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}<div class="form-error">{{ formset.non_form_errors }}</div>{% endif %}
+        {% for license_form in formset %}
+        <div class="license-row">
+            {{ license_form.id }}
+            {% with lic=license_form.instance %}
+            {% if lic.pk %}
+            <div class="license-row__status">
+                <strong>{{ lic }}</strong>
+                {% if lic.is_expired %}
+                <span class="badge--danger">{% trans "Expired" %}</span>
+                {% elif lic.expires_soon %}
+                <span class="badge--warn">{% blocktrans with date=lic.expiration_date|date:"d M y" %}Expires {{ date }}{% endblocktrans %}</span>
+                {% elif lic.expiration_date %}
+                <span class="badge--ok">{% blocktrans with date=lic.expiration_date|date:"d M y" %}Current until {{ date }}{% endblocktrans %}</span>
+                {% else %}
+                <span class="badge--neutral">{% trans "No expiration date" %}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% if license_form.non_field_errors %}<div class="form-error">{{ license_form.non_field_errors }}</div>{% endif %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ license_form.state.id_for_label }}">{% trans "State" %}</label>
+                    {{ license_form.state }}
+                    {% if license_form.state.errors %}<div class="form-error">{{ license_form.state.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ license_form.license_type.id_for_label }}">{% trans "License type" %}</label>
+                    {{ license_form.license_type }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ license_form.license_number.id_for_label }}">{% trans "License number" %}</label>
+                    {{ license_form.license_number }}
+                    {% if license_form.license_number.errors %}<div class="form-error">{{ license_form.license_number.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ license_form.expiration_date.id_for_label }}">{% trans "Expiration date" %}</label>
+                    {{ license_form.expiration_date }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ license_form.notes.id_for_label }}">{% trans "Notes" %}</label>
+                    {{ license_form.notes }}
+                </div>
+                {% if license_form.instance.pk %}
+                <div class="form-group license-delete-col">
+                    <label for="{{ license_form.DELETE.id_for_label }}">{% trans "Delete" %}</label>
+                    {{ license_form.DELETE }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn">{% trans "Save licenses" %}</button>
+        <a href="{% url 'practice_management' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </div>
+</form>
+{% endblock %}

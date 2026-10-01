@@ -55,7 +55,7 @@ class ExpenseCreateView(PracticeScopedCreateView):
     form_class = CompanyExpenseForm
     template_name = "my_practice/expense_form.html"
     success_url = reverse_lazy("expense_list")
-    success_message = gettext_lazy("Expense from {obj.date:%d.%m.%Y} created successfully.")
+    success_message = gettext_lazy("Expense from {obj.date:%d %b %y} created successfully.")
 
     def form_valid(self, form: CompanyExpenseForm) -> HttpResponse:  # type: ignore[override]
         response = super().form_valid(form)
@@ -74,7 +74,7 @@ class ExpenseUpdateView(NextRedirectMixin, PracticeScopedUpdateView):
     form_class = CompanyExpenseForm
     template_name = "my_practice/expense_form.html"
     success_url = reverse_lazy("expense_list")
-    success_message = gettext_lazy("Expense from {obj.date:%d.%m.%Y} updated successfully.")
+    success_message = gettext_lazy("Expense from {obj.date:%d %b %y} updated successfully.")
     context_object_name = "expense"
 
     def form_valid(self, form: CompanyExpenseForm) -> HttpResponse:  # type: ignore[override]
@@ -102,7 +102,7 @@ class ExpenseUpdateView(NextRedirectMixin, PracticeScopedUpdateView):
             )
             if linked_transaction:
                 match_key = build_counterparty_key(
-                    linked_transaction.payer_iban, linked_transaction.payer_name
+                    linked_transaction.payer_account, linked_transaction.payer_name
                 )
                 if match_key:
                     ExpenseCategoryRule.objects.update_or_create(
@@ -199,7 +199,7 @@ class ExpenseDeleteView(NextRedirectMixin, PracticeScopedDeleteView):
     success_url = reverse_lazy("expense_list")
     context_object_name = "expense"
     success_message = gettext_lazy(
-        "Expense from {obj.date:%d.%m.%Y} of {obj.amount}€ deleted successfully."
+        "Expense from {obj.date:%d %b %y} of ${obj.amount} deleted successfully."
     )
 
 
@@ -270,7 +270,7 @@ def expense_link_transaction(request: HttpRequest, pk: int) -> HttpResponse:
         request,
         _("Transaction from %(date)s (%(payer)s) linked.")
         % {
-            "date": transaction.transaction_date.strftime("%d.%m.%Y"),
+            "date": transaction.transaction_date.strftime("%d %b %y"),
             "payer": transaction.payer_name,
         },
     )
@@ -350,6 +350,6 @@ def expense_unlink_transaction(request: HttpRequest, pk: int, transaction_pk: in
     messages.success(
         request,
         _("Link with transaction from %(date)s removed.")
-        % {"date": transaction.transaction_date.strftime("%d.%m.%Y")},
+        % {"date": transaction.transaction_date.strftime("%d %b %y")},
     )
     return redirect("expense_update", pk=pk)

@@ -30,6 +30,7 @@ from .chart_helpers import (
     aggregate_invoice_items_by_month,
     prepare_monthly_chart_data,
 )
+from .licensure import client_licensure_gap
 from .questionnaire_content import list_available_questionnaires
 from .revenue_helpers import RevenueCalculator
 from .tag_helpers import sort_tags_by_category
@@ -62,6 +63,7 @@ class ClientDetailContextBuilder:
         context.update(self._build_stats())
         context.update(self._build_billing_context())
         context.update(self._build_clinical_context())
+        context["licensure_gap"] = client_licensure_gap(self.client)
         return context
 
     # ── Stats ─────────────────────────────────────────────────────────────────
@@ -229,20 +231,16 @@ class ClientDetailContextBuilder:
         # Intake progress: 4 steps tracked as date fields on Client. Labels reuse
         # the exact msgids from the profile-tab onboarding checklist (client_detail.html).
         intake_steps = [
-            (_("Intake"), self.client.intake_sent_date),
-            (_("Contract"), self.client.contract_signed_date),
-            (_("Anamnesis"), self.client.questionnaire_sent_date),
+            (_("Intake paperwork"), self.client.intake_sent_date),
+            (_("Informed consent"), self.client.contract_signed_date),
+            (_("Health history"), self.client.questionnaire_sent_date),
             (_("Intake complete"), self.client.onboarding_complete_date),
         ]
         intake_steps_done = sum(1 for _, d in intake_steps if d)
 
         sessions_qs = (
             self.client.sessions.filter(cancelled=False)
-            .prefetch_related(
-                "log",
-                "invoice_items__invoice",
-                "gebueh_leistungen__ziffer",
-            )
+            .prefetch_related("log", "invoice_items__invoice")
             .order_by("-session_date")
         )
 
@@ -286,15 +284,6 @@ class ClientDetailContextBuilder:
             reverse=True,
         )
 
-        gebueh_diagnostic_count = 0
-        if self.client.needs_gebueh_invoice:
-            from ..models.gebueh import Leistungserfassung
-
-            gebueh_diagnostic_count = Leistungserfassung.objects.filter(
-                session__client=self.client,
-                ziffer__nummer__in=["1", "19.5", "19.6"],
-            ).count()
-
         return {
             "profile": profile,
             "recent_session_logs": recent_session_logs,
@@ -313,6 +302,5 @@ class ClientDetailContextBuilder:
             "session_log_template": SESSION_LOG_TEMPLATE,
             "documents": self.client.documents.order_by("-document_date", "-created_at"),
             "doc_type_choices": ClientDocument.DOC_TYPE_CHOICES,
-            "gebueh_diagnostic_count": gebueh_diagnostic_count,
             "available_questionnaires": list_available_questionnaires(),
         }

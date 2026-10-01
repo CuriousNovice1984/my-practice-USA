@@ -2,17 +2,18 @@
 {% load static i18n %}
 
 {% block title %}{% trans "Email templates" %}{% endblock %}
+{% block page_title %}{% trans "Email templates" %}{% endblock %}
+{% block page_subtitle %}{% trans "Reusable text for everyday client emails" %}{% endblock %}
 
 {% block content %}
 <div class="content-container">
     <div class="bp-header">
-        <h1>✉️ {% trans "Email templates" %}</h1>
         <p class="bp-subtitle">{% trans "Click text to copy." %}</p>
     </div>
 
     <div class="bp-grid">
         {% for card in cards %}
-        {% include 'includes/email_card.html' with card_title=card.title card_id=card.id body_de=card.body_de body_en=card.body_en %}
+        {% include 'includes/email_card.html' with card_title=card.title card_id=card.id body=card.body %}
         {% endfor %}
     </div>{# /bp-grid #}
 </div>{# /content-container #}

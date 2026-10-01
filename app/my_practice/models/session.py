@@ -67,4 +67,4 @@ class Session(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.client.client_code} – {self.session_date.strftime('%d.%m.%Y')}"
+        return f"{self.client.client_code} – {self.session_date.strftime('%d %b %y')}"

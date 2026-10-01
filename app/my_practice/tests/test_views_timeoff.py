@@ -170,7 +170,6 @@ class SendTimeOffNoticeViewTest(TestCase):
             client_code="DE",
             full_name="Anna Schmidt",
             email="anna@example.com",
-            language="de",
             active=True,
             practice=self.practice,
         )
@@ -178,7 +177,6 @@ class SendTimeOffNoticeViewTest(TestCase):
             client_code="EN",
             full_name="Max Mustermann",
             email="max@example.com",
-            language="en",
             active=True,
             practice=self.practice,
         )
@@ -207,7 +205,7 @@ class SendTimeOffNoticeViewTest(TestCase):
             client=self.client_de, session_date=self.next_session_date, cancelled=False
         )
 
-    def test_get_form_shows_recipient_table_with_code_language_and_sessions(self):
+    def test_get_form_shows_recipient_table_with_code_and_sessions(self):
         response = self.client_instance.get(reverse("timeoff_notify"), {"ids": [self.time_off.pk]})
         self.assertEqual(response.status_code, 200)
 
@@ -222,8 +220,6 @@ class SendTimeOffNoticeViewTest(TestCase):
         self.assertIn(self.client_en.client_code, content)
         self.assertNotIn(self.client_de.full_name, content)
         self.assertNotIn(self.client_en.full_name, content)
-        self.assertIn("DE</span>", content)
-        self.assertIn("EN</span>", content)
         self.assertIn(self.last_session_date.isoformat(), content)
         self.assertIn(self.next_session_date.isoformat(), content)
 
@@ -236,8 +232,7 @@ class SendTimeOffNoticeViewTest(TestCase):
         form = response.context["form"]
         recipient_pks = set(form.fields["recipients"].queryset.values_list("pk", flat=True))
         self.assertEqual(recipient_pks, {self.client_de.pk, self.client_en.pk})
-        self.assertIn("{salutation}", form.initial["body_de"])
-        self.assertIn("{salutation}", form.initial["body_en"])
+        self.assertIn("{salutation}", form.initial["body"])
 
     def test_get_form_loads_with_multiple_periods_selected(self):
         response = self.client_instance.get(
@@ -249,13 +244,13 @@ class SendTimeOffNoticeViewTest(TestCase):
 
         # Subject/body are date-based, not title-based — clients don't need to know
         # what the time off is for, just which dates/weekdays are affected.
-        self.assertTrue(form.initial["subject_de"].startswith("Praxis geschlossen: "))
-        periods = form.initial["subject_de"].removeprefix("Praxis geschlossen: ").split(", ")
+        self.assertTrue(form.initial["subject"].startswith("Practice closed: "))
+        periods = form.initial["subject"].removeprefix("Practice closed: ").split(", ")
         self.assertEqual(len(periods), 2)
-        self.assertNotIn(self.time_off.title, form.initial["subject_de"])
-        self.assertNotIn(self.time_off.title, form.initial["body_de"])
+        self.assertNotIn(self.time_off.title, form.initial["subject"])
+        self.assertNotIn(self.time_off.title, form.initial["body"])
 
-        body_lines = form.initial["body_de"].split("\n\n")[2].splitlines()
+        body_lines = form.initial["body"].split("\n\n")[2].splitlines()
         self.assertEqual(len(body_lines), 2)
         self.assertTrue(all(line.startswith("- ") for line in body_lines))
 
@@ -274,10 +269,8 @@ class SendTimeOffNoticeViewTest(TestCase):
             {
                 "ids": [self.time_off.pk],
                 "recipients": [self.client_de.pk],
-                "subject_de": "Praxis geschlossen",
-                "body_de": "{salutation},\n\nWir sind geschlossen.",
-                "subject_en": "Practice closed",
-                "body_en": "{salutation},\n\nWe are closed.",
+                "subject": "Practice closed",
+                "body": "{salutation},\n\nWe are closed.",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -286,7 +279,7 @@ class SendTimeOffNoticeViewTest(TestCase):
         self.assertEqual(call_kwargs["to"], ["anna@example.com"])
 
     @patch("my_practice.views.timeoff_views.EmailMessage")
-    def test_post_sends_language_specific_content_and_salutation(self, mock_email):
+    def test_post_renders_salutation_per_recipient(self, mock_email):
         mock_instance = MagicMock()
         mock_email.return_value = mock_instance
         mock_instance.send.return_value = 1
@@ -296,22 +289,15 @@ class SendTimeOffNoticeViewTest(TestCase):
             {
                 "ids": [self.time_off.pk],
                 "recipients": [self.client_de.pk, self.client_en.pk],
-                "subject_de": "Praxis geschlossen",
-                "body_de": "{salutation},\n\nWir sind geschlossen.",
-                "subject_en": "Practice closed",
-                "body_en": "{salutation},\n\nWe are closed.",
+                "subject": "Practice closed",
+                "body": "{salutation},\n\nWe are closed.",
             },
         )
         self.assertEqual(mock_email.call_count, 2)
-        calls_by_recipient = {c.kwargs["to"][0]: c.kwargs for c in mock_email.call_args_list}
-
-        de_call = calls_by_recipient["anna@example.com"]
-        self.assertEqual(de_call["subject"], "Praxis geschlossen")
-        self.assertNotIn("{salutation}", de_call["body"])
-
-        en_call = calls_by_recipient["max@example.com"]
-        self.assertEqual(en_call["subject"], "Practice closed")
-        self.assertNotIn("{salutation}", en_call["body"])
+        for call in mock_email.call_args_list:
+            self.assertEqual(call.kwargs["subject"], "Practice closed")
+            self.assertNotIn("{salutation}", call.kwargs["body"])
+            self.assertTrue(call.kwargs["body"].startswith("Dear "))
 
     def test_post_invalid_recipient_rejected(self):
         """A client outside the pre-scoped queryset (inactive/no email) can't be submitted."""
@@ -320,10 +306,8 @@ class SendTimeOffNoticeViewTest(TestCase):
             {
                 "ids": [self.time_off.pk],
                 "recipients": [self.client_inactive.pk],
-                "subject_de": "Praxis geschlossen",
-                "body_de": "{salutation},\n\nWir sind geschlossen.",
-                "subject_en": "Practice closed",
-                "body_en": "{salutation},\n\nWe are closed.",
+                "subject": "Practice closed",
+                "body": "{salutation},\n\nWe are closed.",
             },
         )
         self.assertEqual(response.status_code, 200)

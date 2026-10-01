@@ -36,7 +36,7 @@ class ChartTooltip {
 
         // Default formatter
         this.formatter = options.formatter || ((data) => {
-            return `<strong>${data.label}</strong><br>${Math.round(data.value)} €`;
+            return `<strong>${data.label}</strong><br>$${Math.round(data.value).toLocaleString('en-US')}`;
         });
 
         this.tooltipEl = null;
@@ -164,7 +164,7 @@ class MultiLineTooltip extends ChartTooltip {
             formatter: (data) => {
                 const lines = [
                     `<div style="font-weight: bold; margin-bottom: 4px;">${data.label}</div>`,
-                    `<div style="font-size: 14px;">${Math.round(data.value)}€</div>`
+                    `<div style="font-size: 14px;">$${Math.round(data.value).toLocaleString('en-US')}</div>`
                 ];
                 if (data.extra) {
                     lines.push(`<div style="opacity: 0.8; margin-top: 4px; font-size: 11px;">${data.extra}</div>`);
@@ -187,17 +187,17 @@ class ComparisonTooltip extends ChartTooltip {
 
                 if (data.values && Array.isArray(data.values)) {
                     data.values.forEach(item => {
-                        const color = item.color || '#667eea';
+                        const color = item.color || '#2f6b5d';
                         lines.push(`
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                                 <div style="width: 12px; height: 12px; background: ${color}; border-radius: 2px;"></div>
                                 <div style="flex: 1;">${item.label}:</div>
-                                <div style="font-weight: bold;">${Math.round(item.value)}€</div>
+                                <div style="font-weight: bold;">$${Math.round(item.value).toLocaleString('en-US')}</div>
                             </div>
                         `);
                     });
                 } else {
-                    lines.push(`<div>${Math.round(data.value)}€</div>`);
+                    lines.push(`<div>$${Math.round(data.value).toLocaleString('en-US')}</div>`);
                 }
 
                 return lines.join('');

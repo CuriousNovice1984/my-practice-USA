@@ -45,7 +45,6 @@ class AnalyticsDashboardViewTest(TestCase):
         self.service_type = ServiceType.objects.create(
             code="individual",
             name="60 Min Session",
-            name_de="60 Min. Psychotherapie",
             practice=self.practice,
         )
 

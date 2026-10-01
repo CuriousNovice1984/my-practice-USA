@@ -17,11 +17,11 @@
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "Start" %}:</span>
-    <span class="font-semibold">{{ time_off.start_date|date:"d.m.Y" }}</span>
+    <span class="font-semibold">{{ time_off.start_date|date:"d M y" }}</span>
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "End" %}:</span>
-    <span class="font-semibold">{{ time_off.end_date|date:"d.m.Y" }}</span>
+    <span class="font-semibold">{{ time_off.end_date|date:"d M y" }}</span>
 </div>
 {% if time_off.notes %}
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">

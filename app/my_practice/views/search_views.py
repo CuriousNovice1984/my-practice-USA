@@ -139,13 +139,13 @@ def _search_invoices(request, query: str) -> list[dict]:
             "id": invoice.id,
             "invoice_number": invoice.invoice_number,
             "client_code": invoice.client.client_code,
-            "date": invoice.invoice_date.strftime("%d.%m.%Y"),
+            "date": invoice.invoice_date.strftime("%d %b %y"),
             "url": f"/invoices/{invoice.id}/",
             # Invoice rows are identified by number and client *code*, so there
             # is no personal name in them and nothing for privacy mode to hide.
             "prefix": (
                 f"📄 {invoice.invoice_number} - {invoice.client.client_code} "
-                f"({invoice.invoice_date.strftime('%d.%m.%Y')})"
+                f"({invoice.invoice_date.strftime('%d %b %y')})"
             ),
             "name": "",
             "suffix": "",

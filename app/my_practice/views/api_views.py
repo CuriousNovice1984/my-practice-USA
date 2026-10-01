@@ -22,8 +22,6 @@ from weasyprint.text.fonts import FontConfiguration
 
 from ..models import Client, Invoice, Practice
 from ..utils import get_next_invoice_number
-from ..utils.contract_form import add_contract_form_fields
-from ..utils.gebueh_helpers import build_gebueh_blocks, gebueh_total_for_blocks, get_arbeitsdiagnose
 from ..utils.practice_helpers import require_practice
 from ..utils.questionnaire_content import QuestionnaireNotFoundError, load_questionnaire
 from ..utils.view_helpers import safe_next
@@ -120,24 +118,16 @@ def _render_invoice_pdf_bytes(
     Returns:
         (pdf_bytes, filename) where filename is suitable for download/zip entry.
     """
-    if invoice.client.language == "de":
-        template_name = "my_practice/invoice_pdf_de.html"
-        filename = f"Rechnung_{invoice.invoice_number}.pdf"
-    else:
-        template_name = "my_practice/invoice_pdf_en.html"
-        filename = f"Invoice_{invoice.invoice_number}.pdf"
+    template_name = "my_practice/invoice_pdf.html"
+    filename = f"Invoice_{invoice.invoice_number}.pdf"
 
     ctx: dict = {
         "invoice": invoice,
         "practice": practice,
+        "licenses": [lic for lic in practice.licenses.all() if lic.is_current()],
         "logo_data": logo_data,
         "signature_data": signature_data,
     }
-
-    if invoice.client.needs_gebueh_invoice:
-        ctx["gebueh_blocks"] = build_gebueh_blocks(invoice)
-        ctx["gebueh_total"] = gebueh_total_for_blocks(ctx["gebueh_blocks"])
-        ctx["arbeitsdiagnose"] = get_arbeitsdiagnose(invoice.client)
 
     html_string = render_to_string(template_name, ctx)
     # base_url lets WeasyPrint resolve static font files (fonts/ dir) relative to the app
@@ -159,79 +149,14 @@ def invoice_pdf(request: HttpRequest, pk: int) -> HttpResponse:
     return response
 
 
-def generate_contract_pdf_bytes(client: Client, practice: Practice, lang: str) -> tuple[bytes, str]:
-    """Render the pre-filled Behandlungsvertrag as PDF bytes.
-
-    Returns:
-        (pdf_bytes, filename) — filename is suitable for download or attachment.
-    """
-    logo_data, _signature = _prepare_practice_images(practice)
-    html_string = render_to_string(
-        "my_practice/treatment_contract_pdf.html",
-        {"client": client, "practice": practice, "logo_data": logo_data, "lang": lang},
-    )
-    pdf_bytes = HTML(string=html_string).write_pdf()
-    pdf_bytes = add_contract_form_fields(pdf_bytes)
-    safe_code = client.client_code.replace("/", "-")
-    filename = (
-        f"Behandlungsvertrag_{safe_code}.pdf"
-        if lang == "de"
-        else f"TreatmentContract_{safe_code}.pdf"
-    )
-    return pdf_bytes, filename
+# Content files carry per-language text dicts; this app renders the English text.
+QUESTIONNAIRE_LANG = "en"
 
 
-def contract_pdf(request: HttpRequest, pk: int) -> HttpResponse:
-    """Generate pre-filled Behandlungsvertrag PDF for a client.
-
-    Optional query param ``?lang=en`` switches to the English version;
-    otherwise falls back to ``client.language``.
-    """
-    client = get_object_or_404(Client.objects.for_current_practice(request), pk=pk)
-    practice = client.practice
-    lang = request.GET.get("lang") or client.language or "de"
-    pdf_bytes, filename = generate_contract_pdf_bytes(client, practice, lang)
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
-
-
-def generate_intake_form_pdf_bytes(
-    client: Client, practice: Practice, lang: str
-) -> tuple[bytes, str]:
-    """Render the pre-filled Aufnahmebogen as PDF bytes with fillable form fields.
-
-    Returns:
-        (pdf_bytes, filename) — filename is suitable for download or attachment.
-    """
-    logo_data, _signature = _prepare_practice_images(practice)
-    html_string = render_to_string(
-        "my_practice/intake_form_pdf.html",
-        {"client": client, "practice": practice, "logo_data": logo_data, "lang": lang},
-    )
-    pdf_bytes = HTML(string=html_string).write_pdf(pdf_forms=True)
-    safe_code = client.client_code.replace("/", "-")
-    filename = f"Aufnahmebogen_{safe_code}.pdf" if lang == "de" else f"IntakeForm_{safe_code}.pdf"
-    return pdf_bytes, filename
-
-
-def intake_form_pdf(request: HttpRequest, pk: int) -> HttpResponse:
-    """Generate pre-filled Aufnahmebogen (intake form) PDF for a client.
-
-    Optional query param ``?lang=en`` switches to the English version;
-    otherwise falls back to ``client.language``.
-    """
-    client = get_object_or_404(Client.objects.for_current_practice(request), pk=pk)
-    practice = client.practice
-    lang = request.GET.get("lang") or client.language or "de"
-    pdf_bytes, filename = generate_intake_form_pdf_bytes(client, practice, lang)
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
-
-
-def _resolve_questionnaire_section(section: dict, lang: str, index: int) -> dict:
-    """Resolve one raw content section to language + pre-computed field names.
+def _resolve_questionnaire_section(
+    section: dict, index: int, lang: str = QUESTIONNAIRE_LANG
+) -> dict:
+    """Resolve one raw content section to English text + pre-computed field names.
 
     Field names are prefixed by section index (``s{index}_...``) so multiple
     sections in one document never collide, and computed here rather than via
@@ -288,11 +213,10 @@ def _resolve_questionnaire_section(section: dict, lang: str, index: int) -> dict
     raise ValueError(f"Unknown questionnaire section type: {section['type']!r}")
 
 
-def generate_questionnaire_pdf_bytes(code: str, practice: Practice, lang: str) -> tuple[bytes, str]:
+def generate_questionnaire_pdf_bytes(code: str, practice: Practice) -> tuple[bytes, str]:
     """Render a blank clinical questionnaire (e.g. GAD-7) as fillable PDF bytes.
 
-    Unlike the intake form / contract PDFs, this is not tied to a specific
-    client — the same bytes apply to anyone. Content (question text, response
+    This is not tied to a specific client — the same bytes apply to anyone. Content (question text, response
     scale) comes from ``load_questionnaire``, not this template, so instruments
     with restrictive licensing never need their text committed to this repo.
 
@@ -301,8 +225,9 @@ def generate_questionnaire_pdf_bytes(code: str, practice: Practice, lang: str) -
     """
     content = load_questionnaire(code)
     logo_data, _signature = _prepare_practice_images(practice)
+    lang = QUESTIONNAIRE_LANG
     sections = [
-        _resolve_questionnaire_section(section, lang, index)
+        _resolve_questionnaire_section(section, index)
         for index, section in enumerate(content.sections)
     ]
     html_string = render_to_string(
@@ -310,28 +235,22 @@ def generate_questionnaire_pdf_bytes(code: str, practice: Practice, lang: str) -
         {
             "practice": practice,
             "logo_data": logo_data,
-            "lang": lang,
             "title": content.title[lang],
             "intro": content.intro.get(lang, ""),
             "sections": sections,
         },
     )
     pdf_bytes = HTML(string=html_string).write_pdf(pdf_forms=True)
-    filename = f"{content.code.upper()}_{lang}.pdf"
+    filename = f"{content.code.upper()}.pdf"
     return pdf_bytes, filename
 
 
 @require_practice
 def questionnaire_pdf(request: HttpRequest, code: str) -> HttpResponse:
-    """Generate a blank, fillable clinical questionnaire PDF.
-
-    Optional query param ``?lang=en`` switches to the English version
-    (default: German).
-    """
+    """Generate a blank, fillable clinical questionnaire PDF."""
     practice = request.current_practice
-    lang = request.GET.get("lang") or "de"
     try:
-        pdf_bytes, filename = generate_questionnaire_pdf_bytes(code, practice, lang)
+        pdf_bytes, filename = generate_questionnaire_pdf_bytes(code, practice)
     except QuestionnaireNotFoundError as e:
         messages.error(request, str(e))
         return redirect("dashboard")
@@ -387,12 +306,12 @@ def invoice_batch_download(request: HttpRequest) -> HttpResponse:
             pdf_bytes, filename = _render_invoice_pdf_bytes(
                 invoice, practice, logo_data, signature_data, font_config
             )
-            # Prefix client code for easy sorting: AB-1_Rechnung_AB-001.pdf
+            # Prefix client code for easy sorting: AB-1_Invoice_AB-001.pdf
             entry_name = f"{invoice.client.client_code}_{filename}"
             zf.writestr(entry_name, pdf_bytes)
 
     zip_buffer.seek(0)
-    zip_filename = f"Rechnungen_{year}.zip"
+    zip_filename = f"Invoices_{year}.zip"
     response = HttpResponse(zip_buffer.read(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
     return response
@@ -449,6 +368,6 @@ def update_invoice_status(request, pk):
         {
             "status": new_status,
             "display": invoice.get_status_display(),
-            "paid_date": (invoice.paid_date.strftime("%d.%m.%Y") if invoice.paid_date else None),
+            "paid_date": (invoice.paid_date.strftime("%d %b %y") if invoice.paid_date else None),
         }
     )

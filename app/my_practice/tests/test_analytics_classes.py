@@ -45,7 +45,6 @@ class RevenueAnalyzerTests(TestCase):
             client_code="TEST",
             full_name="Test Client",
             email="test@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             hourly_rate_90=Decimal("130.00"),
             practice=self.practice,
@@ -200,7 +199,6 @@ class SessionAnalyzerTests(TestCase):
             client_code="TEST",
             full_name="Test Client",
             email="test@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             hourly_rate_90=Decimal("130.00"),
             practice=self.practice,
@@ -209,7 +207,6 @@ class SessionAnalyzerTests(TestCase):
         self.service_type_60 = ServiceType.objects.create(
             code="test_60",
             name="Test 60min",
-            name_de="Test 60 Min",
             default_duration=60,
             practice=self.practice,
         )
@@ -217,7 +214,6 @@ class SessionAnalyzerTests(TestCase):
         self.service_type_90 = ServiceType.objects.create(
             code="test_90",
             name="Test 90min",
-            name_de="Test 90 Min",
             default_duration=90,
             practice=self.practice,
         )
@@ -295,7 +291,6 @@ class ClientAnalyzerTests(TestCase):
             client_code="CL1",
             full_name="Client One",
             email="client1@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             practice=self.practice,
         )
@@ -304,7 +299,6 @@ class ClientAnalyzerTests(TestCase):
             client_code="CL2",
             full_name="Client Two",
             email="client2@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             practice=self.practice,
         )
@@ -353,7 +347,6 @@ class ClientAnalyzerTests(TestCase):
                 client_code=f"CL{i + 10}",
                 full_name=f"Client {i + 10}",
                 email=f"client{i + 10}@example.com",
-                language="de",
                 hourly_rate_60=Decimal("90.00"),
                 practice=self.practice,
             )
@@ -445,7 +438,7 @@ class ExpenseAnalyzerTests(TestCase):
         CompanyExpense.objects.create(
             date=date(2025, 12, 31),
             amount=Decimal("50.00"),
-            category="materialien",
+            category="supplies",
             is_tax_deductible=True,
             practice=self.practice,
         )
@@ -477,7 +470,7 @@ class ExpenseAnalyzerTests(TestCase):
         CompanyExpense.objects.create(
             date=date.today(),
             amount=Decimal("200.00"),
-            category="miete",
+            category="rent",
             practice=self.practice,
         )
 
@@ -508,7 +501,6 @@ class ProfitCalculatorTests(TestCase):
             client_code="TEST",
             full_name="Test Client",
             email="test@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             practice=self.practice,
         )

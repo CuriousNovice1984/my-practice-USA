@@ -160,7 +160,6 @@ class InvoiceCreateFormValidTests(TestCase):
         self.service_type = ServiceType.objects.create(
             code="individual",
             name="60 Min Session",
-            name_de="60 Min. Psychotherapie",
             default_duration=60,
             practice=self.practice,
         )
@@ -223,7 +222,7 @@ class InvoiceCreateFormValidTests(TestCase):
             response = self.client_instance.post(reverse("invoice_create"), self._formset_data())
         self.assertEqual(response.status_code, 200)
         messages = list(response.context["messages"])
-        self.assertTrue(any("Fehler beim Erstellen der Rechnung" in str(m) for m in messages))
+        self.assertTrue(any("Error creating invoice" in str(m) for m in messages))
         self.assertFalse(Invoice.objects.filter(client=self.test_client).exists())
 
 
@@ -246,7 +245,6 @@ class InvoiceEditFormValidTests(TestCase):
         self.service_type = ServiceType.objects.create(
             code="individual",
             name="60 Min Session",
-            name_de="60 Min. Psychotherapie",
             default_duration=60,
             practice=self.practice,
         )
@@ -452,7 +450,7 @@ class AddSessionsToInvoiceTests(TestCase):
         )
         self.assertRedirects(response, reverse("invoice_detail", kwargs={"pk": self.invoice.pk}))
         messages = list(response.context["messages"])
-        self.assertTrue(any("Keine Sitzungen angegeben" in str(m) for m in messages))
+        self.assertTrue(any("No sessions specified" in str(m) for m in messages))
 
     def test_adds_sessions_and_recalculates_total(self):
         response = self.client_instance.post(
@@ -480,7 +478,7 @@ class AddSessionsToInvoiceTests(TestCase):
             follow=True,
         )
         messages = list(response.context["messages"])
-        self.assertTrue(any("Keine neuen Sitzungen hinzugefügt" in str(m) for m in messages))
+        self.assertTrue(any("No new sessions added" in str(m) for m in messages))
 
     def test_get_request_redirects_without_action(self):
         response = self.client_instance.get(
@@ -561,14 +559,12 @@ class MonthlyBillingOverviewTests(TestCase):
         self.service_type_60 = ServiceType.objects.create(
             code="individual_60",
             name="60 Min Session",
-            name_de="60 Min. Psychotherapie",
             default_duration=60,
             practice=self.practice,
         )
         self.service_type_30 = ServiceType.objects.create(
             code="individual_30",
             name="30 Min Session",
-            name_de="30 Min. Psychotherapie",
             default_duration=30,
             practice=self.practice,
         )

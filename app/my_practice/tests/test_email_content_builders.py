@@ -1,15 +1,9 @@
 """
 Tests for the email content builders in utils/email_utils.py.
 
-These build the subject and body text that actually reaches a client. They sit
-in a double blind spot: the i18n coverage guardrail deliberately exempts them
-(they are authored bilingual content, not Django-i18n UI chrome — see CLAUDE.md),
-and test_email_views.py mocks the send, so it asserts that an email went out but
-never what it said.
-
-Every builder is therefore exercised here under *both* client languages, with
-assertions on distinguishing content rather than "is a non-empty string" — a
-German assertion that would also pass against the English branch tests nothing.
+These build the subject and body text that actually reaches a client.
+test_email_views.py mocks the send, so it asserts that an email went out but
+never what it said — the assertions on content live here.
 """
 
 from datetime import date
@@ -28,46 +22,36 @@ from my_practice.models import (
     TimeOff,
 )
 from my_practice.utils.email_utils import (
-    get_contract_email_content,
-    get_gdpr_deletion_email_content,
-    get_intake_email_content,
     get_invoice_email_content,
-    get_questionnaire_email_content,
     get_questionnaire_pdf_email_content,
+    get_records_deletion_email_content,
     get_salutation_for_client,
     get_timeoff_notice_default_content,
     prepare_invoice_email_context,
     render_email_template,
 )
-from my_practice.utils.formatting import format_currency_de
+from my_practice.utils.formatting import format_currency
 from my_practice.validators import validate_email_template_placeholders
 
-NBSP = "\u00a0"  # explicit: an invisible literal here is too easy to "tidy away"
 
+class FormatCurrencyTest(TestCase):
+    """format_currency is the single definition of how money is written."""
 
-class FormatCurrencyDeTest(TestCase):
-    """format_currency_de is the single definition of how money is written."""
+    def test_us_separators(self):
+        self.assertEqual(format_currency(Decimal("11064.03")), "$11,064.03")
 
-    def test_german_separators(self):
-        self.assertEqual(format_currency_de(Decimal("11064.03")), f"11.064,03{NBSP}€")
-
-    def test_uses_non_breaking_space(self):
-        # A regular space would let the amount wrap away from its symbol.
-        self.assertIn(NBSP, format_currency_de(Decimal("100.00")))
-        self.assertNotIn(" €", format_currency_de(Decimal("100.00")))
+    def test_negative_sign_precedes_symbol(self):
+        self.assertEqual(format_currency(Decimal("-5")), "-$5.00")
 
     def test_always_two_decimals(self):
-        self.assertEqual(format_currency_de(Decimal("100")), f"100,00{NBSP}€")
-
-    def test_custom_symbol(self):
-        self.assertEqual(format_currency_de(Decimal("1234.50"), "$"), f"1.234,50{NBSP}$")
+        self.assertEqual(format_currency(Decimal("100")), "$100.00")
 
     def test_matches_the_currency_template_filter(self):
         """The email and the |currency filter used by the PDF must agree."""
         from my_practice.templatetags.payment_tags import currency
 
         for value in (Decimal("0.99"), Decimal("1234.50"), Decimal("11064.03")):
-            self.assertEqual(currency(value), format_currency_de(value))
+            self.assertEqual(currency(value), format_currency(value))
 
 
 class RenderEmailTemplateTest(TestCase):
@@ -147,19 +131,19 @@ class ValidateEmailTemplatePlaceholdersTest(TestCase):
                 **{f: getattr(practice, f, "") or "" for f in form_class.base_fields},
                 "name": "Test Practice",
                 "slug": "validator-admin-check",
-                "invoice_email_subject_de": "Rechnung {invoice_number}",
-                "invoice_email_body_de": "{salutation},\n\nBetrag: {Betrag}",
+                "invoice_email_subject": "Invoice {invoice_number}",
+                "invoice_email_body": "{salutation},\n\nAmount: {Betrag}",
             },
         )
         self.assertFalse(form.is_valid())
-        self.assertIn("invoice_email_body_de", form.errors)
-        self.assertIn("{Betrag}", str(form.errors["invoice_email_body_de"]))
+        self.assertIn("invoice_email_body", form.errors)
+        self.assertIn("{Betrag}", str(form.errors["invoice_email_body"]))
         # ...and the correctly-spelled sibling field is not blamed
-        self.assertNotIn("invoice_email_subject_de", form.errors)
+        self.assertNotIn("invoice_email_subject", form.errors)
 
 
 class EmailContentBuilderTestBase(TestCase):
-    """Shared fixtures: one practice, one German client, one English client."""
+    """Shared fixtures: one practice, one client."""
 
     def setUp(self):
         self.practice = Practice.objects.create(
@@ -167,48 +151,35 @@ class EmailContentBuilderTestBase(TestCase):
             slug="email-content-builders",
             title="Test Practitioner",
             email="practice@practice.example",
-            city="Berlin",
-            email_signature="Viele Grüße\nAnna Schmidt",
+            city="Austin",
+            email_signature="Best regards\nAnna Schmidt",
         )
-        self.client_de = Client.objects.create(
-            client_code="AB-1",
-            full_name="Max Mustermann",
-            email="max@example.com",
-            language="de",
-            practice=self.practice,
-        )
-        self.client_en = Client.objects.create(
+        self.client_obj = Client.objects.create(
             client_code="CD-2",
             full_name="Jane Doe",
             email="jane@example.com",
-            language="en",
             practice=self.practice,
         )
 
 
 class SalutationTest(EmailContentBuilderTestBase):
-    def test_german_fallback_uses_first_name(self):
-        self.assertEqual(get_salutation_for_client(self.client_de), "Liebe:r Max")
-
-    def test_english_fallback_uses_first_name(self):
-        self.assertEqual(get_salutation_for_client(self.client_en), "Dear Jane")
+    def test_fallback_uses_first_name(self):
+        self.assertEqual(get_salutation_for_client(self.client_obj), "Dear Jane")
 
     def test_custom_salutation_overrides_fallback(self):
-        self.client_de.salutation = "Hallo Max"
-        self.assertEqual(get_salutation_for_client(self.client_de), "Hallo Max")
+        self.client_obj.salutation = "Hi Jane"
+        self.assertEqual(get_salutation_for_client(self.client_obj), "Hi Jane")
 
     def test_blank_full_name_falls_back_to_client(self):
-        nameless = Client.objects.create(
-            client_code="EF-3", full_name="", language="en", practice=self.practice
-        )
+        nameless = Client.objects.create(client_code="EF-3", full_name="", practice=self.practice)
         self.assertEqual(get_salutation_for_client(nameless), "Dear Client")
 
 
 class InvoiceEmailContentTest(EmailContentBuilderTestBase):
-    def _make_invoice(self, client, total="1234.50"):
+    def _make_invoice(self, total="1234.50"):
         invoice = Invoice.objects.create(
-            client=client,
-            invoice_number=f"{client.client_code}-1",
+            client=self.client_obj,
+            invoice_number="CD-2-1",
             status="draft",
             total=Decimal(total),
             practice=self.practice,
@@ -219,89 +190,77 @@ class InvoiceEmailContentTest(EmailContentBuilderTestBase):
         invoice.save(update_fields=["invoice_date"])
         return invoice
 
-    def test_amount_uses_german_format_matching_the_attached_pdf(self):
-        """Regression: an inline f-string produced "1234.50 €" beside a PDF reading "1.234,50 €"."""
-        invoice = self._make_invoice(self.client_de)
-        context = prepare_invoice_email_context(invoice, self.practice)
-        self.assertEqual(context["amount"], f"1.234,50{NBSP}€")
-        self.assertNotIn("1234.50", context["amount"])
+    def test_amount_format_matches_the_attached_pdf(self):
+        context = prepare_invoice_email_context(self._make_invoice(), self.practice)
+        self.assertEqual(context["amount"], "$1,234.50")
 
     def test_context_carries_every_documented_placeholder(self):
-        invoice = self._make_invoice(self.client_de)
-        context = prepare_invoice_email_context(invoice, self.practice)
-        self.assertEqual(context["invoice_number"], "AB-1-1")
-        self.assertEqual(context["date"], "15.08.2026")
-        self.assertEqual(context["client_name"], "Max Mustermann")
-        self.assertEqual(context["salutation"], "Liebe:r Max")
+        context = prepare_invoice_email_context(self._make_invoice(), self.practice)
+        self.assertEqual(context["invoice_number"], "CD-2-1")
+        self.assertEqual(context["date"], "15 Aug 26")
+        self.assertEqual(context["client_name"], "Jane Doe")
+        self.assertEqual(context["salutation"], "Dear Jane")
 
     def test_custom_salutation_overrides_context(self):
-        invoice = self._make_invoice(self.client_de)
-        context = prepare_invoice_email_context(invoice, self.practice, custom_salutation="Servus")
-        self.assertEqual(context["salutation"], "Servus")
+        context = prepare_invoice_email_context(
+            self._make_invoice(), self.practice, custom_salutation="Hey"
+        )
+        self.assertEqual(context["salutation"], "Hey")
 
-    def test_german_client_gets_german_template(self):
-        subject, body = get_invoice_email_content(self._make_invoice(self.client_de), self.practice)
-        self.assertEqual(subject, "Rechnung AB-1-1")
-        self.assertIn("anbei erhalten Sie die Rechnung", body)
-        self.assertIn(f"1.234,50{NBSP}€", body)
-
-    def test_english_client_gets_english_template(self):
-        subject, body = get_invoice_email_content(self._make_invoice(self.client_en), self.practice)
+    def test_default_template(self):
+        subject, body = get_invoice_email_content(self._make_invoice(), self.practice)
         self.assertEqual(subject, "Invoice CD-2-1")
-        self.assertIn("Please find attached invoice", body)
-        self.assertNotIn("anbei erhalten Sie", body)
+        self.assertIn("Please find attached invoice CD-2-1 for $1,234.50", body)
 
     def test_amount_rendered_into_body_not_left_as_placeholder(self):
-        _, body = get_invoice_email_content(self._make_invoice(self.client_de), self.practice)
+        _, body = get_invoice_email_content(self._make_invoice(), self.practice)
         self.assertNotIn("{amount}", body)
         self.assertNotIn("{invoice_number}", body)
         self.assertNotIn("{salutation}", body)
 
     def test_signature_appended(self):
-        _, body = get_invoice_email_content(self._make_invoice(self.client_de), self.practice)
-        self.assertTrue(body.endswith("-- \nViele Grüße\nAnna Schmidt"))
+        _, body = get_invoice_email_content(self._make_invoice(), self.practice)
+        self.assertTrue(body.endswith("-- \nBest regards\nAnna Schmidt"))
 
     def test_no_dangling_delimiter_when_signature_empty(self):
         """An empty signature must not leave a bare "-- " sig delimiter on the mail."""
         self.practice.email_signature = ""
-        _, body = get_invoice_email_content(self._make_invoice(self.client_de), self.practice)
+        _, body = get_invoice_email_content(self._make_invoice(), self.practice)
         self.assertNotIn("-- \n", body)
 
     def test_custom_message_appended_before_signature(self):
         _, body = get_invoice_email_content(
-            self._make_invoice(self.client_de), self.practice, custom_message="Bis bald!"
+            self._make_invoice(), self.practice, custom_message="See you soon!"
         )
-        self.assertIn("Bis bald!", body)
-        self.assertLess(body.index("Bis bald!"), body.index("Viele Grüße"))
+        self.assertIn("See you soon!", body)
+        self.assertLess(body.index("See you soon!"), body.index("Best regards"))
 
     def test_broken_template_renders_instead_of_crashing_the_send(self):
         """A template already stored with a typo must not abort the send."""
-        self.practice.invoice_email_body_de = "{salutation},\n\nBetrag: {Betrag}"
-        _, body = get_invoice_email_content(self._make_invoice(self.client_de), self.practice)
-        self.assertIn("Liebe:r Max", body)
+        self.practice.invoice_email_body = "{salutation},\n\nAmount: {Betrag}"
+        _, body = get_invoice_email_content(self._make_invoice(), self.practice)
+        self.assertIn("Dear Jane", body)
         self.assertIn("{Betrag}", body)
 
 
 class SessionsIntroTest(EmailContentBuilderTestBase):
     """The opening sentence summarising which sessions an invoice covers."""
 
-    def _invoice_with_sessions(self, client, session_dates):
+    def _invoice_with_sessions(self, session_dates):
         service_type = ServiceType.objects.create(
             practice=self.practice,
-            code="EINZEL",
-            name="Einzelsitzung",
-            name_de="Einzelsitzung",
-            name_en="Individual session",
+            code="INDIVIDUAL",
+            name="Individual session",
         )
         invoice = Invoice.objects.create(
-            client=client,
-            invoice_number=f"{client.client_code}-9",
+            client=self.client_obj,
+            invoice_number="CD-2-9",
             status="draft",
             total=Decimal("100.00"),
             practice=self.practice,
         )
         for d in session_dates:
-            session = Session.objects.create(client=client, session_date=d, duration=60)
+            session = Session.objects.create(client=self.client_obj, session_date=d, duration=60)
             InvoiceItem.objects.create(
                 invoice=invoice,
                 session=session,
@@ -311,161 +270,103 @@ class SessionsIntroTest(EmailContentBuilderTestBase):
             )
         return invoice
 
-    def test_single_month_german_singular(self):
-        invoice = self._invoice_with_sessions(self.client_de, [date(2026, 7, 3)])
+    def test_single_month_singular(self):
+        invoice = self._invoice_with_sessions([date(2026, 7, 3)])
         _, body = get_invoice_email_content(invoice, self.practice)
-        self.assertIn("unsere Sitzung im Juli", body)
+        self.assertIn("our session in July", body)
 
-    def test_single_month_german_plural(self):
-        invoice = self._invoice_with_sessions(self.client_de, [date(2026, 7, 3), date(2026, 7, 10)])
-        _, body = get_invoice_email_content(invoice, self.practice)
-        self.assertIn("unsere Sitzungen im Juli", body)
-
-    def test_single_month_english(self):
-        invoice = self._invoice_with_sessions(self.client_en, [date(2026, 7, 3), date(2026, 7, 10)])
+    def test_single_month_plural(self):
+        invoice = self._invoice_with_sessions([date(2026, 7, 3), date(2026, 7, 10)])
         _, body = get_invoice_email_content(invoice, self.practice)
         self.assertIn("our sessions in July", body)
 
     def test_spanning_months_counts_sessions(self):
-        invoice = self._invoice_with_sessions(self.client_de, [date(2026, 6, 30), date(2026, 7, 1)])
+        invoice = self._invoice_with_sessions([date(2026, 6, 30), date(2026, 7, 1)])
         _, body = get_invoice_email_content(invoice, self.practice)
-        self.assertIn("unsere letzten 2 Sitzungen", body)
+        self.assertIn("our last 2 sessions", body)
 
     def test_no_sessions_yields_no_intro(self):
-        invoice = self._invoice_with_sessions(self.client_de, [])
+        invoice = self._invoice_with_sessions([])
         _, body = get_invoice_email_content(invoice, self.practice)
-        self.assertNotIn("Sitzung", body)
+        self.assertNotIn("Here is the invoice for", body)
         self.assertNotIn("{sessions_intro}", body)
 
 
 class DocumentEmailContentTest(EmailContentBuilderTestBase):
-    """The five attachment-accompanying builders, each in both languages.
-
-    Parametrised over (builder, german marker, english marker) so a newly added
-    builder is a one-line addition rather than another copy of the same test.
-    """
+    """The client-specific builders: (builder, subject, body marker)."""
 
     CASES = [
         (
-            get_questionnaire_email_content,
-            "Anamnesebogen",
-            "Questionnaire",
-            "anbei auch der Anamnesebogen",
-            "Here is also the questionnaire",
-        ),
-        (
-            get_intake_email_content,
-            "Aufnahmebogen",
-            "Intake Form",
-            "anbei findest du den Aufnahmebogen",
-            "please find attached the intake form",
-        ),
-        (
-            get_gdpr_deletion_email_content,
-            "Löschung Ihrer gespeicherten Daten",
-            "Deletion of your personal data",
-            "Art. 17 DSGVO",
-            "Art. 17 GDPR",
+            get_records_deletion_email_content,
+            "Your records have been securely destroyed",
+            "records retention period has ended",
         ),
         (
             get_questionnaire_pdf_email_content,
-            "Fragebogen",
             "Questionnaire",
-            "anbei findest du einen kurzen Fragebogen",
             "please find attached a short questionnaire",
-        ),
-        (
-            get_contract_email_content,
-            "Behandlungsvertrag",
-            "Treatment Contract",
-            "anbei findest du den Behandlungsvertrag",
-            "please find attached the therapy agreement",
         ),
     ]
 
-    def test_german_subject_and_body(self):
-        for builder, subject_de, _subject_en, body_de, _body_en in self.CASES:
+    def test_subject_and_body(self):
+        for builder, subject_expected, body_marker in self.CASES:
             with self.subTest(builder=builder.__name__):
-                subject, body = builder(self.client_de, self.practice)
-                self.assertEqual(subject, subject_de)
-                self.assertIn(body_de, body)
-                self.assertTrue(body.startswith("Liebe:r Max,"))
-
-    def test_english_subject_and_body(self):
-        for builder, _subject_de, subject_en, _body_de, body_en in self.CASES:
-            with self.subTest(builder=builder.__name__):
-                subject, body = builder(self.client_en, self.practice)
-                self.assertEqual(subject, subject_en)
-                self.assertIn(body_en, body)
+                subject, body = builder(self.client_obj, self.practice)
+                self.assertEqual(subject, subject_expected)
+                self.assertIn(body_marker, body)
                 self.assertTrue(body.startswith("Dear Jane,"))
-
-    def test_languages_produce_different_bodies(self):
-        """Guards against a builder ignoring client.language entirely."""
-        for builder, *_ in self.CASES:
-            with self.subTest(builder=builder.__name__):
-                _, body_de = builder(self.client_de, self.practice)
-                _, body_en = builder(self.client_en, self.practice)
-                self.assertNotEqual(body_de, body_en)
 
     def test_signature_appended_when_set(self):
         for builder, *_ in self.CASES:
             with self.subTest(builder=builder.__name__):
-                _, body = builder(self.client_de, self.practice)
-                self.assertTrue(body.endswith("-- \nViele Grüße\nAnna Schmidt"))
+                _, body = builder(self.client_obj, self.practice)
+                self.assertTrue(body.endswith("-- \nBest regards\nAnna Schmidt"))
 
     def test_no_dangling_delimiter_when_signature_empty(self):
         self.practice.email_signature = ""
         for builder, *_ in self.CASES:
             with self.subTest(builder=builder.__name__):
-                _, body = builder(self.client_de, self.practice)
+                _, body = builder(self.client_obj, self.practice)
                 self.assertNotIn("-- \n", body)
 
 
 class TimeOffNoticeContentTest(EmailContentBuilderTestBase):
-    """Unlike the others this returns all four strings at once, for an editable form."""
+    """Returns subject and body for the editable multi-recipient form."""
 
     def _timeoff(self, start, end):
-        return TimeOff.objects.create(start_date=start, end_date=end, title="Sommerurlaub")
+        return TimeOff.objects.create(start_date=start, end_date=end, title="Summer vacation")
 
     def test_single_period_same_month(self):
         periods = [self._timeoff(date(2026, 7, 24), date(2026, 7, 28))]
-        subject_de, body_de, subject_en, body_en = get_timeoff_notice_default_content(
-            periods, self.practice
-        )
-        self.assertEqual(subject_de, "Praxis geschlossen: 24.-28. Juli")
-        self.assertEqual(subject_en, "Practice closed: 24-28th July")
-        self.assertIn("Fr 24. - Di 28. Juli", body_de)
-        self.assertIn("Fri 24th - Tue 28th July", body_en)
+        subject, body = get_timeoff_notice_default_content(periods, self.practice)
+        self.assertEqual(subject, "Practice closed: 24-28th July")
+        self.assertIn("Fri 24th - Tue 28th July", body)
 
     def test_single_period_spanning_months(self):
         periods = [self._timeoff(date(2026, 6, 30), date(2026, 7, 2))]
-        subject_de, _, subject_en, _ = get_timeoff_notice_default_content(periods, self.practice)
-        self.assertEqual(subject_de, "Praxis geschlossen: 30. Juni-2. Juli")
-        self.assertEqual(subject_en, "Practice closed: 30th June-2nd July")
+        subject, _ = get_timeoff_notice_default_content(periods, self.practice)
+        self.assertEqual(subject, "Practice closed: 30th June-2nd July")
 
     def test_multiple_periods_rendered_as_bullets(self):
         periods = [
             self._timeoff(date(2026, 7, 24), date(2026, 7, 28)),
             self._timeoff(date(2026, 8, 10), date(2026, 8, 14)),
         ]
-        subject_de, body_de, _, body_en = get_timeoff_notice_default_content(periods, self.practice)
-        self.assertIn("24.-28. Juli", subject_de)
-        self.assertIn("10.-14. August", subject_de)
-        self.assertIn("- Fr 24. - Di 28. Juli", body_de)
-        self.assertIn("- Mo 10. - Fr 14. August", body_de)
-        self.assertIn("- Fri 24th - Tue 28th July", body_en)
+        subject, body = get_timeoff_notice_default_content(periods, self.practice)
+        self.assertIn("24-28th July", subject)
+        self.assertIn("10-14th August", subject)
+        self.assertIn("- Fri 24th - Tue 28th July", body)
+        self.assertIn("- Mon 10th - Fri 14th August", body)
 
     def test_salutation_left_as_placeholder_for_per_recipient_render(self):
         """The body is filled in per recipient at send time, so it must stay a placeholder."""
         periods = [self._timeoff(date(2026, 7, 24), date(2026, 7, 28))]
-        _, body_de, _, body_en = get_timeoff_notice_default_content(periods, self.practice)
-        self.assertTrue(body_de.startswith("{salutation},"))
-        self.assertTrue(body_en.startswith("{salutation},"))
-        # and that placeholder must survive a real render round-trip
-        rendered = render_email_template(body_de, {"salutation": "Liebe:r Max"})
-        self.assertTrue(rendered.startswith("Liebe:r Max,"))
+        _, body = get_timeoff_notice_default_content(periods, self.practice)
+        self.assertTrue(body.startswith("{salutation},"))
+        rendered = render_email_template(body, {"salutation": "Dear Jane"})
+        self.assertTrue(rendered.startswith("Dear Jane,"))
 
-    def test_english_ordinal_suffixes(self):
+    def test_ordinal_suffixes(self):
         cases = {
             1: "1st",
             2: "2nd",
@@ -479,5 +380,5 @@ class TimeOffNoticeContentTest(EmailContentBuilderTestBase):
         for day, expected in cases.items():
             with self.subTest(day=day):
                 periods = [self._timeoff(date(2026, 7, day), date(2026, 7, day))]
-                _, _, subject_en, _ = get_timeoff_notice_default_content(periods, self.practice)
-                self.assertIn(expected, subject_en)
+                subject, _ = get_timeoff_notice_default_content(periods, self.practice)
+                self.assertIn(expected, subject)

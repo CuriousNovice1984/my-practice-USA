@@ -58,7 +58,6 @@ class AnalyticsTimeFilterTest(TestCase):
         self.service_type = ServiceType.objects.create(
             code="therapy_60",
             name="Therapy Session 60min",
-            name_de="Psychotherapie, 60 Min.",
             practice=self.practice,
         )
 
@@ -157,7 +156,7 @@ class AnalyticsTimeFilterTest(TestCase):
         CompanyExpense.objects.create(
             description="Expense Last Month",
             amount=Decimal("50.00"),
-            category="miete",
+            category="rent",
             date=last_month,
             is_tax_deductible=True,
             has_invoice=True,
@@ -236,11 +235,11 @@ class AnalyticsTimeFilterTest(TestCase):
         response = self.client_http.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="period"')
-        self.assertContains(response, "Zeitraum")
-        self.assertContains(response, "Alle Jahre (")
-        self.assertContains(response, "–heute)")
-        self.assertContains(response, "Letztes Jahr")
-        self.assertContains(response, "Letzter Monat")
+        self.assertContains(response, "Period")
+        self.assertContains(response, "All years (")
+        self.assertContains(response, "–today)")
+        self.assertContains(response, "Last year")
+        self.assertContains(response, "Last month")
 
     def test_filter_persistence(self):
         """Test that filter parameters are included in context"""
@@ -254,4 +253,4 @@ class AnalyticsTimeFilterTest(TestCase):
         response = self.client_http.get(self.url, {"period": "month"})
         self.assertEqual(response.status_code, 200)
         # When period != 'all', reset link should be present
-        self.assertContains(response, "Zurücksetzen")
+        self.assertContains(response, "Reset")

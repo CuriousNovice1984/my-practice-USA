@@ -1,0 +1,12 @@
+{% extends 'my_practice/portal_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Link not available" %}{% endblock %}
+
+{% block content %}
+<header class="portal-hero">
+    <p class="portal-hero__eyebrow">{% trans "Private upload" %}</p>
+    <h1 class="portal-hero__title">{% trans "This link is no longer available" %}</h1>
+    <p class="portal-hero__note">{% trans "Upload links expire after a while for your privacy. Please ask your counselor for a new link." %}</p>
+</header>
+{% endblock %}

@@ -12,7 +12,7 @@
  *   .data([100, 200, 300])
  *   .labels(['2022', '2023', '2024'])
  *   .preset('expense')
- *   .tooltip((data) => `${data.label}: ${data.value}€`)
+ *   .tooltip((data) => `${data.label}: $${data.value}`)
  *   .build();
  */
 class ChartBuilder {
@@ -228,7 +228,7 @@ class ChartBuilder {
         const colors = this.config.customColors || preset.colors?.line || ChartConfig.colors.primary.gradient;
 
         // Draw Y-axis labels
-        const yAxisSuffix = this.config.options.yAxisSuffix || preset.yAxisSuffix || '€';
+        const yAxisSuffix = this.config.options.yAxisSuffix || preset.yAxisSuffix || '$';
         drawYAxisLabels(ctx, padding, chartHeight, maxValue * 1.1, yAxisSuffix);
 
         // Calculate points

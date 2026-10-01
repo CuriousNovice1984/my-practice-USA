@@ -93,18 +93,8 @@ class SendTimeOffNoticeView(View):
             messages.error(request, _("Practice settings not configured."))
             return redirect("timeoff_list")
 
-        subject_de, body_de, subject_en, body_en = get_timeoff_notice_default_content(
-            time_offs, practice
-        )
-        form = TimeOffNoticeForm(
-            practice=practice,
-            initial={
-                "subject_de": subject_de,
-                "body_de": body_de,
-                "subject_en": subject_en,
-                "body_en": body_en,
-            },
-        )
+        subject, body = get_timeoff_notice_default_content(time_offs, practice)
+        form = TimeOffNoticeForm(practice=practice, initial={"subject": subject, "body": body})
         # All recipients pre-checked by default (see form initial above) — the
         # template renders the recipient table by hand, so it needs the checked
         # set spelled out explicitly rather than relying on widget iteration.
@@ -135,20 +125,13 @@ class SendTimeOffNoticeView(View):
             )
 
         recipients: list[Client] = list(form.cleaned_data["recipients"])
-        subject_de = form.cleaned_data["subject_de"]
-        body_de = form.cleaned_data["body_de"]
-        subject_en = form.cleaned_data["subject_en"]
-        body_en = form.cleaned_data["body_en"]
+        subject = form.cleaned_data["subject"]
+        body_template = form.cleaned_data["body"]
         from_email = _make_from_email(practice)
 
         sent_count = 0
         failed_clients: list[str] = []
         for client in recipients:
-            if client.language == "en":
-                subject, body_template = subject_en, body_en
-            else:
-                subject, body_template = subject_de, body_de
-
             body = render_email_template(
                 body_template, {"salutation": get_salutation_for_client(client)}
             )

@@ -45,8 +45,6 @@ class PracticeAnalyzerTestCase(TestCase):
         self.service_type = ServiceType.objects.create(
             code="therapy_60",
             name="Session",
-            name_de="Sitzung",
-            name_en="Session",
             default_duration=60,
             practice=self.practice,
         )
@@ -56,7 +54,6 @@ class PracticeAnalyzerTestCase(TestCase):
             client_code="EST",
             full_name="Established Client",
             email="est@test.com",
-            language="de",
             practice=self.practice,
         )
 
@@ -64,7 +61,6 @@ class PracticeAnalyzerTestCase(TestCase):
             client_code="PRO",
             full_name="Probatoric Client",
             email="pro@test.com",
-            language="de",
             practice=self.practice,
         )
 
@@ -72,7 +68,6 @@ class PracticeAnalyzerTestCase(TestCase):
             client_code="DOR",
             full_name="Dormant Client",
             email="dor@test.com",
-            language="de",
             practice=self.practice,
         )
 
@@ -321,23 +316,23 @@ class PracticeAnalyzerTestCase(TestCase):
 
         capacity = analysis["capacity"]
 
-        # Q4 working days excl. Berlin public holidays:
-        # Oct: 23 Mon-Fri − 2 holidays (Oct 3 Einheit, Oct 31 Reformationstag) = 21
-        # Nov: 20 Mon-Fri − 0 holidays = 20
-        # Dec: 23 Mon-Fri − 2 holidays (Dec 25+26 Weihnachten) = 21  →  total 62
+        # Q4 working days excl. US federal holidays:
+        # Oct: 23 Mon-Fri − 1 holiday (Oct 13 Columbus Day) = 22
+        # Nov: 20 Mon-Fri − 2 holidays (Nov 11 Veterans Day, Nov 27 Thanksgiving) = 18
+        # Dec: 23 Mon-Fri − 1 holiday (Dec 25 Christmas) = 22  →  total 62
         self.assertEqual(capacity["working_days_total"], 62)
 
-        # TimeOff Dec 23-31: 7 Mon-Fri − 2 holidays (Dec 25+26) = 5 workdays; 62 − 5 = 57
-        self.assertEqual(capacity["working_days_available"], 57)
+        # TimeOff Dec 23-31: 7 Mon-Fri − 1 holiday (Dec 25) = 6 workdays; 62 − 6 = 56
+        self.assertEqual(capacity["working_days_available"], 56)
 
-        # Available hours: 57 days * 8 hours = 456
-        self.assertEqual(capacity["available_hours"], 456)
+        # Available hours: 56 days * 8 hours = 448
+        self.assertEqual(capacity["available_hours"], 448)
 
         # Booked hours: 18 (EST) + 3 (PRO) = 21
         self.assertEqual(capacity["booked_hours"], 21.0)
 
-        # Usable capacity: 57 days / 5 * 20h/week = 228
-        self.assertAlmostEqual(capacity["usable_capacity_hours"], 228.0, places=1)
+        # Usable capacity: 56 days / 5 * 20h/week = 224
+        self.assertAlmostEqual(capacity["usable_capacity_hours"], 224.0, places=1)
 
         # Capacity percentage: 21 / 240 * 100 ≈ 8.75%
         self.assertGreater(capacity["capacity_percentage"], 7)
@@ -353,8 +348,8 @@ class PracticeAnalyzerTestCase(TestCase):
         # Dec 23-31 = 9 days total
         self.assertEqual(timeoff["total_days"], 9)
 
-        # Workdays: Dec 23,24,29,30,31 = 5 (excl. Dec 25+26 Berlin public holidays)
-        self.assertEqual(timeoff["workdays"], 5)
+        # Workdays: Dec 23,24,26,29,30,31 = 6 (excl. Dec 25 federal holiday)
+        self.assertEqual(timeoff["workdays"], 6)
 
     def test_insights_generation(self):
         """Test that insights are generated"""
@@ -393,7 +388,6 @@ class PracticeAnalyzerTestCase(TestCase):
             client_code="ONL",
             full_name="Online Client",
             email="onl@test.com",
-            language="en",
             is_online_client=True,
             practice=self.practice,
         )
@@ -468,8 +462,6 @@ class CalculateQuarterTrendsTestCase(TestCase):
         self.service_type = ServiceType.objects.create(
             code="therapy_60",
             name="Session",
-            name_de="Sitzung",
-            name_en="Session",
             default_duration=60,
             practice=self.practice,
         )
@@ -479,7 +471,6 @@ class CalculateQuarterTrendsTestCase(TestCase):
             client_code="TRE",
             full_name="Trend Client",
             email="trend@test.com",
-            language="de",
             practice=self.practice,
         )
 
@@ -611,7 +602,6 @@ class PracticeAnalyzerEdgeCasesTestCase(TestCase):
             client_code="NEW",
             full_name="New Client",
             email="new@test.com",
-            language="de",
             practice=self.practice,
         )
 

@@ -24,12 +24,12 @@ class CurrencyFilterTests(TestCase):
     """Tests for the currency template filter."""
 
     def test_currency_basic(self):
-        """Test basic currency formatting (German format)."""
-        self.assertEqual(currency(1234.56), "1.234,56\u00a0€")
+        """Test basic US currency formatting."""
+        self.assertEqual(currency(1234.56), "$1,234.56")
 
     def test_currency_with_custom_symbol(self):
         """Test currency with custom symbol."""
-        self.assertEqual(currency(1234.56, "$"), "1.234,56\u00a0$")
+        self.assertEqual(currency(1234.56, "US$"), "US$1,234.56")
 
     def test_currency_with_none(self):
         """Test currency with None value."""
@@ -37,23 +37,23 @@ class CurrencyFilterTests(TestCase):
 
     def test_currency_with_zero(self):
         """Test currency with zero value."""
-        self.assertEqual(currency(0), "0,00\u00a0€")
+        self.assertEqual(currency(0), "$0.00")
 
     def test_currency_large_number(self):
         """Test currency with large number."""
-        self.assertEqual(currency(1234567.89), "1.234.567,89\u00a0€")
+        self.assertEqual(currency(1234567.89), "$1,234,567.89")
 
     def test_currency_negative_number(self):
         """Test currency with negative number."""
-        self.assertEqual(currency(-100.50), "-100,50\u00a0€")
+        self.assertEqual(currency(-100.50), "-$100.50")
 
     def test_currency_very_small_number(self):
         """Test currency with very small number."""
-        self.assertEqual(currency(0.01), "0,01\u00a0€")
+        self.assertEqual(currency(0.01), "$0.01")
 
     def test_currency_string_coercion(self):
         """Test currency with string input."""
-        self.assertEqual(currency("99.99"), "99,99\u00a0€")
+        self.assertEqual(currency("99.99"), "$99.99")
 
 
 class PercentFilterTests(TestCase):
@@ -280,24 +280,24 @@ class FormatMonthYearFilterTests(TestCase):
     """Tests for the format_month_year template filter."""
 
     def test_format_month_year_basic(self):
-        """Test basic month/year formatting in German."""
+        """Test basic month/year formatting."""
         test_date = date(2025, 1, 15)
         self.assertEqual(format_month_year(test_date), "Jan 2025")
 
     def test_format_month_year_december(self):
         """Test December formatting."""
         test_date = date(2024, 12, 31)
-        self.assertEqual(format_month_year(test_date), "Dez 2024")
+        self.assertEqual(format_month_year(test_date), "Dec 2024")
 
     def test_format_month_year_march(self):
-        """Test March formatting (German: Mär)."""
+        """Test March formatting ."""
         test_date = date(2023, 3, 15)
-        self.assertEqual(format_month_year(test_date), "Mär 2023")
+        self.assertEqual(format_month_year(test_date), "Mar 2023")
 
     def test_format_month_year_october(self):
-        """Test October formatting (German: Okt)."""
+        """Test October formatting ."""
         test_date = date(2022, 10, 1)
-        self.assertEqual(format_month_year(test_date), "Okt 2022")
+        self.assertEqual(format_month_year(test_date), "Oct 2022")
 
     def test_format_month_year_with_none(self):
         """Test format_month_year with None value."""
@@ -308,16 +308,16 @@ class FormatMonthYearFilterTests(TestCase):
         expected = [
             "Jan",
             "Feb",
-            "Mär",
+            "Mar",
             "Apr",
-            "Mai",
+            "May",
             "Jun",
             "Jul",
             "Aug",
             "Sep",
-            "Okt",
+            "Oct",
             "Nov",
-            "Dez",
+            "Dec",
         ]
         for month, month_name in enumerate(expected, 1):
             test_date = date(2025, month, 1)

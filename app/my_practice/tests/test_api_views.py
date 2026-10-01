@@ -51,7 +51,7 @@ class NextInvoiceNumberAPITest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
-        self.assertEqual(response.json()["error"], "Klienten-ID erforderlich")
+        self.assertEqual(response.json()["error"], "Client ID required")
 
     def test_next_invoice_number_invalid_client(self):
         """Test API returns 404 for non-existent client"""
@@ -59,7 +59,7 @@ class NextInvoiceNumberAPITest(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertIn("error", response.json())
-        self.assertEqual(response.json()["error"], "Klient nicht gefunden")
+        self.assertEqual(response.json()["error"], "Client not found")
 
     def test_next_invoice_number_first_invoice(self):
         """Test API returns correct number for first invoice"""
@@ -164,7 +164,7 @@ class InvoicePDFViewTest(TestCase):
 
         # Check filename in Content-Disposition
         content_disposition = response["Content-Disposition"]
-        self.assertIn("Rechnung_TC-1.pdf", content_disposition)
+        self.assertIn("Invoice_TC-1.pdf", content_disposition)
 
     def test_invoice_pdf_404(self):
         """Test PDF generation returns 404 for non-existent invoice"""
@@ -179,7 +179,6 @@ class InvoicePDFViewTest(TestCase):
             client_code="EN",
             full_name="English Client",
             email="english@example.com",
-            language="en",
             practice=self.practice,
         )
 
@@ -223,168 +222,6 @@ class InvoicePDFViewTest(TestCase):
         response = self.client_http.get(reverse("invoice_pdf", kwargs={"pk": invoice.pk}))
 
         # Should work with configured practice
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "application/pdf")
-
-
-class IntakeFormPdfTest(TestCase):
-    """Tests for the fillable Aufnahmebogen PDF."""
-
-    def setUp(self):
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="intake-pdf-test",
-            title="Test Practitioner",
-            email="practice@example.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(username="intakepdfuser", password="testpass123")
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http = TestClient()
-        self.client_http.login(username="intakepdfuser", password="testpass123")
-
-        self.test_client = Client.objects.create(
-            client_code="TC",
-            full_name="Max Mustermann",
-            email="max@example.com",
-            phone="+49 123 456789",
-            date_of_birth=date(1990, 1, 15),
-            practice=self.practice,
-        )
-
-    def _get_form_fields(self, pdf_bytes: bytes) -> dict:
-        import io
-
-        from pypdf import PdfReader
-
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-        return reader.get_fields() or {}
-
-    def test_intake_form_pdf_download(self):
-        """View returns a PDF with the expected filename."""
-        response = self.client_http.get(
-            reverse("intake_form_pdf", kwargs={"pk": self.test_client.pk})
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "application/pdf")
-        self.assertIn("Aufnahmebogen_TC.pdf", response["Content-Disposition"])
-
-    def test_intake_form_pdf_has_fillable_fields(self):
-        """The PDF contains AcroForm fields, pre-filled from client data."""
-        response = self.client_http.get(
-            reverse("intake_form_pdf", kwargs={"pk": self.test_client.pk})
-        )
-        fields = self._get_form_fields(response.content)
-
-        expected = {
-            "full_name",
-            "date_of_birth",
-            "address",
-            "postal_code_city",
-            "email",
-            "phone",
-            "cost_carrier",
-            "place_date",
-            "signature_patient",
-        }
-        self.assertEqual(set(fields), expected)
-        self.assertEqual(fields["full_name"].get("/V"), "Max Mustermann")
-        self.assertEqual(fields["date_of_birth"].get("/V"), "15.01.1990")
-        self.assertEqual(fields["email"].get("/V"), "max@example.com")
-        # Blank fields are present but empty
-        self.assertEqual(fields["postal_code_city"].get("/V"), "")
-        self.assertEqual(fields["signature_patient"].get("/V"), "")
-
-    def test_intake_form_pdf_english(self):
-        """?lang=en switches the filename to the English variant."""
-        response = self.client_http.get(
-            reverse("intake_form_pdf", kwargs={"pk": self.test_client.pk}) + "?lang=en"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("IntakeForm_TC.pdf", response["Content-Disposition"])
-        self.assertTrue(self._get_form_fields(response.content))
-
-
-class ContractPdfTest(TestCase):
-    """Tests for the pre-filled Behandlungsvertrag PDF."""
-
-    def setUp(self):
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="contract-pdf-test",
-            title="Heilpraktikerin für Psychotherapie",
-            email="practice@example.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(username="contractpdfuser", password="testpass123")
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http = TestClient()
-        self.client_http.login(username="contractpdfuser", password="testpass123")
-
-        self.test_client = Client.objects.create(
-            client_code="TC",
-            full_name="Max Mustermann",
-            hourly_rate_60=Decimal("90.00"),
-            practice=self.practice,
-        )
-
-    def test_contract_pdf_download_german_default(self):
-        response = self.client_http.get(reverse("contract_pdf", kwargs={"pk": self.test_client.pk}))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "application/pdf")
-        self.assertIn("Behandlungsvertrag_TC.pdf", response["Content-Disposition"])
-
-    def test_contract_pdf_lang_param_switches_to_english(self):
-        response = self.client_http.get(
-            reverse("contract_pdf", kwargs={"pk": self.test_client.pk}) + "?lang=en"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("TreatmentContract_TC.pdf", response["Content-Disposition"])
-
-    def test_contract_pdf_uses_client_language_when_no_param(self):
-        self.test_client.language = "en"
-        self.test_client.save()
-        response = self.client_http.get(reverse("contract_pdf", kwargs={"pk": self.test_client.pk}))
-        self.assertIn("TreatmentContract_TC.pdf", response["Content-Disposition"])
-
-    def test_contract_pdf_404_for_nonexistent_client(self):
-        response = self.client_http.get(reverse("contract_pdf", kwargs={"pk": 99999}))
-        self.assertEqual(response.status_code, 404)
-
-
-class InvoicePdfGebuehTest(TestCase):
-    """Test the needs_gebueh_invoice branch of invoice PDF rendering."""
-
-    def setUp(self):
-        self.practice = Practice.objects.create(
-            name="Test Practice",
-            slug="invoice-pdf-gebueh",
-            title="Heilpraktikerin für Psychotherapie",
-            email="practice@example.com",
-            city="Berlin",
-        )
-        self.user = User.objects.create_user(username="gebuehpdfuser", password="testpass123")
-        UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        self.client_http = TestClient()
-        self.client_http.login(username="gebuehpdfuser", password="testpass123")
-
-        self.test_client = Client.objects.create(
-            client_code="TC",
-            full_name="Max Mustermann",
-            hourly_rate_60=Decimal("90.00"),
-            practice=self.practice,
-            needs_gebueh_invoice=True,
-        )
-        self.invoice = Invoice.objects.create(
-            client=self.test_client,
-            invoice_number="TC-1",
-            invoice_date=date.today(),
-            total=Decimal("90.00"),
-            practice=self.practice,
-        )
-
-    def test_invoice_pdf_renders_for_gebueh_client_with_no_leistungen(self):
-        response = self.client_http.get(reverse("invoice_pdf", kwargs={"pk": self.invoice.pk}))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
 
@@ -443,14 +280,14 @@ class InvoiceBatchDownloadTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
-        self.assertIn("Rechnungen_2026.zip", response["Content-Disposition"])
+        self.assertIn("Invoices_2026.zip", response["Content-Disposition"])
 
         import zipfile
         from io import BytesIO
 
         zf = zipfile.ZipFile(BytesIO(response.content))
         self.assertEqual(len(zf.namelist()), 1)
-        self.assertIn("TC_Rechnung_TC-1.pdf", zf.namelist()[0])
+        self.assertIn("TC_Invoice_TC-1.pdf", zf.namelist()[0])
 
 
 class UpdateInvoiceStatusTest(TestCase):

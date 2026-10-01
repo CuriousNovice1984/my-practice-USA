@@ -357,7 +357,7 @@ class SyncBankUnmatchedTests(TestCase):
             "transaction_date": date(2026, 1, 15),
             "value_date": date(2026, 1, 15),
             "payer_name": "Max Mustermann",
-            "payer_iban": "",
+            "payer_account": "",
             "reference": reference,
             "amount": Decimal(amount),
             "balance_after": Decimal("1000.00"),

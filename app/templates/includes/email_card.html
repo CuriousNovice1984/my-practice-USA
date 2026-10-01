@@ -1,55 +1,25 @@
-{# Shared bilingual email card — used on /tools/boilerplate/ and inquiry detail.  #}
-{# Required: card_title, card_id, body_de                                          #}
-{# Optional: body_en     — adds DE/EN tabs when present                            #}
-{#           subject_de, subject_en — adds copyable subject row inside each panel  #}
-{# Exempt from i18n (like utils/email_utils.py): labels here identify the language #}
-{# of the authored content beside them (Betreff/Subject, Kopieren/Copy), not the   #}
-{# app's UI language — translating them would make the German panel show English  #}
-{# labels when the UI is switched to English, which defeats the point.            #}
-<section class="bp-card" x-data="{ tab: 'de' }">
+{% load i18n %}
+{# Shared copyable email card — used on /tools/boilerplate/ and inquiry detail. #}
+{# Required: card_title, card_id, body                                          #}
+{# Optional: subject — adds a copyable subject row                              #}
+<section class="bp-card">
     <h2>{{ card_title }}</h2>
-    {% if body_en %}
-    <div class="bp-tabs">
-        <button type="button" class="bp-tab" :class="{ active: tab === 'de' }" x-on:click="tab = 'de'">Deutsch</button>
-        <button type="button" class="bp-tab" :class="{ active: tab === 'en' }" x-on:click="tab = 'en'">English</button>
-    </div>
-    {% endif %}
-    <div id="{{ card_id }}-de" class="bp-body" :class="{ active: tab === 'de' }">
-        {% if subject_de %}
+    <div id="{{ card_id }}">
+        {% if subject %}
         <div class="bp-subject">
-            <span class="bp-subject-label">Betreff</span>
-            <span class="bp-subject-text">{{ subject_de }}</span>
+            <span class="bp-subject-label">{% trans "Subject" %}</span>
+            <span class="bp-subject-text">{{ subject }}</span>
             <button type="button" class="btn btn-secondary bp-copy-btn"
-                    data-copy="{{ subject_de }}"
+                    data-copy="{{ subject }}"
                     x-data="{ copied: false }"
                     x-on:click="navigator.clipboard.writeText($el.dataset.copy).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                    x-text="copied ? '✓ Kopiert' : 'Kopieren'">Kopieren</button>
+                    x-text="copied ? '{% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
         </div>
         {% endif %}
-        <pre class="bp-text">{{ body_de }}</pre>
+        <pre class="bp-text">{{ body }}</pre>
         <button type="button" class="btn btn-secondary bp-copy-btn"
                 x-data="{ copied: false }"
                 x-on:click="navigator.clipboard.writeText($el.previousElementSibling.textContent).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                x-text="copied ? '✓ Kopiert' : 'Kopieren'">Kopieren</button>
+                x-text="copied ? '{% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
     </div>
-    {% if body_en %}
-    <div id="{{ card_id }}-en" class="bp-body" :class="{ active: tab === 'en' }">
-        {% if subject_en %}
-        <div class="bp-subject">
-            <span class="bp-subject-label">Subject</span>
-            <span class="bp-subject-text">{{ subject_en }}</span>
-            <button type="button" class="btn btn-secondary bp-copy-btn"
-                    data-copy="{{ subject_en }}"
-                    x-data="{ copied: false }"
-                    x-on:click="navigator.clipboard.writeText($el.dataset.copy).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                    x-text="copied ? '✓ Copied' : 'Copy'">Copy</button>
-        </div>
-        {% endif %}
-        <pre class="bp-text">{{ body_en }}</pre>
-        <button type="button" class="btn btn-secondary bp-copy-btn"
-                x-data="{ copied: false }"
-                x-on:click="navigator.clipboard.writeText($el.previousElementSibling.textContent).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                x-text="copied ? '✓ Copied' : 'Copy'">Copy</button>
-    </div>
-    {% endif %}
 </section>

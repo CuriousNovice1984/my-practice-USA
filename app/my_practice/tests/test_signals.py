@@ -34,8 +34,6 @@ class InvoiceSignalTests(TestCase):
         )
         self.service_type = ServiceType.objects.create(
             name="Test Service",
-            name_de="Testservice",
-            name_en="Test Service",
             practice=self.practice,
         )
 

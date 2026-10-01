@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Client uploads" %}{% endblock %}
+{% block page_title %}{% trans "Client uploads" %}{% endblock %}
+{% block page_subtitle %}{% trans "Documents clients sent through the forms portal" %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-section">
+        {% for doc in documents %}
+        <div class="portal-link-row">
+            <span class="portal-link-url">
+                <a href="{% url 'client_detail' doc.client_id %}#client-portal"><strong>{{ doc.client.client_code }}</strong></a>
+                · {{ doc.get_document_type_display }}
+                · <a href="{{ doc.file.url }}" target="_blank">{{ doc.description|default:doc.filename }}</a>
+                <span class="text-muted">· {{ doc.created_at|date:"d M y" }}</span>
+            </span>
+            <form method="post" action="{% url 'portal_upload_mark_reviewed' doc.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm">{% trans "Mark reviewed" %}</button>
+            </form>
+        </div>
+        {% empty %}
+        <p class="cn-empty-state">{% trans "Nothing new — all client uploads have been reviewed." %}</p>
+        {% endfor %}
+    </div>
+    <a href="{% url 'portal_forms' %}" class="btn btn-secondary">{% trans "Manage portal forms" %}</a>
+</div>
+{% endblock %}

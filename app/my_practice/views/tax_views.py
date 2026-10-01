@@ -2,6 +2,7 @@
 Tax year summary view - provides comprehensive financial overview for tax purposes.
 """
 
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import cast
 from urllib.parse import urlencode
@@ -17,8 +18,12 @@ from django.views.decorators.http import require_POST
 
 from ..forms import TaxYearNoteForm
 from ..models import CompanyExpense, CompanyWithdrawal, TaxYearNote
-from ..utils import DateRangeHelper, RevenueCalculator, TaxYearContextBuilder
-from ..utils.practice_days import WorkdayAuditCalculator
+from ..utils import RevenueCalculator, TaxYearContextBuilder
+from ..utils.practice_days import (
+    EstimatedTaxPeriod,
+    estimated_tax_periods,
+    self_employment_tax_estimate,
+)
 from ..utils.tax_context_builder import available_data_years
 from ..utils.view_helpers import get_year_from_request
 
@@ -89,39 +94,15 @@ def save_tax_year_note(request: HttpRequest) -> JsonResponse:
         year=year,
         defaults=defaults,
     )
-    return JsonResponse({"saved": True, "updated_at": obj.updated_at.strftime("%d.%m.%Y %H:%M")})
+    return JsonResponse({"saved": True, "updated_at": obj.updated_at.strftime("%d %b %y %H:%M")})
 
 
-def tax_workday_audit(request: HttpRequest) -> HttpResponse:
-    """
-    Printable day-by-day workday audit list for a tax year.
-
-    Classifies every Mon–Fri as: practice day, home-office day, public holiday,
-    or time-off. Includes session count per day for verification.
-    """
-    year = (
-        get_year_from_request(request, "year", timezone.localdate().year)
-        or timezone.localdate().year
-    )
-    practice = request.current_practice
-
-    audit = WorkdayAuditCalculator(practice, year).calculate() if practice else None
-
-    available_years = available_data_years(practice) if practice else []
-
-    return render(
-        request,
-        "my_practice/tax_workday_audit.html",
-        {"year": year, "audit": audit, "practice": practice, "available_years": available_years},
-    )
-
-
-def _build_quarter_data(year: int, practice, today, current_quarter: int, q: int) -> dict:
-    """Revenue/expenses/tax-prepayment data for one quarter of *year*."""
-    start, end = DateRangeHelper.get_quarter_range(year, q)
+def _build_period_data(period: EstimatedTaxPeriod, previous_due: date, practice, today) -> dict:
+    """Revenue/expenses/estimated-tax payments for one 1040-ES period."""
+    start, end = period.start, period.end
 
     # Same paid-date rule (with invoice_date fallback) as the year summary,
-    # so quarters sum to the year total
+    # so periods sum to the year total
     revenue = RevenueCalculator.get_paid_revenue_for_range(start, end, practice=practice)
 
     expenses = CompanyExpense.objects.filter(
@@ -130,27 +111,34 @@ def _build_quarter_data(year: int, practice, today, current_quarter: int, q: int
         is_tax_deductible=True,
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
+    # A payment counts toward the period whose due date it was made by: payments
+    # after the previous due date up to and including this one.
     tax_withdrawals = CompanyWithdrawal.objects.filter(
         practice=practice,
         category="tax",
-        date__range=(start, end),
+        date__gt=previous_due,
+        date__lte=period.due,
     ).order_by("date")
     tax_paid = sum(w.amount for w in tax_withdrawals)
 
-    # A quarter is "complete" once its last day has passed
+    net_profit = revenue - expenses
     is_complete = today > end
-    is_current = q == current_quarter and year == today.year
-    # Flag quarters where money was earned but no prepayment recorded
-    needs_attention = (is_complete or is_current) and revenue > 0 and not tax_withdrawals.exists()
+    is_current = start <= today <= end
+    is_overdue = today > period.due
+    # Flag periods with profit but no payment once the due date is near or past
+    due_soon = timedelta(0) <= period.due - today <= timedelta(days=30)
+    needs_attention = (is_overdue or due_soon) and net_profit > 0 and not tax_withdrawals.exists()
 
     return {
-        "number": q,
-        "label": f"Q{q}",
+        "number": period.number,
+        "label": period.label,
         "start": start,
         "end": end,
+        "due": period.due,
         "revenue": revenue,
         "expenses": expenses,
-        "net_profit": revenue - expenses,
+        "net_profit": net_profit,
+        "se_tax_estimate": self_employment_tax_estimate(net_profit),
         "tax_withdrawals": tax_withdrawals,
         "tax_paid": tax_paid,
         "is_complete": is_complete,
@@ -175,7 +163,7 @@ def _tax_note_context(practice, year: int, total_tax_paid: Decimal) -> dict:
 
 
 def _add_tax_payment_url(year: int) -> str:
-    """Quick-add URL for a tax prepayment, returning to this year's overview.
+    """Quick-add URL for an estimated tax payment, returning to this year's overview.
 
     The withdrawal form honours ?next= (NextRedirectMixin), so saving or
     cancelling comes back here rather than dropping the user on the withdrawal
@@ -187,11 +175,12 @@ def _add_tax_payment_url(year: int) -> str:
 
 def tax_quarter_overview(request: HttpRequest) -> HttpResponse:
     """
-    Quarterly tax overview for Steuervorauszahlung tracking (P-013 Phase 2).
+    Quarterly estimated tax overview (IRS Form 1040-ES, P-013 Phase 2).
 
-    Shows per-quarter revenue, deductible expenses, and net profit for the
-    selected year, plus a history of tax prepayment withdrawals (category='tax').
-    Provides a quick-add link to record a new prepayment.
+    Shows per-period revenue, deductible expenses, net profit and an estimated
+    self-employment tax for the selected year, with each period's due date, plus
+    the estimated tax payments recorded as withdrawals (category='tax').
+    Provides a quick-add link to record a new payment.
     """
     year = (
         get_year_from_request(request, "year", timezone.localdate().year)
@@ -199,13 +188,19 @@ def tax_quarter_overview(request: HttpRequest) -> HttpResponse:
     )
     practice = request.current_practice
     today = timezone.localdate()
-    current_quarter = DateRangeHelper.get_quarter_for_date(today)[0]
 
-    quarters = [_build_quarter_data(year, practice, today, current_quarter, q) for q in range(1, 5)]
+    periods = estimated_tax_periods(year)
+    # Q1 payments start the day after the prior year's Q4 due date (mid-January)
+    previous_dues = [estimated_tax_periods(year - 1)[-1].due] + [p.due for p in periods[:-1]]
+    quarters = [
+        _build_period_data(period, previous_due, practice, today)
+        for period, previous_due in zip(periods, previous_dues, strict=True)
+    ]
 
     total_revenue: Decimal = sum((cast(Decimal, q["revenue"]) for q in quarters), Decimal("0"))
     total_expenses: Decimal = sum((cast(Decimal, q["expenses"]) for q in quarters), Decimal("0"))
     total_tax_paid: Decimal = sum((cast(Decimal, q["tax_paid"]) for q in quarters), Decimal("0"))
+    total_net_profit = total_revenue - total_expenses
 
     available_years = available_data_years(practice, include_expenses=False) or [today.year]
 
@@ -219,8 +214,8 @@ def tax_quarter_overview(request: HttpRequest) -> HttpResponse:
             "total_revenue": total_revenue,
             "total_expenses": total_expenses,
             "total_tax_paid": total_tax_paid,
-            "total_net_profit": total_revenue - total_expenses,
-            "current_quarter": current_quarter,
+            "total_net_profit": total_net_profit,
+            "total_se_tax_estimate": self_employment_tax_estimate(total_net_profit),
             "add_payment_url": _add_tax_payment_url(year),
             "save_note_url": reverse("save_tax_year_note"),
             **_tax_note_context(practice, year, total_tax_paid),

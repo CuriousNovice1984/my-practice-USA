@@ -5,12 +5,26 @@ from django.utils.html import format_html
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
-from ..models import Practice
+from ..models import Practice, ProviderLicense
+
+
+class ProviderLicenseInline(admin.TabularInline):
+    model = ProviderLicense
+    extra = 0
+    fields = ("state", "license_type", "license_number", "expiration_date", "notes")
+
+
+@admin.register(ProviderLicense)
+class ProviderLicenseAdmin(admin.ModelAdmin):
+    list_display = ("practice", "license_type", "state", "license_number", "expiration_date")
+    list_filter = ("practice", "state")
 
 
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
     """Practice admin with field groups for better organization (Django 5.1 feature)"""
+
+    inlines = [ProviderLicenseInline]
 
     fieldsets = (
         (
@@ -18,11 +32,9 @@ class PracticeAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "name",
-                    "short_title_de",
-                    "short_title_en",
+                    "short_title",
                     "title",
-                    "subtitle_de",
-                    "subtitle_en",
+                    "subtitle",
                 ),
                 "description": gettext_lazy("Basic information about the practice"),
             },
@@ -30,7 +42,7 @@ class PracticeAdmin(admin.ModelAdmin):
         (
             gettext_lazy("Address"),
             {
-                "fields": ("street", "postal_code", "city", "country"),
+                "fields": ("street", "city", "state", "postal_code", "country"),
                 "classes": ("collapse",),  # Collapsible group
             },
         ),
@@ -42,13 +54,13 @@ class PracticeAdmin(admin.ModelAdmin):
             },
         ),
         (
-            gettext_lazy("Bank Details"),
+            gettext_lazy("Payments"),
             {
-                "fields": ("bank_name", "iban", "bic", "private_bank_account"),
+                "fields": ("payment_instructions", "private_bank_account"),
                 "classes": ("collapse",),
                 "description": gettext_lazy(
-                    "Business account for invoices. The private bank account (IBAN) is used "
-                    "during bank import to automatically detect withdrawals and capital "
+                    "Payment instructions are printed on invoices. The private bank account "
+                    "is used during bank import to automatically detect owner draws and "
                     "contributions."
                 ),
             },
@@ -61,30 +73,30 @@ class PracticeAdmin(admin.ModelAdmin):
                     "csv_column_date",
                     "csv_column_value_date",
                     "csv_column_payer_name",
-                    "csv_column_payer_iban",
+                    "csv_column_payer_account",
                     "csv_column_reference",
                     "csv_column_amount",
                     "csv_column_balance",
-                    "csv_column_account_iban",
+                    "csv_column_account",
                 ),
                 "classes": ("collapse",),
                 "description": gettext_lazy(
                     "Delimiter and column names for your bank's CSV export, used by "
-                    "/bank/import. Defaults match GLS Bank; adjust for other banks."
+                    "/bank/import. Adjust to match your bank's export."
                 ),
             },
         ),
         (
             gettext_lazy("Tax"),
             {
-                "fields": ("tax_id", "vat_exempt_text_de", "vat_exempt_text_en"),
+                "fields": ("tax_id", "records_retention_years"),
                 "classes": ("collapse",),
             },
         ),
         (
             gettext_lazy("Memberships"),
             {
-                "fields": ("memberships_de", "memberships_en"),
+                "fields": ("professional_memberships",),
                 "classes": ("collapse",),
             },
         ),
@@ -105,8 +117,7 @@ class PracticeAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "payment_terms_days",
-                    "payment_terms_text_de",
-                    "payment_terms_text_en",
+                    "payment_terms_text",
                     "overdue_after_days",
                 ),
                 "classes": ("collapse",),
@@ -120,10 +131,8 @@ class PracticeAdmin(admin.ModelAdmin):
             gettext_lazy("Email Templates for Invoices"),
             {
                 "fields": (
-                    "invoice_email_subject_de",
-                    "invoice_email_subject_en",
-                    "invoice_email_body_de",
-                    "invoice_email_body_en",
+                    "invoice_email_subject",
+                    "invoice_email_body",
                     "email_signature",
                 ),
                 "classes": ("collapse", "wide"),  # Collapsible + wide for text fields
@@ -148,17 +157,12 @@ class PracticeAdmin(admin.ModelAdmin):
             },
         ),
         (
-            gettext_lazy("Travel Costs (P-027)"),
+            gettext_lazy("Home Office"),
             {
-                "fields": (
-                    "commute_distance_km",
-                    "practice_weekdays",
-                ),
+                "fields": ("home_office_sqft",),
                 "classes": ("collapse",),
                 "description": gettext_lazy(
-                    "Distance allowance (§9 (1) no. 4 EStG). One-way distance in km + "
-                    "weekdays on which the practice is attended (JSON list, e.g. "
-                    "[0, 1, 2, 3, 4] for Mon–Fri)."
+                    "Used for the simplified home office deduction on the tax year summary."
                 ),
             },
         ),

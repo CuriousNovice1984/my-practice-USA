@@ -153,7 +153,7 @@ def apply_remainder_distribution(created_items: list, total_amount: Decimal) -> 
     Apply remainder distribution to ensure exact invoice total.
 
     Problem: Dividing invoice total by session count creates rounding errors.
-    Example: 340€ ÷ 3 = 113.33€ × 3 = 339.99€ (0.01€ lost)
+    Example: $340 ÷ 3 = $113.33 × 3 = $339.99 ($0.01 lost)
 
     Solution: Last item gets remainder to guarantee exact total.
     Only applies to items with quantity=1.00 (whole sessions).

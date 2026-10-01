@@ -67,7 +67,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenjp2-7 \
     zlib1g \
     ghostscript \
-    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
@@ -78,9 +77,6 @@ COPY --from=python-builder /install /usr/local
 COPY --from=css-builder /app /app
 
 RUN chmod +x manage.py
-
-# Compile translation catalogs into binary .mo files
-RUN python manage.py compilemessages
 
 EXPOSE 8000
 

@@ -40,18 +40,12 @@ PY_EXCLUDE_DIR_NAMES = {"migrations", "__pycache__"}
 PY_FILE_EXEMPTIONS = {"my_practice/tests/test_i18n_coverage.py"}
 
 # (file, name) pairs already known to violate the policy — fix in the same
-# PR you're touching the file, then remove the entry. The word these two
-# pre-existing test names use for "total" is ordinary vocabulary, not
-# domain-specific like the GebüH-billing terms in TERM_EXEMPTIONS, so they're
-# recorded here instead of widening that exemption.
+# PR you're touching the file, then remove the entry.
 KNOWN_VIOLATIONS: set[tuple[str, str]] = set()
 
-# Untranslatable German technical/legal terms with no English equivalent,
-# used as identifiers throughout the codebase — proper nouns for specific
-# German tax filing methods and the licensed-alternative-practitioner fee
-# schedule (same rationale as the analogous proper-noun exemption in
-# test_i18n_coverage.py), not ordinary vocabulary that should be English.
-TERM_EXEMPTIONS = {"gebueh", "gebüh", "eur", "eür", "goa", "leistung"}
+# Terms exempt from the German-word scan. "eur" is the Eurydice client code in
+# the demo seed data.
+TERM_EXEMPTIONS = {"eur"}
 
 GERMAN_CHAR_RE = re.compile(r"[äöüßÄÖÜ]")
 

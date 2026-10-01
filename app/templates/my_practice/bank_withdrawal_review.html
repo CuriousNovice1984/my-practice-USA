@@ -2,9 +2,12 @@
 {% load payment_tags %}
 {% load static i18n %}
 
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{% trans "Bank transactions waiting for a decision" %}{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>{{ page_title }}</h1>
 
     <!-- Statistics -->
     <div class="expense-stats-card">
@@ -15,7 +18,7 @@
             </div>
             <div>
                 <div class="expense-stat__label">{% trans "Total amount" %}</div>
-                <div class="expense-stat__value expense-stat__value--primary">{{ stats.total_amount|floatformat:2 }} €</div>
+                <div class="expense-stat__value expense-stat__value--primary">{{ stats.total_amount|currency }}</div>
             </div>
         </div>
     </div>
@@ -44,10 +47,10 @@
 
             <div class="expense-action-panel__buttons">
                 <button type="submit" name="action" value="group" class="btn btn-primary">
-                    ✓ {% trans "Group into withdrawal" %}
+                    {% trans "Group into withdrawal" %}
                 </button>
                 <button type="submit" name="action" value="ignore" class="btn btn-secondary">
-                    ➖ {% trans "Ignore" %}
+                    {% trans "Ignore" %}
                 </button>
             </div>
         </div>
@@ -61,24 +64,24 @@
                 <div class="expense-trans-card__body">
                     <div class="expense-trans-card__header">
                         <div>
-                            <span class="expense-trans-card__date">{{ trans.transaction_date|date:"d.m.Y" }}</span>
+                            <span class="expense-trans-card__date">{{ trans.transaction_date|date:"d M y" }}</span>
                             <span class="expense-trans-card__payer">{{ trans.payer_name }}</span>
                         </div>
-                        <span class="expense-trans-card__amount">{{ trans.amount|floatformat:2 }} €</span>
+                        <span class="expense-trans-card__amount">{{ trans.amount|currency }}</span>
                     </div>
 
                     <div class="expense-trans-card__reference">
                         {{ trans.reference }}
                     </div>
 
-                    {% if trans.payer_iban %}
-                    <div class="expense-trans-card__iban">
-                        IBAN: {{ trans.payer_iban }}
+                    {% if trans.payer_account %}
+                    <div class="expense-trans-card__meta">
+                        {% trans "Account:" %} {{ trans.payer_account }}
                     </div>
                     {% endif %}
 
                     {% if trans.linked_withdrawal %}
-                    <div class="expense-trans-card__iban">
+                    <div class="expense-trans-card__meta">
                         {% blocktrans with linked_withdrawal=trans.linked_withdrawal %}Auto-withdrawal: {{ linked_withdrawal }}{% endblocktrans %}
                     </div>
                     {% endif %}
@@ -96,7 +99,7 @@
     {% else %}
     <div class="expense-empty-state">
         <div class="expense-empty-state__title">
-            ✓ {% trans "All withdrawals matched" %}
+            {% trans "All withdrawals matched" %}
         </div>
         <div class="expense-empty-state__desc">
             {% trans "There are no pending automatically detected withdrawals." %}
@@ -107,7 +110,7 @@
     <!-- Navigation Links -->
     <div class="expense-nav-footer">
         <a href="{% url 'bank_review' %}" class="btn btn-secondary">{% trans "← Review invoices" %}</a>
-        <a href="{% url 'bank_expense_review' %}" class="btn btn-secondary">💸 {% trans "Expenses" %}</a>
+        <a href="{% url 'bank_expense_review' %}" class="btn btn-secondary">{% trans "Expenses" %}</a>
         <a href="{% url 'withdrawal_list' %}" class="btn btn-secondary">{% trans "Withdrawal list" %}</a>
         <a href="{% url 'dashboard' %}" class="btn btn-secondary">{% trans "Overview" %}</a>
     </div>

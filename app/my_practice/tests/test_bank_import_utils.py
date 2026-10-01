@@ -5,6 +5,8 @@ Covers: CSV parsing, invoice number extraction, invoice matching,
 withdrawal/expense auto-detection, duplicate prevention, and end-to-end CSV processing.
 """
 
+import csv
+import io
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -26,45 +28,51 @@ from ..models import (
 )
 from ..utils import BankStatementImporter, build_counterparty_key
 
-PRACTICE_IBAN = "DE89370400440532013000"
-PRIVATE_IBAN = "DE73200400600056789000"
+PRACTICE_ACCOUNT = "CHK4321"
+PRIVATE_ACCOUNT = "CHK9876"
+
+CSV_HEADER = ["Account", "Date", "Posted", "Payee", "Payee Account", "Amount", "Balance", "Memo"]
 
 
-def _make_importer(practice, rows, csv_iban=PRACTICE_IBAN):
-    """Build a BankStatementImporter with a fake CSV file."""
-    header = (
-        "IBAN Auftragskonto;Buchungstag;Valutadatum;"
-        "Name Zahlungsbeteiligter;IBAN Zahlungsbeteiligter;"
-        "Betrag;Saldo nach Buchung;Verwendungszweck"
-    )
-    lines = [header]
-    lines.extend(
-        ";".join(
+def _csv_bytes(rows, account=PRACTICE_ACCOUNT, delimiter=","):
+    """Render rows as a US-format bank CSV (MM/DD/YYYY dates, 1,234.56 amounts)."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=delimiter)
+    writer.writerow(CSV_HEADER)
+    for r in rows:
+        writer.writerow(
             [
-                csv_iban,
-                r.get("date", "15.01.2026"),
-                r.get("date", "15.01.2026"),
-                r.get("payer", "Test Zahler"),
-                r.get("payer_iban", ""),
-                r.get("amount", "90,00"),
-                "1000,00",
-                r.get("ref", "Überweisung"),
+                account,
+                r.get("date", "01/15/2026"),
+                r.get("date", "01/15/2026"),
+                r.get("payer", "Test Payer"),
+                r.get("payer_account", ""),
+                r.get("amount", "90.00"),
+                "1,000.00",
+                r.get("ref", "Transfer"),
             ]
         )
-        for r in rows
-    )
-    content = "\n".join(lines).encode("utf-8")
-    csv_file = SimpleUploadedFile("test.csv", content, content_type="text/csv")
+    return buffer.getvalue().encode("utf-8")
+
+
+def _make_importer(practice, rows, account=PRACTICE_ACCOUNT):
+    """Build a BankStatementImporter with a fake CSV file."""
+    csv_file = SimpleUploadedFile("test.csv", _csv_bytes(rows, account), content_type="text/csv")
     return BankStatementImporter(csv_file, practice)
 
 
 def _make_practice(**kwargs):
     defaults = {
-        "name": "Test Praxis",
+        "name": "Test Practice",
         "slug": "bank-util-test",
-        "title": "Therapeutin",
+        "title": "Therapist",
         "email": "test@example.com",
-        "iban": PRACTICE_IBAN,
+        "csv_column_value_date": "Posted",
+        "csv_column_payer_name": "Payee",
+        "csv_column_payer_account": "Payee Account",
+        "csv_column_reference": "Memo",
+        "csv_column_balance": "Balance",
+        "csv_column_account": "Account",
     }
     defaults.update(kwargs)
     return Practice.objects.create(**defaults)
@@ -90,51 +98,51 @@ def _make_invoice_item(invoice, practice, client_obj, rate=Decimal("90.00"), dur
     )
 
 
-# ── parse_german_decimal ──────────────────────────────────────────────────────
+# ── parse_amount ──────────────────────────────────────────────────────────────
 
 
-class ParseGermanDecimalTest(TestCase):
+class ParseAmountTest(TestCase):
     def setUp(self):
-        self.practice = _make_practice(slug="parse-decimal")
+        self.practice = _make_practice(slug="parse-amount")
         self.importer = _make_importer(self.practice, [])
 
     def test_positive(self):
-        self.assertEqual(self.importer.parse_german_decimal("90,00"), Decimal("90.00"))
+        self.assertEqual(self.importer.parse_amount("90.00"), Decimal("90.00"))
 
     def test_negative(self):
-        self.assertEqual(self.importer.parse_german_decimal("-300,00"), Decimal("-300.00"))
+        self.assertEqual(self.importer.parse_amount("-300.00"), Decimal("-300.00"))
 
-    def test_zero(self):
-        self.assertEqual(self.importer.parse_german_decimal("0,00"), Decimal("0.00"))
+    def test_parenthesized_is_negative(self):
+        self.assertEqual(self.importer.parse_amount("(300.00)"), Decimal("-300.00"))
 
-    def test_thousands_separator(self):
-        self.assertEqual(self.importer.parse_german_decimal("1.234,56"), Decimal("1234.56"))
-
-    def test_negative_thousands_separator(self):
-        self.assertEqual(self.importer.parse_german_decimal("-2.500,00"), Decimal("-2500.00"))
+    def test_thousands_separator_and_symbol(self):
+        self.assertEqual(self.importer.parse_amount("$1,234.56"), Decimal("1234.56"))
 
     def test_invalid_raises(self):
         with self.assertRaises(InvalidOperation):
-            self.importer.parse_german_decimal("nicht-eine-zahl")
+            self.importer.parse_amount("not-a-number")
 
 
-# ── parse_german_date ─────────────────────────────────────────────────────────
+# ── parse_date ────────────────────────────────────────────────────────────────
 
 
-class ParseGermanDateTest(TestCase):
+class ParseDateTest(TestCase):
     def setUp(self):
         self.practice = _make_practice(slug="parse-date")
         self.importer = _make_importer(self.practice, [])
 
-    def test_valid_date(self):
-        self.assertEqual(self.importer.parse_german_date("02.02.2026"), date(2026, 2, 2))
+    def test_us_format(self):
+        self.assertEqual(self.importer.parse_date("02/14/2026"), date(2026, 2, 14))
 
-    def test_leading_zeros(self):
-        self.assertEqual(self.importer.parse_german_date("01.01.2026"), date(2026, 1, 1))
+    def test_two_digit_year(self):
+        self.assertEqual(self.importer.parse_date("02/14/26"), date(2026, 2, 14))
 
-    def test_iso_format_raises(self):
+    def test_iso_format(self):
+        self.assertEqual(self.importer.parse_date("2026-02-14"), date(2026, 2, 14))
+
+    def test_day_first_format_raises(self):
         with self.assertRaises(ValueError):
-            self.importer.parse_german_date("2026-02-02")
+            self.importer.parse_date("14.02.2026")
 
 
 # ── extract_invoice_number ────────────────────────────────────────────────────
@@ -151,23 +159,25 @@ class ExtractInvoiceNumberTest(TestCase):
     def test_direct_code_longer(self):
         self.assertEqual(self.importer.extract_invoice_number("ABCD-123"), "ABCD-123")
 
-    def test_german_invoice_keyword(self):
-        self.assertEqual(self.importer.extract_invoice_number("Rechnung Nr. YY-2"), "YY-2")
+    def test_inv_hash_keyword(self):
+        self.assertEqual(self.importer.extract_invoice_number("Inv #YY-2"), "YY-2")
 
     def test_invoice_keyword(self):
         self.assertEqual(self.importer.extract_invoice_number("Invoice No. AB-3"), "AB-3")
 
-    def test_therapie_context(self):
-        self.assertEqual(self.importer.extract_invoice_number("3x Therapie CD-4"), "CD-4")
+    def test_code_inside_zelle_memo(self):
+        self.assertEqual(
+            self.importer.extract_invoice_number("Zelle payment from M Schmidt for CD-4"), "CD-4"
+        )
 
     def test_uppercase_normalised(self):
         self.assertEqual(self.importer.extract_invoice_number("ab-12"), "AB-12")
 
     def test_no_match_time(self):
-        self.assertIsNone(self.importer.extract_invoice_number("Mi 9-10"))
+        self.assertIsNone(self.importer.extract_invoice_number("Wed 9-10"))
 
     def test_no_match_plain_text(self):
-        self.assertIsNone(self.importer.extract_invoice_number("Überweisung Miete"))
+        self.assertIsNone(self.importer.extract_invoice_number("Transfer office rent"))
 
     def test_no_match_single_letter(self):
         # Single letter codes must not be extracted (min 2 letters)
@@ -204,7 +214,7 @@ class FindMatchingInvoiceTest(TestCase):
 
     def test_different_name_still_exact(self):
         # Name mismatch but no alias → still returns exact (user can add alias later)
-        result = self.importer.find_matching_invoice("AS-1", Decimal("90.00"), "Unbekannt")
+        result = self.importer.find_matching_invoice("AS-1", Decimal("90.00"), "Unknown")
         self.assertIsNotNone(result)
         _, confidence = result
         self.assertEqual(confidence, "exact")
@@ -238,14 +248,14 @@ class DetectFinancialRecordTest(TestCase):
     def setUp(self):
         self.practice = _make_practice(
             slug="detect-financial",
-            private_bank_account=PRIVATE_IBAN,
+            private_bank_account=PRIVATE_ACCOUNT,
         )
         self.importer = _make_importer(self.practice, [])
         self.txn_date = date(2026, 2, 1)
 
-    def test_iban_match_creates_withdrawal(self):
+    def test_private_account_match_creates_withdrawal(self):
         result = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-300.00"), "Entnahme", payer_iban=PRIVATE_IBAN
+            self.txn_date, Decimal("-300.00"), "Owner draw", payer_account=PRIVATE_ACCOUNT
         )
         self.assertIsNotNone(result)
         self.assertEqual(result["type"], "CompanyWithdrawal")
@@ -253,108 +263,111 @@ class DetectFinancialRecordTest(TestCase):
 
     def test_withdrawal_category_private_transfer(self):
         result = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-300.00"), "Überweisung", payer_iban=PRIVATE_IBAN
+            self.txn_date, Decimal("-300.00"), "Transfer", payer_account=PRIVATE_ACCOUNT
         )
         self.assertEqual(result["record"].category, "private_transfer")
 
     def test_correction_keyword_sets_category(self):
         result = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-50.00"), "Fehlbuchung Korrektur", payer_iban=PRIVATE_IBAN
+            self.txn_date, Decimal("-50.00"), "Reversal correction", payer_account=PRIVATE_ACCOUNT
         )
         self.assertEqual(result["record"].category, "correction")
 
     def test_salary_keyword_sets_category(self):
         result = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-2000.00"), "Entnahme Unternehmerlohn", payer_iban=PRIVATE_IBAN
+            self.txn_date,
+            Decimal("-2000.00"),
+            "Owner draw payroll",
+            payer_account=PRIVATE_ACCOUNT,
         )
         self.assertEqual(result["record"].category, "salary")
 
-    def test_keyword_fallback_without_iban(self):
-        # No private IBAN configured → keyword-only fallback
-        practice_no_iban = _make_practice(slug="no-private-iban")
-        importer = _make_importer(practice_no_iban, [])
+    def test_keyword_fallback_without_private_account(self):
+        # No private account configured → keyword-only fallback
+        practice_no_private = _make_practice(slug="no-private-account")
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-2000.00"), "Unternehmerlohn Jan 2026"
+            self.txn_date, Decimal("-2000.00"), "Owner draw Jan 2026"
         )
         self.assertEqual(result["type"], "CompanyWithdrawal")
 
     def test_unrelated_expense_creates_expense(self):
-        practice_no_iban = _make_practice(slug="expense-test")
-        importer = _make_importer(practice_no_iban, [])
+        practice_no_private = _make_practice(slug="expense-test")
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-120.00"), "Miete Praxisraum"
+            self.txn_date, Decimal("-120.00"), "Office rent"
         )
         self.assertEqual(result["type"], "CompanyExpense")
-        self.assertEqual(CompanyExpense.objects.filter(practice=practice_no_iban).count(), 1)
+        self.assertEqual(CompanyExpense.objects.filter(practice=practice_no_private).count(), 1)
 
     def test_idempotent_duplicate(self):
         r1 = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-300.00"), "Entnahme", payer_iban=PRIVATE_IBAN
+            self.txn_date, Decimal("-300.00"), "Owner draw", payer_account=PRIVATE_ACCOUNT
         )
         r2 = self.importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-300.00"), "Entnahme", payer_iban=PRIVATE_IBAN
+            self.txn_date, Decimal("-300.00"), "Owner draw", payer_account=PRIVATE_ACCOUNT
         )
         self.assertEqual(r1["record"].id, r2["record"].id)
         self.assertEqual(CompanyWithdrawal.objects.filter(practice=self.practice).count(), 1)
 
-    def test_expense_uses_learned_rule_by_iban(self):
-        practice_no_iban = _make_practice(slug="learned-rule-iban")
-        landlord_iban = "DE12500105170648489890"
+    def test_expense_uses_learned_rule_by_account(self):
+        practice_no_private = _make_practice(slug="learned-rule-account")
+        landlord_account = "ACH-LANDLORD-001"
         ExpenseCategoryRule.objects.create(
-            practice=practice_no_iban,
-            match_key=build_counterparty_key(landlord_iban, ""),
-            category="miete",
+            practice=practice_no_private,
+            match_key=build_counterparty_key(landlord_account, ""),
+            category="rent",
         )
-        importer = _make_importer(practice_no_iban, [])
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-800.00"), "Miete August", payer_iban=landlord_iban
+            self.txn_date, Decimal("-800.00"), "Rent August", payer_account=landlord_account
         )
-        self.assertEqual(result["record"].category, "miete")
+        self.assertEqual(result["record"].category, "rent")
 
     def test_expense_uses_learned_rule_by_name_fallback(self):
-        practice_no_iban = _make_practice(slug="learned-rule-name")
+        practice_no_private = _make_practice(slug="learned-rule-name")
         ExpenseCategoryRule.objects.create(
-            practice=practice_no_iban,
+            practice=practice_no_private,
             match_key=build_counterparty_key("", "Telekom Deutschland"),
-            category="telefon",
+            category="phone_internet",
         )
-        importer = _make_importer(practice_no_iban, [])
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
             self.txn_date,
             Decimal("-40.00"),
-            "Rechnung",
+            "Invoice",
             payer_name="Telekom Deutschland",
         )
-        self.assertEqual(result["record"].category, "telefon")
+        self.assertEqual(result["record"].category, "phone_internet")
 
     def test_no_rule_still_defaults_to_other(self):
-        practice_no_iban = _make_practice(slug="no-learned-rule")
-        importer = _make_importer(practice_no_iban, [])
+        practice_no_private = _make_practice(slug="no-learned-rule")
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-40.00"), "Unbekannt", payer_name="Irgendwer GmbH"
+            self.txn_date, Decimal("-40.00"), "Unknown", payer_name="Irgendwer GmbH"
         )
         self.assertEqual(result["record"].category, "other")
 
     def test_rule_from_other_practice_is_ignored(self):
-        landlord_iban = "DE12500105170648489890"
+        landlord_account = "ACH-LANDLORD-001"
         other_practice = _make_practice(slug="other-practice-rule")
         ExpenseCategoryRule.objects.create(
             practice=other_practice,
-            match_key=build_counterparty_key(landlord_iban, ""),
-            category="miete",
+            match_key=build_counterparty_key(landlord_account, ""),
+            category="rent",
         )
-        practice_no_iban = _make_practice(slug="my-practice-no-rule")
-        importer = _make_importer(practice_no_iban, [])
+        practice_no_private = _make_practice(slug="my-practice-no-rule")
+        importer = _make_importer(practice_no_private, [])
         result = importer.detect_and_create_financial_record(
-            self.txn_date, Decimal("-800.00"), "Miete August", payer_iban=landlord_iban
+            self.txn_date, Decimal("-800.00"), "Rent August", payer_account=landlord_account
         )
         self.assertEqual(result["record"].category, "other")
 
 
 class BuildCounterpartyKeyTest(TestCase):
-    def test_iban_takes_priority(self):
-        key = build_counterparty_key("DE89 3704 0044 0532 0130 00", "Some Name")
-        self.assertEqual(key, "iban:DE89370400440532013000")
+    def test_account_takes_priority(self):
+        key = build_counterparty_key("chk 4321", "Some Name")
+        self.assertEqual(key, "account:CHK4321")
 
     def test_falls_back_to_normalized_name(self):
         key = build_counterparty_key("", "  Max Mustermann  ")
@@ -386,7 +399,7 @@ class ProcessCSVTest(TestCase):
         importer = _make_importer(
             self.practice,
             [
-                {"date": "15.01.2026", "payer": "Max Mustermann", "amount": "90,00", "ref": "MM-1"},
+                {"date": "01/15/2026", "payer": "Max Mustermann", "amount": "90.00", "ref": "MM-1"},
             ],
         )
         results = importer.process(skip_negatives=False)
@@ -399,10 +412,10 @@ class ProcessCSVTest(TestCase):
             self.practice,
             [
                 {
-                    "date": "15.01.2026",
-                    "payer": "Unbekannt",
-                    "amount": "50,00",
-                    "ref": "Überweisung",
+                    "date": "01/15/2026",
+                    "payer": "Unknown",
+                    "amount": "50.00",
+                    "ref": "Transfer",
                 },
             ],
         )
@@ -414,35 +427,25 @@ class ProcessCSVTest(TestCase):
         importer = _make_importer(
             self.practice,
             [
-                {"date": "15.01.2026", "payer": "Jemand", "amount": "50,00", "ref": "Test Ref"},
-                {"date": "15.01.2026", "payer": "Jemand", "amount": "50,00", "ref": "Test Ref"},
+                {"date": "01/15/2026", "payer": "Somebody", "amount": "50.00", "ref": "Test Ref"},
+                {"date": "01/15/2026", "payer": "Somebody", "amount": "50.00", "ref": "Test Ref"},
             ],
         )
         results = importer.process(skip_negatives=False)
         self.assertEqual(results["total"], 2)
         self.assertEqual(BankTransaction.objects.count(), 1)
 
-    def test_account_mismatch_aborts(self):
-        importer = _make_importer(
-            self.practice,
-            [{"date": "15.01.2026", "payer": "Jemand", "amount": "100,00", "ref": "Test"}],
-            csv_iban="DE00000000000000000000",
-        )
-        results = importer.process()
-        self.assertTrue(results.get("account_mismatch"))
-        self.assertEqual(BankTransaction.objects.count(), 0)
-
     def test_negative_skipped_when_not_withdrawal(self):
-        # No private IBAN → no withdrawal detection → auto-expense is created regardless
+        # No private account → no withdrawal detection → auto-expense is created regardless
         # but skip_negatives=True should still ignore unknown negatives after auto-create fails
         importer = _make_importer(
             self.practice,
             [
-                {"date": "15.01.2026", "payer": "Vermieter", "amount": "-500,00", "ref": "Miete"},
+                {"date": "01/15/2026", "payer": "Landlord", "amount": "-500.00", "ref": "Rent"},
             ],
         )
         results = importer.process(skip_negatives=True)
-        # With no private IBAN, "Miete" has no keyword match → CompanyExpense created,
+        # With no private IBAN, "Rent" has no keyword match → CompanyExpense created,
         # transaction recorded with auto-expense confidence
         self.assertEqual(results["needs_review"], 1)
 
@@ -450,7 +453,7 @@ class ProcessCSVTest(TestCase):
         importer = _make_importer(
             self.practice,
             [
-                {"date": "15.01.2026", "payer": "Vermieter", "amount": "-500,00", "ref": "Miete"},
+                {"date": "01/15/2026", "payer": "Landlord", "amount": "-500.00", "ref": "Rent"},
             ],
         )
         results = importer.process(skip_negatives=False)
@@ -458,22 +461,20 @@ class ProcessCSVTest(TestCase):
 
 
 class ConfigurableCsvFormatTest(TestCase):
-    """A non-GLS delimiter/column mapping (issue #11) should parse and match correctly."""
+    """A non-default delimiter/column mapping (issue #11) should parse and match correctly."""
 
     def setUp(self):
-        # Pipe delimiter (not comma): the German comma-decimal amount parsing
-        # isn't configurable, so a comma delimiter would collide with it.
         self.practice = _make_practice(
             slug="custom-csv-format",
             csv_delimiter="|",
-            csv_column_date="Date",
-            csv_column_value_date="ValueDate",
-            csv_column_payer_name="Payee",
-            csv_column_payer_iban="PayeeIBAN",
-            csv_column_reference="Reference",
-            csv_column_amount="Amount",
-            csv_column_balance="Balance",
-            csv_column_account_iban="AccountIBAN",
+            csv_column_date="TxnDate",
+            csv_column_value_date="",
+            csv_column_payer_name="Description",
+            csv_column_payer_account="",
+            csv_column_reference="Description",
+            csv_column_amount="Amt",
+            csv_column_balance="",
+            csv_column_account="",
         )
         self.client_obj = Client.objects.create(
             practice=self.practice, full_name="Max Mustermann", client_code="MM"
@@ -487,45 +488,32 @@ class ConfigurableCsvFormatTest(TestCase):
         )
         _make_invoice_item(self.invoice, self.practice, self.client_obj)
 
-    def _make_custom_importer(self, rows, csv_iban=PRACTICE_IBAN):
-        header = "AccountIBAN|Date|ValueDate|Payee|PayeeIBAN|Amount|Balance|Reference"
-        lines = [header]
-        lines.extend(
-            "|".join(
-                [
-                    csv_iban,
-                    r.get("date", "15.01.2026"),
-                    r.get("date", "15.01.2026"),
-                    r.get("payer", "Test Payer"),
-                    r.get("payer_iban", ""),
-                    r.get("amount", "90,00"),
-                    "1000,00",
-                    r.get("ref", "Transfer"),
-                ]
-            )
-            for r in rows
-        )
+    def _make_custom_importer(self, rows):
+        """Minimal export: date, description and amount only — the optional columns are absent."""
+        lines = ["TxnDate|Description|Amt"]
+        lines.extend(f"{r['date']}|{r['ref']}|{r['amount']}" for r in rows)
         content = "\n".join(lines).encode("utf-8")
         csv_file = SimpleUploadedFile("test.csv", content, content_type="text/csv")
         return BankStatementImporter(csv_file, self.practice)
 
+    def test_optional_columns_default_sensibly(self):
+        importer = self._make_custom_importer(
+            [{"date": "2026-01-15", "amount": "1,250.00", "ref": "Deposit"}]
+        )
+        importer.process(skip_negatives=False)
+        transaction = BankTransaction.objects.get()
+        self.assertEqual(transaction.value_date, date(2026, 1, 15))
+        self.assertIsNone(transaction.balance_after)
+        self.assertEqual(transaction.amount, Decimal("1250.00"))
+
     def test_matches_invoice_with_custom_delimiter_and_columns(self):
         importer = self._make_custom_importer(
-            [{"date": "15.01.2026", "payer": "Max Mustermann", "amount": "90,00", "ref": "MM-1"}]
+            [{"date": "01/15/2026", "amount": "90.00", "ref": "Zelle from Max Mustermann MM-1"}]
         )
         results = importer.process(skip_negatives=False)
         self.assertEqual(results["matched"], 1)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, "paid")
-
-    def test_account_mismatch_uses_configured_iban_column(self):
-        importer = self._make_custom_importer(
-            [{"date": "15.01.2026", "payer": "Jemand", "amount": "100,00", "ref": "Test"}],
-            csv_iban="DE00000000000000000000",
-        )
-        results = importer.process()
-        self.assertTrue(results.get("account_mismatch"))
-        self.assertEqual(BankTransaction.objects.count(), 0)
 
 
 class IngestTransactionTest(TestCase):
@@ -557,7 +545,7 @@ class IngestTransactionTest(TestCase):
             "transaction_date": date(2026, 1, 15),
             "value_date": date(2026, 1, 15),
             "payer_name": "Anna Schmidt",
-            "payer_iban": "",
+            "payer_account": "",
             "reference": "AS-1",
             "amount": Decimal("90.00"),
             "balance_after": Decimal("1000.00"),
@@ -565,24 +553,35 @@ class IngestTransactionTest(TestCase):
         parsed.update(overrides)
         return parsed
 
-    def test_for_account_sets_normalized_iban(self):
-        importer = BankStatementImporter.for_account(self.practice, "de89 3704 0044 0532 0130 00")
-        self.assertEqual(importer.account_iban, PRACTICE_IBAN)
+    def test_for_account_sets_normalized_account(self):
+        importer = BankStatementImporter.for_account(self.practice, "chk 4321")
+        self.assertEqual(importer.source_account, PRACTICE_ACCOUNT)
+
+    def test_external_id_deduplicates(self):
+        """A bank-connection transaction ID wins over date/amount/memo matching."""
+        importer = BankStatementImporter.for_account(self.practice, PRACTICE_ACCOUNT)
+        importer.ingest_transaction(self._parsed(external_id="txn-1"), skip_negatives=False)
+        second = importer.ingest_transaction(
+            self._parsed(external_id="txn-1", reference="AS-1 (edited memo)"),
+            skip_negatives=False,
+        )
+        self.assertIsNone(second)
+        self.assertEqual(BankTransaction.objects.get().external_id, "txn-1")
 
     def test_ingest_matches_invoice_without_csv(self):
-        importer = BankStatementImporter.for_account(self.practice, PRACTICE_IBAN)
+        importer = BankStatementImporter.for_account(self.practice, PRACTICE_ACCOUNT)
         transaction = importer.ingest_transaction(self._parsed(), skip_negatives=False)
 
         self.assertIsNotNone(transaction)
         self.assertEqual(importer.results["total"], 1)
         self.assertEqual(importer.results["matched"], 1)
-        self.assertEqual(transaction.account_iban, PRACTICE_IBAN)
+        self.assertEqual(transaction.source_account, PRACTICE_ACCOUNT)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, "paid")
         self.assertEqual(self.invoice.paid_date, date(2026, 1, 15))
 
     def test_ingest_suppresses_duplicate(self):
-        importer = BankStatementImporter.for_account(self.practice, PRACTICE_IBAN)
+        importer = BankStatementImporter.for_account(self.practice, PRACTICE_ACCOUNT)
         importer.ingest_transaction(self._parsed(), skip_negatives=False)
         second = importer.ingest_transaction(self._parsed(), skip_negatives=False)
 
@@ -593,9 +592,9 @@ class IngestTransactionTest(TestCase):
 
     def test_ingest_routes_negative_to_expense(self):
         """Negatives take the same auto-expense path they take from CSV."""
-        importer = BankStatementImporter.for_account(self.practice, PRACTICE_IBAN)
+        importer = BankStatementImporter.for_account(self.practice, PRACTICE_ACCOUNT)
         transaction = importer.ingest_transaction(
-            self._parsed(amount=Decimal("-40.00"), reference="Miete"), skip_negatives=True
+            self._parsed(amount=Decimal("-40.00"), reference="Rent"), skip_negatives=True
         )
 
         # _handle_negative_row owns the row, so ingest_transaction returns None
@@ -604,13 +603,13 @@ class IngestTransactionTest(TestCase):
         self.assertEqual(importer.results["total"], 1)
         self.assertEqual(importer.results["needs_review"], 1)
         self.assertEqual(CompanyExpense.objects.count(), 1)
-        self.assertEqual(BankTransaction.objects.get().account_iban, PRACTICE_IBAN)
+        self.assertEqual(BankTransaction.objects.get().source_account, PRACTICE_ACCOUNT)
 
     def test_csv_and_ingest_agree(self):
         """The CSV path and a hand-built dict produce the same stored row."""
         csv_importer = _make_importer(
             self.practice,
-            [{"date": "15.01.2026", "payer": "Anna Schmidt", "amount": "90,00", "ref": "AS-1"}],
+            [{"date": "01/15/2026", "payer": "Anna Schmidt", "amount": "90.00", "ref": "AS-1"}],
         )
         csv_importer.process(skip_negatives=False)
         via_csv = BankTransaction.objects.get()
@@ -620,7 +619,7 @@ class IngestTransactionTest(TestCase):
         self.invoice.save()
         via_csv.delete()
 
-        api_importer = BankStatementImporter.for_account(self.practice, PRACTICE_IBAN)
+        api_importer = BankStatementImporter.for_account(self.practice, PRACTICE_ACCOUNT)
         via_api = api_importer.ingest_transaction(self._parsed(), skip_negatives=False)
 
         for field in (
@@ -630,7 +629,7 @@ class IngestTransactionTest(TestCase):
             "reference",
             "amount",
             "balance_after",
-            "account_iban",
+            "source_account",
             "match_confidence",
             "extracted_invoice_number",
         ):

@@ -147,31 +147,26 @@ class CalendarEventParserTest(TestCase):
         ServiceType.objects.create(
             code="checkin_15",
             name="Check-in",
-            name_de="Check-in Termin",
             practice=self.practice,
         )
         ServiceType.objects.create(
             code="initial_consultation",
             name="Initial Consultation",
-            name_de="Vorgespräch",
             practice=self.practice,
         )
         ServiceType.objects.create(
             code="therapy_60",
             name="Session",
-            name_de="Standardsitzung",
             practice=self.practice,
         )
         ServiceType.objects.create(
             code="therapy_90",
             name="Extended Session",
-            name_de="Verlängerte Sitzung",
             practice=self.practice,
         )
         ServiceType.objects.create(
             code="therapy_cancelled",
             name="Cancellation",
-            name_de="Ausgefallener Termin",
             practice=self.practice,
         )
 
@@ -412,14 +407,14 @@ class CalendarEventParserTest(TestCase):
         service_type, description = CalendarEventParser.map_duration_to_service_type(15)
         self.assertIsNotNone(service_type)
         self.assertEqual(service_type.code, "checkin_15")
-        self.assertEqual(description, "Check-in Termin")
+        self.assertEqual(description, "Check-in")
 
     def test_map_duration_to_service_type_free_consultation(self):
         """Test mapping 20-minute events to the free initial-consultation service type."""
         service_type, description = CalendarEventParser.map_duration_to_service_type(20)
         self.assertIsNotNone(service_type)
         self.assertEqual(service_type.code, "initial_consultation")
-        self.assertEqual(description, "Vorgespräch")
+        self.assertEqual(description, "Initial Consultation")
 
     def test_map_duration_to_service_type_warns_on_unknown_code(self):
         """An unseeded code must be logged, not silently degrade to no suggestion.
@@ -446,14 +441,14 @@ class CalendarEventParserTest(TestCase):
         service_type, description = CalendarEventParser.map_duration_to_service_type(60)
         self.assertIsNotNone(service_type)
         self.assertEqual(service_type.code, "therapy_60")
-        self.assertEqual(description, "Standardsitzung")
+        self.assertEqual(description, "Session")
 
     def test_map_duration_to_service_type_extended_session(self):
         """Test mapping 90-minute events to Sitzung."""
         service_type, description = CalendarEventParser.map_duration_to_service_type(90)
         self.assertIsNotNone(service_type)
         self.assertEqual(service_type.code, "therapy_90")
-        self.assertEqual(description, "Verlängerte Sitzung")
+        self.assertEqual(description, "Extended Session")
 
     def test_map_duration_to_service_type_no_match(self):
         """Test duration that doesn't match any mapping."""
@@ -473,7 +468,7 @@ class CalendarEventParserTest(TestCase):
 
         self.assertIsNotNone(result["suggested_service_type_obj"])
         self.assertEqual(result["suggested_service_type_obj"].code, "therapy_60")
-        self.assertEqual(result["suggested_service_type"], "Standardsitzung")
+        self.assertEqual(result["suggested_service_type"], "Session")
 
     def test_parse_event_cancelled_overrides_service_type(self):
         """Test that cancelled events get Ausfall service type."""

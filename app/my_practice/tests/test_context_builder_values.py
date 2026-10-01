@@ -80,24 +80,10 @@ class BuilderTestBase(TestCase):
             is_tax_deductible=deductible,
         )
 
-    def configure_deductions(self, weekdays=(0, 1, 2), distance_km=10, session_count=3):
-        """Make both deductions claimable.
-
-        Fahrtkosten is computed from *actual session days* (§9: days you drove),
-        not calendar days, so configuring the practice alone yields zero — real
-        Session rows on the configured weekdays are required. Home office is
-        calendar-based over the complementary weekdays and needs no sessions.
-        """
-        self.practice.commute_distance_km = distance_km
-        self.practice.practice_weekdays = list(weekdays)
-        self.practice.save(update_fields=["commute_distance_km", "practice_weekdays"])
-
-        current, made = date(YEAR, 3, 1), 0
-        while made < session_count:
-            if current.weekday() in weekdays:
-                Session.objects.create(client=self.client_a, session_date=current)
-                made += 1
-            current += timedelta(days=1)
+    def configure_deductions(self, square_feet=100):
+        """Make the home office deduction claimable (simplified method, $5/sq ft)."""
+        self.practice.home_office_sqft = square_feet
+        self.practice.save(update_fields=["home_office_sqft"])
 
 
 # ── TaxYearContextBuilder ─────────────────────────────────────────────────────
@@ -246,10 +232,10 @@ class TaxYearExpenseTest(BuilderTestBase):
         self.assertEqual(context["expense_sort"], "date")
 
 
-class TaxYearGrossProfitTest(BuilderTestBase):
-    """gross_profit = revenue − expenses − Fahrtkosten − home office."""
+class TaxYearNetProfitTest(BuilderTestBase):
+    """net_profit = revenue − expenses − home office deduction."""
 
-    def test_revenue_minus_expenses_when_no_deductions_configured(self):
+    def test_revenue_minus_expenses_when_no_home_office_configured(self):
         self.make_invoice(
             total="1000.00",
             status="paid",
@@ -260,13 +246,11 @@ class TaxYearGrossProfitTest(BuilderTestBase):
 
         context = TaxYearContextBuilder(YEAR, self.practice, self.user).build()
 
-        # An unconfigured practice claims neither deduction.
-        self.assertEqual(context["fahrtkosten_deduction"], Decimal("0"))
         self.assertEqual(context["home_office_deduction"], Decimal("0"))
-        self.assertEqual(context["gross_profit"], Decimal("750.00"))
+        self.assertEqual(context["net_profit"], Decimal("750.00"))
 
-    def test_deductions_are_subtracted_from_gross_profit(self):
-        self.configure_deductions()
+    def test_home_office_is_subtracted_from_net_profit(self):
+        self.configure_deductions(square_feet=100)
         self.make_invoice(
             total="1000.00",
             status="paid",
@@ -277,25 +261,25 @@ class TaxYearGrossProfitTest(BuilderTestBase):
 
         context = TaxYearContextBuilder(YEAR, self.practice, self.user).build()
 
-        # Configuring the practice must actually claim something...
-        self.assertGreater(context["fahrtkosten_deduction"], Decimal("0"))
-        self.assertGreater(context["home_office_deduction"], Decimal("0"))
-        # ...and gross_profit must account for both, not just revenue − expenses.
-        self.assertEqual(
-            context["gross_profit"],
-            Decimal("1000.00")
-            - Decimal("250.00")
-            - context["fahrtkosten_deduction"]
-            - context["home_office_deduction"],
-        )
-        self.assertLess(context["gross_profit"], Decimal("750.00"))
+        self.assertEqual(context["home_office_deduction"], Decimal("500"))
+        self.assertEqual(context["net_profit"], Decimal("250.00"))
 
-    def test_gross_profit_can_be_negative(self):
+    def test_net_profit_can_be_negative(self):
         self.make_expense(amount="500.00", expense_date=date(YEAR, 4, 1))
 
         context = TaxYearContextBuilder(YEAR, self.practice, self.user).build()
 
-        self.assertEqual(context["gross_profit"], Decimal("-500.00"))
+        self.assertEqual(context["net_profit"], Decimal("-500.00"))
+        self.assertEqual(context["se_tax_estimate"], Decimal("0.00"))
+
+    def test_home_office_not_claimed_against_a_loss(self):
+        self.configure_deductions(square_feet=100)
+        self.make_expense(amount="500.00", expense_date=date(YEAR, 4, 1))
+
+        context = TaxYearContextBuilder(YEAR, self.practice, self.user).build()
+
+        self.assertEqual(context["home_office_deduction"], Decimal("0"))
+        self.assertTrue(context["home_office_limited"])
 
 
 class TaxYearPracticeSplitTest(BuilderTestBase):
@@ -389,7 +373,6 @@ class TaxYearPracticeSplitTest(BuilderTestBase):
         expected = (context["home_office_deduction"] * Decimal("0.7500")).quantize(Decimal("0.01"))
         self.assertEqual(context["home_office_split_revenue"], expected)
         self.assertGreater(context["home_office_split_revenue"], Decimal("0"))
-        self.assertGreater(context["fahrtkosten_split_revenue"], Decimal("0"))
 
     def test_inactive_practices_are_not_part_of_the_split(self):
         self._two_practice_setup()

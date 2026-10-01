@@ -4,7 +4,8 @@ Management command to materialize derived Task rows for the P-050 Focus Queue.
 Creates a PracticeTodo (task_type != manual) for each currently-outstanding
 derived signal (missing session log, unpaid/unsent invoices, pending
 operational checklists, unmatched bank transactions, open supervision
-topics) and auto-closes ones whose
+topics, licenses expiring within 90 days, client portal uploads to review)
+and auto-closes ones whose
 underlying signal has since resolved. Reuses the same detection logic as the
 dashboard's "Braucht Aktion" widget builders (or, for supervision, the
 existing SupervisionItem model) rather than re-deriving it.
@@ -24,10 +25,18 @@ from django.core.management.base import BaseCommand
 from django.db.models import Model, Q
 from django.utils import timezone
 
-from ...models import BankTransaction, Invoice, Practice, PracticeTodo
+from ...models import (
+    BankTransaction,
+    ClientDocument,
+    Invoice,
+    Practice,
+    PracticeTodo,
+    ProviderLicense,
+)
 from ...models.clinical import SupervisionItem
 from ...models.session import Session
 from ...utils.dashboard_widgets import ChecklistWidgetBuilder, InvoiceActionsWidgetBuilder
+from ...utils.licensure import licenses_needing_attention
 from ...utils.tag_helpers import get_sessions_missing_log
 
 
@@ -35,7 +44,7 @@ class Command(BaseCommand):
     help = (
         "Materialize derived Focus Queue Task rows (missing session log, "
         "unpaid/unsent invoices, operational checklists, unmatched bank "
-        "transactions, open supervision topics) and auto-close resolved ones."
+        "transactions, open supervision topics, license renewals) and auto-close resolved ones."
     )
 
     def handle(self, *args, **options):
@@ -48,12 +57,79 @@ class Command(BaseCommand):
             self._sync_operational_checklist(practice, totals)
             self._sync_bank_unmatched(practice, totals)
             self._sync_supervision(practice, totals)
+            self._sync_license_renewal(practice, totals)
+            self._sync_portal_uploads(practice, totals)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Focus queue sync: {totals['created']} created, {totals['closed']} closed"
             )
         )
+
+    def _sync_portal_uploads(self, practice: Practice, totals: dict) -> None:
+        """Client portal uploads awaiting review, aggregated into one Task per practice.
+
+        Aggregated (and titled with a count, not a client code) for the same
+        reasons as _sync_bank_unmatched: reviewed in one sitting, and no name in
+        the queue.
+        """
+        count = ClientDocument.objects.filter(
+            client__practice=practice, uploaded_via_portal=True, reviewed_at__isnull=True
+        ).count()
+        self._sync_aggregate_task(
+            practice,
+            PracticeTodo.TaskType.PORTAL_UPLOADS,
+            f"{count} client uploads to review" if count else "",
+            totals,
+        )
+
+    def _sync_aggregate_task(
+        self, practice: Practice, task_type: str, title: str, totals: dict
+    ) -> None:
+        """Keep exactly one open Task of ``task_type`` while ``title`` is non-empty."""
+        existing = (
+            PracticeTodo.objects.filter(
+                practice=practice, task_type=task_type, completed_at__isnull=True
+            )
+            .order_by("created_at")
+            .first()
+        )
+        if not title:
+            if existing:
+                existing.mark_completed()
+                totals["closed"] += 1
+            return
+        if existing:
+            if existing.title != title:
+                existing.title = title
+                existing.save(update_fields=["title"])
+        else:
+            PracticeTodo.objects.create(practice=practice, title=title, task_type=task_type)
+            totals["created"] += 1
+
+    def _sync_license_renewal(self, practice: Practice, totals: dict) -> None:
+        """One task per license that has expired or expires within 90 days.
+
+        Renewing the license (a later expiration date) closes the task on the
+        next run. The due date mirrors the expiration date so the queue sorts
+        renewals by urgency.
+        """
+        licenses = licenses_needing_attention(practice)
+        self._sync_object_tasks(
+            practice,
+            PracticeTodo.TaskType.LICENSE_RENEWAL,
+            ProviderLicense,
+            licenses,
+            lambda lic: f"{lic.license_type} {lic.state} license expires {lic.expiration_date}",
+            totals,
+        )
+        for lic in licenses:
+            PracticeTodo.objects.filter(
+                practice=practice,
+                task_type=PracticeTodo.TaskType.LICENSE_RENEWAL,
+                object_id=lic.pk,
+                completed_at__isnull=True,
+            ).exclude(due_date=lic.expiration_date).update(due_date=lic.expiration_date)
 
     def _sync_object_tasks(
         self,
@@ -163,38 +239,16 @@ class Command(BaseCommand):
             .count()
         )
 
-        existing = (
-            PracticeTodo.objects.filter(
-                practice=practice,
-                task_type=PracticeTodo.TaskType.BANK_UNMATCHED,
-                completed_at__isnull=True,
-            )
-            .order_by("created_at")
-            .first()
-        )
-
-        if not count:
-            if existing:
-                existing.mark_completed()
-                totals["closed"] += 1
-            return
-
         # Untranslated on purpose: this command runs outside any request, so
         # there is no admin UI language to render into (see module docstring).
         # The row's task-type badge is translated by the UI; the title only has
         # to carry the number.
-        title = f"{count} unmatched bank transactions"
-        if existing:
-            if existing.title != title:
-                existing.title = title
-                existing.save(update_fields=["title"])
-        else:
-            PracticeTodo.objects.create(
-                practice=practice,
-                title=title,
-                task_type=PracticeTodo.TaskType.BANK_UNMATCHED,
-            )
-            totals["created"] += 1
+        self._sync_aggregate_task(
+            practice,
+            PracticeTodo.TaskType.BANK_UNMATCHED,
+            f"{count} unmatched bank transactions" if count else "",
+            totals,
+        )
 
     def _sync_supervision(self, practice: Practice, totals: dict) -> None:
         """

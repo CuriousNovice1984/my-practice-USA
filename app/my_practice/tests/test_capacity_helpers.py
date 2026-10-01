@@ -114,10 +114,12 @@ class PeriodCapacityWithTimeoffTests(TestCase):
         )
         with_timeoff = calculate_period_capacity(start, end, include_timeoff=True)
 
-        self.assertEqual(without["working_days_total"], 44)
+        # 44 weekdays in Jul + Aug 2023, minus Independence Day (Tue Jul 4)
+        self.assertEqual(without["working_days_total"], 43)
         self.assertEqual(with_timeoff["timeoff_days"], 10)
-        self.assertEqual(with_timeoff["working_days_available"], 34)
+        self.assertEqual(with_timeoff["working_days_available"], 33)
         self.assertLess(with_timeoff["usable_capacity_hours"], without["usable_capacity_hours"])
-        # Weighted hours/week: (21*10 + 23*20) / 44; applied to 34 available days
-        expected = 34 / 5 * ((21 * 10 + 23 * 20) / 44)
+        # Weighted hours/week: (20*10 + 23*20) / 43 (July has 20 working days after
+        # Independence Day); applied to 33 available days
+        expected = 33 / 5 * ((20 * 10 + 23 * 20) / 43)
         self.assertAlmostEqual(with_timeoff["usable_capacity_hours"], expected)

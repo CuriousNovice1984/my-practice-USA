@@ -1,0 +1,27 @@
+{% load static i18n scene_tags icons %}<!DOCTYPE html>
+{% get_current_language as CURRENT_LANGUAGE %}
+<html lang="{{ CURRENT_LANGUAGE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}{% trans "Secure document upload" %}{% endblock %}</title>
+    <link rel="preload" href="{% static 'fonts/hanken-grotesk.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'fonts/newsreader.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
+</head>
+<body class="portal-body">
+    {% comment %}Standalone layout: clients must never see the practitioner's
+       navigation, and nothing here names a client.{% endcomment %}
+    <div class="portal-backdrop" aria-hidden="true">
+        {% scene_image scene "portal-backdrop__img" %}
+    </div>
+    <main class="portal-container">
+        {% block content %}{% endblock %}
+        <footer class="portal-footer">
+            <p class="portal-footer__safe">{% icon "check-circle" %} {% trans "Your files travel over an encrypted connection and go only to your counselor." %}</p>
+            <a class="portal-footer__credit" href="{{ scene.source_url }}" target="_blank" rel="noopener noreferrer">{% blocktrans with place=scene.place name=scene.photographer %}Photo: {{ place }}, {{ name }}{% endblocktrans %}</a>
+        </footer>
+    </main>
+</body>
+</html>

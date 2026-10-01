@@ -20,11 +20,9 @@ from my_practice.admin import (
     CompanyExpenseAdmin,
     CompanyWithdrawalAdmin,
     ExpenseCategoryRuleAdmin,
-    GebuhZifferAdmin,
     InvoiceAdmin,
     InvoiceItemAdmin,
     InvoiceItemAdminForm,
-    LeistungserfassungAdmin,
     MarketingPeriodAdmin,
     OperationalChecklistCompletionAdmin,
     PendingCalendarEventAdmin,
@@ -48,10 +46,8 @@ from my_practice.models import (
     CompanyExpense,
     CompanyWithdrawal,
     ExpenseCategoryRule,
-    GebuhZiffer,
     Invoice,
     InvoiceItem,
-    Leistungserfassung,
     MarketingPeriod,
     OperationalChecklistCompletion,
     PendingCalendarEvent,
@@ -240,16 +236,6 @@ class RemainingAdminConfigTestCase(TestCase):
         self.assertIn("has_log", admin_instance.list_display)
         self.assertIn("has_invoice_item", admin_instance.list_display)
 
-    def test_gebuh_ziffer_admin_registered(self):
-        admin_instance = GebuhZifferAdmin(GebuhZiffer, self.site)
-        self.assertIn("nummer", admin_instance.list_display)
-        self.assertIn("sort_order", admin_instance.list_editable)
-
-    def test_leistungserfassung_admin_registered(self):
-        admin_instance = LeistungserfassungAdmin(Leistungserfassung, self.site)
-        self.assertIn("session", admin_instance.list_display)
-        self.assertIn("ziffer", admin_instance.list_display)
-
     def test_operational_checklist_completion_admin_registered(self):
         admin_instance = OperationalChecklistCompletionAdmin(
             OperationalChecklistCompletion, self.site
@@ -359,7 +345,6 @@ class AdminIntegrationTestCase(TestCase):
             "client_code": "TC",
             "full_name": "Test Client",
             "email": "test@example.com",
-            "language": "de",
             "hourly_rate_60": "90.00",
             "hourly_rate_90": "130.00",
             "cancellation_fee": "0.00",

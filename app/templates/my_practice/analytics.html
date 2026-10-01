@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load icons %}
 {% load static %}
 {% load payment_tags %}
 
 {% block title %}{% trans "Analytics" %}{% endblock %}
 
-{% block page_icon %}📊{% endblock %}
 {% block page_title %}{% trans "Analytics" %}{% endblock %}
 {% block page_subtitle %}{% trans "Revenue, Clients, Capacity & Expenses" %}{% endblock %}
 
@@ -16,7 +16,7 @@ const CHART_MESSAGES = {
     allZero:    "{% trans 'No data in selected period' %}",
     invalidMax: "{% trans 'No valid data available' %}"
 };
-const LOCALE = (navigator.language || 'de-DE').replace('_', '-');
+const LOCALE = (navigator.language || 'en-US').replace('_', '-');
 </script>
 <!-- Modular chart utilities -->
 <script src="{% static 'js/charts/chart_core.js' %}"></script>
@@ -39,7 +39,7 @@ const LOCALE = (navigator.language || 'de-DE').replace('_', '-');
         <input type="hidden" name="tab" value="{{ active_tab }}">
         <div class="period-filter-form__field">
             <label for="period" class="filter-label">
-                📅 {% trans "Period" %}
+                {% trans "Period" %}
             </label>
             <select name="period" id="period" class="form-control">
                 <option value="all" {% if selected_period == 'all' %}selected{% endif %}>{% blocktrans with year=data_start_year %}All years ({{ year }}–today){% endblocktrans %}</option>
@@ -66,7 +66,7 @@ const LOCALE = (navigator.language || 'de-DE').replace('_', '-');
         </div>
 
         <button type="submit" class="btn btn-primary">
-            🔍 {% trans "Apply" %}
+            {% trans "Apply" %}
         </button>
         {% if selected_period != 'all' %}
         <a href="{% url 'analytics' %}?tab={{ active_tab }}" class="btn btn-secondary">
@@ -98,34 +98,34 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="tabs-container">
     <div class="tabs-nav">
         <button class="tab-button {% if active_tab == 'revenue' %}active{% endif %}" data-tab="revenue">
-            <span class="tab-icon">💰</span> {% trans "Revenue" %}
+            {% trans "Revenue" %}
         </button>
         <button class="tab-button {% if active_tab == 'clients' %}active{% endif %}" data-tab="clients">
-            <span class="tab-icon">👥</span> {% trans "Clients" %}
+            {% trans "Clients" %}
         </button>
         <button class="tab-button {% if active_tab == 'capacity' %}active{% endif %}" data-tab="capacity">
-            <span class="tab-icon">📊</span> {% trans "Capacity" %}
+            {% trans "Capacity" %}
         </button>
         <button class="tab-button {% if active_tab == 'expenses' %}active{% endif %}" data-tab="expenses">
-            <span class="tab-icon">💸</span> {% trans "Expenses" %}
+            {% trans "Expenses" %}
         </button>
     </div>
 </div>
 
 <!-- Tab Content: Revenue -->
 <div id="revenue-tab" class="tab-content {% if active_tab == 'revenue' %}active{% endif %}">
-    <h2>💰 {% trans "Revenue & Profit" %}</h2>
+    <h2>{% trans "Revenue & Profit" %}</h2>
 
     <!-- Quick Actions -->
     <div class="tab-actions">
         <a href="{% url 'revenue_report' %}" class="btn btn-primary btn-sm">
-            📊 {% trans "Detailed Revenue Report" %}
+            {% trans "Detailed Revenue Report" %}
         </a>
     </div>
 
     <!-- Profit Analysis -->
     <div class="analytics-card mb-4">
-        <h3>💰 {% trans "Profit (Revenue - Expenses)" %}</h3>
+        <h3>{% trans "Profit (Revenue - Expenses)" %}</h3>
         <p class="chart-subtitle">
             {% blocktrans with start_year=data_start_year %}Business profit {{ start_year }}–today · Cumulative development{% endblocktrans %}
         </p>
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Revenue vs Expenses vs Withdrawals -->
     <div class="analytics-card mb-4">
-        <h3>💰 {% trans "Revenue, Expenses & Withdrawals" %}</h3>
+        <h3>{% trans "Revenue, Expenses & Withdrawals" %}</h3>
         <p class="chart-subtitle">
             {% trans "Complete financial overview" %}
         </p>
@@ -182,9 +182,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const withdrawals = [{% for item in comparison_data %}{{ item.withdrawals|js_number }}{% if not forloop.last %},{% endif %}{% endfor %}];
 
         const datasets = [
-            { data: revenues, color: '#48bb78', colorEnd: '#38a169', label: '{% trans "Revenue" %}' },
-            { data: expenses, color: '#f56565', colorEnd: '#e53e3e', label: '{% trans "Expenses" %}' },
-            { data: withdrawals, color: '#9f7aea', colorEnd: '#805ad5', label: '{% trans "Withdrawals" %}' }
+            { data: revenues, color: '#2f6b5d', colorEnd: '#3d8f95', label: '{% trans "Revenue" %}' },
+            { data: expenses, color: '#c0703c', colorEnd: '#b4433a', label: '{% trans "Expenses" %}' },
+            { data: withdrawals, color: '#d6a64a', colorEnd: '#b8862e', label: '{% trans "Withdrawals" %}' }
         ];
 
         new ChartBuilder(canvas)
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .tooltip((d) => {
                 const lines = [`<strong>${d.label}</strong>`];
                 d.values.forEach(v => {
-                    lines.push(`${v.label}: ${Math.round(v.value).toLocaleString(LOCALE)}€`);
+                    lines.push(`${v.label}: $${Math.round(v.value).toLocaleString(LOCALE)}`);
                 });
                 return lines.join('<br>');
             })
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Revenue Trends Line Chart -->
     <div class="analytics-card mb-4">
-        <h3>📈 {% trans "Revenue Trend (Monthly)" %}</h3>
+        <h3>{% trans "Revenue Trend (Monthly)" %}</h3>
         <p class="chart-subtitle">
             {% trans "Monthly revenue development · growth visualized" %}
         </p>
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="chart-legend mt-2">
             <div class="legend-item">
                 <div class="legend-line-swatch"></div>
-                <span>{% blocktrans with months=revenue_trends|length max=max_revenue|floatformat:0 %}Monthly revenue · {{ months }} months · Max: {{ max }}€{% endblocktrans %}</span>
+                <span>{% blocktrans with months=revenue_trends|length max=max_revenue|currency_rounded %}Monthly revenue · {{ months }} months · Max: {{ max }}{% endblocktrans %}</span>
             </div>
         </div>
     </div>
@@ -250,14 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 startYear: chartStartYear,
                 startMonth: chartStartMonth,
             })
-            .tooltip((d) => `<strong>${d.label}</strong><br>${Math.round(d.value)} €`)
+            .tooltip((d) => `<strong>${d.label}</strong><br>$${Math.round(d.value).toLocaleString(LOCALE)}`)
             .build();
     });
     </script>
 
     <!-- Busiest Months -->
     <div class="analytics-card mt-4">
-        <h3>🔥 {% trans "Peak Months" %}</h3>
+        <h3>{% trans "Peak Months" %}</h3>
         {% with max_month=busiest_months|dictsort:"revenue"|last %}
         <ul class="busiest-months">
             {% for month in busiest_months %}
@@ -336,11 +336,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Tab Content: Clients -->
 <div id="clients-tab" class="tab-content {% if active_tab == 'clients' %}active{% endif %}">
-    <h2>👥 {% trans "Client overview" %}</h2>
+    <h2>{% trans "Client overview" %}</h2>
 
     <!-- Top Clients by Revenue -->
     <div class="analytics-card mb-4">
-        <h3>👑 {% trans "Top 10 Clients by Revenue" %}</h3>
+        <h3>{% trans "Top 10 Clients by Revenue" %}</h3>
         {% if top_clients %}
         <div class="table-container">
             <table class="client-table">
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td class="text-primary">{{ client_data.invoice_count }}</td>
                         <td class="text-primary">{{ client_data.session_hours }}h</td>
-                        <td class="revenue-amount text-right fw-700">{{ client_data.total_revenue|floatformat:2 }}&nbsp;€</td>
+                        <td class="revenue-amount text-right fw-700">{{ client_data.total_revenue|currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if practice_analysis %}
     <!-- Client Classification Table -->
     <div class="analytics-card mb-4">
-        <h3>📋 {% blocktrans with label=practice_analysis.period.label %}Client Details ({{ label }}){% endblocktrans %}</h3>
+        <h3>{% blocktrans with label=practice_analysis.period.label %}Client Details ({{ label }}){% endblocktrans %}</h3>
 
         {% if practice_analysis.clients.list %}
         <div class="toggle-section mb-2">
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>
                             {% if client.classification == 'probatoric' %}
-                                <span class="badge badge-probatoric">{% trans "Probatoric" %}</span>
+                                <span class="badge badge-probatoric">{% trans "New (under 5 sessions)" %}</span>
                             {% elif client.classification == 'active' %}
                                 <span class="badge badge-active">{% trans "Active" %}</span>
                             {% elif client.classification == 'established' %}
@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>{{ client.sessions_total|floatformat:1 }}h</td>
                         <td>
                             {% if client.is_online %}
-                                <span class="badge badge-online">{% trans "💻 Online" %}</span>
+                                <span class="badge badge-online">{% trans "Online" %}</span>
                             {% else %}
                                 <span class="text-muted">{% trans "In-person" %}</span>
                             {% endif %}
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Session Type Distribution -->
     <div class="analytics-card">
-        <h3>🎯 {% trans "Session Type Distribution" %}</h3>
+        <h3>{% trans "Session Type Distribution" %}</h3>
         {% if session_distribution.total > 0 %}
         <div class="text-center mb-3">
             <div class="stat-display__value">
@@ -504,13 +504,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Tab Content: Capacity -->
 <div id="capacity-tab" class="tab-content {% if active_tab == 'capacity' %}active{% endif %}">
-    <h2>📊 {% trans "Capacity & Utilisation" %}</h2>
+    <h2>{% trans "Capacity & Utilisation" %}</h2>
 
     {% if practice_analysis %}
     <!-- Insights Section -->
     {% if practice_analysis.insights %}
     <div class="insights-section">
-        <h2>💡 {% trans "Key Insights" %}</h2>
+        <h2>{% trans "Key Insights" %}</h2>
         <ul class="insights-list">
             {% for insight in practice_analysis.insights %}
             <li>{{ insight }}</li>
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             {% if practice_analysis.capacity.is_forward_looking and practice_analysis.capacity.booking_horizon_end %}
             <div class="hint-text">
-                ℹ️ {% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d.m.Y" %}Bookings until {{ date }}{% endblocktrans %}
+                ℹ️ {% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d M y" %}Bookings until {{ date }}{% endblocktrans %}
             </div>
             {% endif %}
         </div>
@@ -554,10 +554,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Capacity Analysis -->
     <div class="analytics-card mb-4">
-        <h3>📊 {% trans "Capacity Analysis" %}{% if practice_analysis.capacity.is_forward_looking and practice_analysis.capacity.booking_horizon_end %} ({% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d.m.Y" %}until {{ date }}{% endblocktrans %}){% endif %}</h3>
+        <h3>{% trans "Capacity Analysis" %}{% if practice_analysis.capacity.is_forward_looking and practice_analysis.capacity.booking_horizon_end %} ({% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d M y" %}until {{ date }}{% endblocktrans %}){% endif %}</h3>
         {% if practice_analysis.capacity.is_forward_looking and practice_analysis.capacity.booking_horizon_end %}
         <p class="hint-paragraph">
-            ℹ️ <strong>{% trans "Note:" %}</strong> {% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d.m.Y" %}For future-oriented periods only the period until <strong>{{ date }}</strong> (2 weeks from today) is considered, as most clients book at short notice.{% endblocktrans %}
+            ℹ️ <strong>{% trans "Note:" %}</strong> {% blocktrans with date=practice_analysis.capacity.booking_horizon_end|date:"d M y" %}For future-oriented periods only the period until <strong>{{ date }}</strong> (2 weeks from today) is considered, as most clients book at short notice.{% endblocktrans %}
         </p>
         {% endif %}
 
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- 4-Quarter Trends -->
     {% if practice_trends %}
     <div class="analytics-card mb-4">
-        <h3>📈 {% trans "4-Quarter Trends" %}</h3>
+        <h3>{% trans "4-Quarter Trends" %}</h3>
         <div class="table-container">
             <table class="client-table">
                 <thead>
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- TimeOff Overview -->
     {% if practice_analysis.timeoff.entries %}
     <div class="analytics-card">
-        <h3>🏖️ {% blocktrans with label=practice_analysis.period.label %}Time off in {{ label }}{% endblocktrans %}</h3>
+        <h3>{% blocktrans with label=practice_analysis.period.label %}Time off in {{ label }}{% endblocktrans %}</h3>
         <ul class="bare-list">
             {% for entry in practice_analysis.timeoff.entries %}
             <li class="timeoff-entry">
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <strong class="text-primary">{{ entry.title }}</strong>
                     <span class="text-muted"> ({{ entry.period_days|default:entry.full_days }} {% trans "Days" %})</span>
                 </span>
-                <span class="text-muted">{{ entry.period_start|date:"d.m." }} - {{ entry.period_end|date:"d.m.Y" }}</span>
+                <span class="text-muted">{{ entry.period_start|date:"d M" }} - {{ entry.period_end|date:"d M y" }}</span>
             </li>
             {% endfor %}
         </ul>
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- TimeOff Statistics -->
     <div class="analytics-card mb-4 mt-4">
-        <h3>🏖️ {% blocktrans with label=timeoff_label %}Time off {{ label }}{% endblocktrans %}</h3>
+        <h3>{% blocktrans with label=timeoff_label %}Time off {{ label }}{% endblocktrans %}</h3>
         <p class="chart-subtitle">
             {% trans "Days off in selected period" %}
         </p>
@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Yearly TimeOff Breakdown -->
     {% if yearly_timeoff %}
     <div class="analytics-card mb-4">
-        <h3>📅 {% trans "Time Off by Year" %}</h3>
+        <h3>{% trans "Time Off by Year" %}</h3>
         <div class="table-container table-container--wide">
             <table class="timeoff-table">
                 <thead>
@@ -662,9 +662,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>{% trans "Year" %}</th>
                         <th>{% trans "Workdays" %}</th>
                         <th>{% trans "Wk." %}</th>
-                        <th title="{% trans "Time off" %}">🏖️</th>
-                        <th title="{% trans "Training" %}">📚</th>
-                        <th title="{% trans "Sick" %}">🤒</th>
+                        <th title="{% trans "Time off" %}">{% icon "sun" %}</th>
+                        <th title="{% trans "Training" %}">{% icon "book" %}</th>
+                        <th title="{% trans "Sick" %}">{% icon "thermometer" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Capacity Utilization Trends -->
     <div class="analytics-card mb-4 mt-4">
-        <h3>📈 {% trans "Capacity Utilisation Over Time" %}</h3>
+        <h3>{% trans "Capacity Utilisation Over Time" %}</h3>
         <p class="chart-subtitle">
             {% trans "Monthly utilisation in % (10h/week until Jul 2023, then 20h/week)" %}
         </p>
@@ -742,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if cumulative_year_data %}
     {{ cumulative_year_data|json_script:"cumulative-year-data" }}
     <div class="analytics-card mt-3">
-        <h3>📈 {% trans "Year Comparison – Hours per Month" %}</h3>
+        <h3>{% trans "Year Comparison – Hours per Month" %}</h3>
         <p class="chart-subtitle">
             {% trans "Therapy hours per calendar month (last 4 years + average)" %}
         </p>
@@ -762,8 +762,8 @@ document.addEventListener('DOMContentLoaded', function() {
             '{% trans "Oct" %}','{% trans "Nov" %}','{% trans "Dec" %}'
         ];
         const YEAR_COLORS = {
-            2020: '#374151', 2021: '#64748b', 2022: '#14b8a6',
-            2023: '#8b5cf6', 2024: '#0ea5e9', 2025: '#22c55e', 2026: '#f59e0b'
+            2020: '#8a8f8c', 2021: '#8a6aa8', 2022: '#3d8f95',
+            2023: '#4f7fa0', 2024: '#6f9a5c', 2025: '#c0703c', 2026: '#2f6b5d'
         };
 
         // Find max value for Y scaling
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Seasonality -->
     {% if seasonality_data %}
     <div class="analytics-card mt-3">
-        <h3>🗓️ {% trans "Seasonality" %}</h3>
+        <h3>{% trans "Seasonality" %}</h3>
         <p class="chart-subtitle">
             {% trans "Average utilisation per calendar month (Ø over all years, incl. time off)" %}
         </p>
@@ -875,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if cancellation_trends %}
     {{ cancellation_trends|json_script:"cancellation-trends-data" }}
     <div class="analytics-card mt-3">
-        <h3>❌ {% trans "Cancellation Rate (last 24 months)" %}</h3>
+        <h3>{% trans "Cancellation Rate (last 24 months)" %}</h3>
         <p class="chart-subtitle">
             {% trans "Cancelled sessions in % of all sessions per month" %}
         </p>
@@ -924,25 +924,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Tab Content: Expenses -->
 <div id="expenses-tab" class="tab-content {% if active_tab == 'expenses' %}active{% endif %}">
-    <h2>💸 {% trans "Expense Overview" %}</h2>
+    <h2>{% trans "Expense Overview" %}</h2>
 
     <!-- Quick Actions -->
     <div class="tab-actions">
         <a href="{% url 'expense_list' %}" class="btn btn-secondary btn-sm">
-            💸 {% trans "Manage Expenses" %}
+            {% trans "Manage Expenses" %}
         </a>
         <a href="{% url 'withdrawal_list' %}" class="btn btn-secondary btn-sm">
-            💰 {% trans "Manage Withdrawals" %}
+            {% trans "Manage Withdrawals" %}
         </a>
     </div>
 
     <!-- Expense Category Distribution -->
     <div class="analytics-card mb-4">
-        <h3>💸 {% trans "Expenses by Category" %}</h3>
+        <h3>{% trans "Expenses by Category" %}</h3>
             {% if expense_distribution.total > 0 %}
             <div class="text-center mb-3">
                 <div class="stat-display__value">
-                    {{ expense_distribution.total|floatformat:0 }}&nbsp;€
+                    {{ expense_distribution.total|currency_rounded }}
                 </div>
                 <div class="stat-display__label">
                     {% trans "Total Expenses" %}
@@ -957,7 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-break">{{ category.category }}</span>
                     </span>
                     <span class="expense-category-item__amount">
-                        <strong class="text-primary">{{ category.amount|floatformat:0 }}&nbsp;€</strong>
+                        <strong class="text-primary">{{ category.amount|currency_rounded }}</strong>
                         <span class="stat-note">({{ category.percentage }}%)</span>
                     </span>
                 </li>
@@ -970,7 +970,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Expense Trends -->
     <div class="analytics-card mb-4 mt-4">
-        <h3>💸 {% trans "Expense Trends" %}</h3>
+        <h3>{% trans "Expense Trends" %}</h3>
         <p class="chart-subtitle">
             {% blocktrans with start_year=data_start_year %}Annual operating expenses {{ start_year }}–today{% endblocktrans %}
         </p>
@@ -993,7 +993,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .data(data)
             .labels(years)
             .preset('expense')
-            .tooltip((d) => `<strong>${d.label}</strong><br>${Math.round(d.value).toLocaleString(LOCALE)} €`)
+            .tooltip((d) => `<strong>${d.label}</strong><br>$${Math.round(d.value).toLocaleString(LOCALE)}`)
             .build();
     });
     </script>
@@ -1077,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <div class="text-center mt-4">
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary">🏠 {% trans "Back to overview" %}</a>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">{% trans "Back to overview" %}</a>
 </div>
 
 {% endblock %}

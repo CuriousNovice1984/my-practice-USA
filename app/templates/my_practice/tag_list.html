@@ -12,7 +12,7 @@
         ← {% trans "Back to client list" %}
     </a>
     <a href="{% url 'tag_create' %}" class="btn">
-        ➕ {% trans "Create new tag" %}
+        {% trans "Create new tag" %}
     </a>
 </div>
 
@@ -60,10 +60,10 @@
                     <td>
                         {% if not tag.is_system %}
                             <a href="{% url 'tag_update' tag.pk %}" class="btn btn-sm btn-secondary mr-2">
-                                ✏️ {% trans "Edit" %}
+                                {% trans "Edit" %}
                             </a>
                             <a href="{% url 'tag_delete' tag.pk %}" class="btn btn-sm btn-danger">
-                                🗑️ {% trans "Delete" %}
+                                {% trans "Delete" %}
                             </a>
                         {% else %}
                             <span class="text-muted-light text-sm">{% trans "System tag" %}</span>
@@ -80,7 +80,7 @@
     <h2>{% trans "No tags yet" %}</h2>
     <p>{% trans "Create your first tag to organise clients better." %}</p>
     <a href="{% url 'tag_create' %}" class="btn mt-2">
-        ➕ {% trans "Create first tag" %}
+        {% trans "Create first tag" %}
     </a>
 </div>
 {% endif %}

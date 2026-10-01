@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Bank connection" %}{% endblock %}
+{% block page_title %}{% trans "Bank connection" %}{% endblock %}
+{% block page_subtitle %}{% trans "Import transactions directly from your bank via Plaid" %}{% endblock %}
+
+{% block extra_head_scripts %}
+{% if plaid_configured %}<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+
+{% if not plaid_configured %}
+    <div class="form-section">
+        <h3>{% trans "Plaid isn't set up yet" %}</h3>
+        <p>{% trans "To connect your bank, create a Plaid account, then add your keys to the .env file and restart:" %}</p>
+        <pre class="bp-text">PLAID_CLIENT_ID=...
+PLAID_SECRET=...
+PLAID_ENV=sandbox   # or production</pre>
+        <p class="form-hint">{% trans "Use the sandbox keys first to try it with Plaid's test bank (user_good / pass_good). Until then you can still upload CSV exports on the bank import page." %}</p>
+        <a href="{% url 'bank_import' %}" class="btn btn-secondary">{% trans "CSV bank import" %}</a>
+    </div>
+{% else %}
+    <div class="plaid-actions">
+        <button type="button" class="btn" id="plaid-connect"
+                data-link-token-url="{% url 'plaid_link_token' %}"
+                data-exchange-url="{% url 'plaid_exchange' %}"
+                data-error-label="{% trans 'Could not open the bank connection:' %}">
+            {% trans "Connect a bank" %}
+        </button>
+        {% if items %}
+        <form method="post" action="{% url 'plaid_sync' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">{% trans "Sync transactions now" %}</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'bank_import' %}" class="btn btn-secondary">{% trans "CSV bank import" %}</a>
+    </div>
+    <p class="form-hint">{% trans "Synced transactions go through the same matching as CSV imports: payments with an invoice number are marked paid, everything else lands in bank review. Pending transactions are imported once they post." %}</p>
+
+    {% for item in items %}
+    <div class="form-section">
+        <div class="plaid-item-header">
+            <h3>{{ item }}</h3>
+            <form method="post" action="{% url 'plaid_remove' item.pk %}"
+                  onsubmit="return confirm('{% trans "Disconnect this bank? Imported transactions are kept." %}')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm">{% trans "Disconnect" %}</button>
+            </form>
+        </div>
+        <p class="form-hint">
+            {% if item.last_synced_at %}{% blocktrans with when=item.last_synced_at|date:"d M y, g:i A" %}Last synced {{ when }}{% endblocktrans %}{% else %}{% trans "Not synced yet" %}{% endif %}
+            {% if item.last_error %}<br><span class="text-danger">{% blocktrans with error=item.last_error %}Last sync failed: {{ error }}{% endblocktrans %}</span>{% endif %}
+        </p>
+        {% for account in item.accounts.all %}
+        <div class="plaid-account-row">
+            <span>{{ account }}{% if account.subtype %} <span class="text-muted">· {{ account.subtype }}</span>{% endif %}</span>
+            <form method="post" action="{% url 'plaid_toggle_account' account.pk %}">
+                {% csrf_token %}
+                {% if account.import_enabled %}
+                <button type="submit" class="badge--ok" title="{% trans 'Click to stop importing' %}">{% trans "Importing" %}</button>
+                {% else %}
+                <button type="submit" class="badge--neutral" title="{% trans 'Click to import' %}">{% trans "Not imported" %}</button>
+                {% endif %}
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <div class="form-section">
+        <p>{% trans "No bank connected yet. Connect your business checking account to import transactions automatically." %}</p>
+    </div>
+    {% endfor %}
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if plaid_configured %}
+<script>
+(function () {
+    const button = document.getElementById("plaid-connect");
+    if (!button) return;
+    const csrf = "{{ csrf_token }}";
+
+    async function postJson(url, body) {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {"X-CSRFToken": csrf, "Content-Type": "application/json"},
+            body: JSON.stringify(body || {}),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || response.statusText);
+        return data;
+    }
+
+    button.addEventListener("click", async function () {
+        button.disabled = true;
+        try {
+            const {link_token} = await postJson(button.dataset.linkTokenUrl);
+            const handler = Plaid.create({
+                token: link_token,
+                onSuccess: async function (publicToken, metadata) {
+                    await postJson(button.dataset.exchangeUrl, {
+                        public_token: publicToken,
+                        institution: metadata.institution,
+                    });
+                    window.location.reload();
+                },
+                onExit: function () { button.disabled = false; },
+            });
+            handler.open();
+        } catch (err) {
+            alert(button.dataset.errorLabel + " " + err.message);
+            button.disabled = false;
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -150,7 +150,7 @@ class CreateInvoiceItemsFromEventsTest(TestCase):
 
         self.assertEqual(created, 0)
         self.assertEqual(skipped, 1)
-        self.assertIn("Duplikat", errors[0])
+        self.assertIn("Duplicate", errors[0])
 
     def test_uses_90min_rate_for_90min_service(self):
         client_90 = _make_client(self.practice, code="T9", hourly_rate_60=90)
@@ -255,7 +255,7 @@ class CreateInvoiceItemsFromEventsTest(TestCase):
 
         self.assertEqual(created, 0)
         self.assertEqual(skipped, 1)
-        self.assertIn("Stundensatz", errors[0])
+        self.assertIn("hourly rate", errors[0])
 
     def test_session_record_created(self):
         create_invoice_items_from_events([self._make_event()], {}, self.request)
@@ -289,7 +289,7 @@ class BillSessionTest(TestCase):
         success, msg = bill_session(self.session, self.practice)
 
         self.assertFalse(success)
-        self.assertIn("abgerechnet", msg)
+        self.assertIn("already billed", msg)
         self.assertEqual(InvoiceItem.objects.count(), 1)  # still only one
 
     def test_no_service_type_fails(self):
@@ -312,4 +312,4 @@ class BillSessionTest(TestCase):
         )
         success, msg = bill_session(penniless_session, self.practice)
         self.assertFalse(success)
-        self.assertIn("Stundensatz", msg)
+        self.assertIn("hourly rate", msg)

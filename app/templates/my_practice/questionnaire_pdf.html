@@ -103,14 +103,14 @@
             {% endif %}
             <div>
                 <div class="brand-text-name">{{ practice.name }}</div>
-                {% if lang == "en" %}{% if practice.subtitle_en %}<div class="brand-text-sub">{{ practice.subtitle_en }}</div>{% endif %}{% else %}{% if practice.subtitle_de %}<div class="brand-text-sub">{{ practice.subtitle_de }}</div>{% endif %}{% endif %}
+                {% if practice.subtitle %}<div class="brand-text-sub">{{ practice.subtitle }}</div>{% endif %}
             </div>
         </div>
         <div class="invoice-title-block">
             <h1>{{ title }}</h1>
             <div class="inv-meta">
                 {{ practice.title }}<br>
-                {{ practice.street }}, {{ practice.postal_code }} {{ practice.city }}<br>
+                {{ practice.street }}, {{ practice.city }}, {{ practice.state }} {{ practice.postal_code }}<br>
                 {{ practice.email }}
             </div>
         </div>

@@ -20,8 +20,8 @@ function testColorPalette() {
     const colors = ChartConfig.colors;
 
     // Primary colors
-    console.assert(colors.primary === '#667eea', 'Primary color should be #667eea');
-    console.assert(colors.secondary === '#f093fb', 'Secondary color should be #f093fb');
+    console.assert(colors.primary === '#2f6b5d', 'Primary color should be #2f6b5d');
+    console.assert(colors.secondary === '#c0703c', 'Secondary color should be #c0703c');
 
     // Status colors
     console.assert(colors.success === '#10b981', 'Success color should be #10b981');
@@ -36,16 +36,16 @@ function testColorPalette() {
 // Test getColor helper
 function testGetColor() {
     // Get by name
-    console.assert(ChartConfig.getColor('primary') === '#667eea', 'getColor("primary") should return #667eea');
+    console.assert(ChartConfig.getColor('primary') === '#2f6b5d', 'getColor("primary") should return #2f6b5d');
     console.assert(ChartConfig.getColor('success') === '#10b981', 'getColor("success") should return #10b981');
 
     // Get by index
-    console.assert(ChartConfig.getColor(0) === '#667eea', 'getColor(0) should return primary color');
-    console.assert(ChartConfig.getColor(1) === '#f093fb', 'getColor(1) should return secondary color');
+    console.assert(ChartConfig.getColor(0) === '#2f6b5d', 'getColor(0) should return primary color');
+    console.assert(ChartConfig.getColor(1) === '#c0703c', 'getColor(1) should return secondary color');
 
     // Invalid inputs should return primary
-    console.assert(ChartConfig.getColor('invalid') === '#667eea', 'Invalid color name should return primary');
-    console.assert(ChartConfig.getColor(999) === '#667eea', 'Out of range index should return primary');
+    console.assert(ChartConfig.getColor('invalid') === '#2f6b5d', 'Invalid color name should return primary');
+    console.assert(ChartConfig.getColor(999) === '#2f6b5d', 'Out of range index should return primary');
 }
 
 // Test font configuration
@@ -172,7 +172,7 @@ function testRevenuePreset() {
     const preset = ChartConfig.presets.revenue;
 
     console.assert(preset.type === 'line', 'Revenue preset type should be line');
-    console.assert(preset.color === '#667eea', 'Revenue preset color should be primary');
+    console.assert(preset.color === '#2f6b5d', 'Revenue preset color should be primary');
     console.assert(preset.showArea === true, 'Revenue preset should show area');
     console.assert(preset.showTrendline === true, 'Revenue preset should show trendline');
     console.assert(preset.showPoints === true, 'Revenue preset should show points');
@@ -238,12 +238,12 @@ function testCreateGradient() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    const gradient = ChartConfig.createGradient(ctx, 0, 0, 0, 100, '#667eea');
+    const gradient = ChartConfig.createGradient(ctx, 0, 0, 0, 100, '#2f6b5d');
     console.assert(gradient !== null, 'createGradient should return a gradient');
     console.assert(typeof gradient === 'object', 'Gradient should be an object');
 
     // Test with color array
-    const multiGradient = ChartConfig.createGradient(ctx, 0, 0, 0, 100, ['#667eea', '#f093fb']);
+    const multiGradient = ChartConfig.createGradient(ctx, 0, 0, 0, 100, ['#2f6b5d', '#c0703c']);
     console.assert(multiGradient !== null, 'createGradient should work with color array');
 }
 

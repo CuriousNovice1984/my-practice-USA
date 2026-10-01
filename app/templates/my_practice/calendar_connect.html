@@ -2,13 +2,14 @@
 {% load i18n %}
 
 {% block title %}{% trans "Connect Google Calendar" %}{% endblock %}
+{% block page_title %}{% trans "Connect Google Calendar" %}{% endblock %}
+{% block page_subtitle %}{% trans "Bring your appointments in as sessions" %}{% endblock %}
 
 {% block content %}
 <div class="content-container">
-    <h1>{% trans "Connect Google Calendar" %}</h1>
 
     <div class="info-box">
-        <h3>🗓️ {% trans "Connect Google Calendar" %}</h3>
+        <h3>{% trans "Connect Google Calendar" %}</h3>
         <p>
             {% trans "Calendar events are automatically recognised as sessions and can be taken straight into billing." %}
         </p>
@@ -34,7 +35,7 @@
 
         <a href="{% url 'calendar_authorize' %}"
            class="btn btn-primary inline-block py-[15px] px-[30px] text-base mt-5">
-            🔐 {% trans "Connect with Google" %}
+            {% trans "Connect with Google" %}
         </a>
     </div>
 

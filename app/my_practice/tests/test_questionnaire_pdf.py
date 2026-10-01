@@ -116,29 +116,22 @@ class QuestionnairePdfGenerationTest(TestCase):
         return reader.get_fields() or {}
 
     def test_generate_bytes_returns_valid_pdf(self):
-        pdf_bytes, filename = generate_questionnaire_pdf_bytes("gad7", self.practice, "de")
+        pdf_bytes, filename = generate_questionnaire_pdf_bytes("gad7", self.practice)
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
-        self.assertEqual(filename, "GAD7_de.pdf")
+        self.assertEqual(filename, "GAD7.pdf")
 
     def test_pdf_has_one_fillable_radio_group_per_item(self):
         """One radio-button group per statement (s0_q0..s0_q6), each with 4 choices."""
-        pdf_bytes, _filename = generate_questionnaire_pdf_bytes("gad7", self.practice, "de")
+        pdf_bytes, _filename = generate_questionnaire_pdf_bytes("gad7", self.practice)
         fields = self._get_form_fields(pdf_bytes)
         group_names = {name.split(".")[0] for name in fields}
         self.assertEqual(group_names, {f"s0_q{i}" for i in range(7)})
 
-    def test_view_download_german_default(self):
+    def test_view_download(self):
         response = self.client_http.get(reverse("questionnaire_pdf", kwargs={"code": "gad7"}))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
-        self.assertIn("GAD7_de.pdf", response["Content-Disposition"])
-
-    def test_view_lang_param_switches_to_english(self):
-        response = self.client_http.get(
-            reverse("questionnaire_pdf", kwargs={"code": "gad7"}) + "?lang=en"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("GAD7_en.pdf", response["Content-Disposition"])
+        self.assertIn("GAD7.pdf", response["Content-Disposition"])
 
     def test_view_unknown_code_redirects_with_error(self):
         response = self.client_http.get(
@@ -147,13 +140,13 @@ class QuestionnairePdfGenerationTest(TestCase):
         self.assertRedirects(response, reverse("dashboard"))
 
     def test_shutd_generate_bytes_returns_valid_pdf(self):
-        pdf_bytes, filename = generate_questionnaire_pdf_bytes("shutd", self.practice, "de")
+        pdf_bytes, filename = generate_questionnaire_pdf_bytes("shutd", self.practice)
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
-        self.assertEqual(filename, "SHUTD_de.pdf")
+        self.assertEqual(filename, "SHUTD.pdf")
 
     def test_shutd_pdf_has_one_fillable_radio_group_per_item(self):
         """One radio-button group per statement (s0_q0..s0_q12), 13 items."""
-        pdf_bytes, _filename = generate_questionnaire_pdf_bytes("shutd", self.practice, "de")
+        pdf_bytes, _filename = generate_questionnaire_pdf_bytes("shutd", self.practice)
         fields = self._get_form_fields(pdf_bytes)
         group_names = {name.split(".")[0] for name in fields}
         self.assertEqual(group_names, {f"s0_q{i}" for i in range(13)})
@@ -196,7 +189,7 @@ class SendQuestionnairePdfEmailViewTest(TestCase):
         self.assertTemplateUsed(response, "my_practice/send_questionnaire_pdf_email.html")
         form = response.context["form"]
         self.assertEqual(form.initial["recipient"], "max@example.com")
-        self.assertEqual(response.context["filename"], "GAD-7_de.pdf")
+        self.assertEqual(response.context["filename"], "GAD-7.pdf")
 
     def test_redirects_without_client_email(self):
         self.test_client.email = ""
@@ -230,7 +223,7 @@ class SendQuestionnairePdfEmailViewTest(TestCase):
 
         mock_instance.attach.assert_called_once()
         fname, fbytes, fmime = mock_instance.attach.call_args.args
-        self.assertEqual(fname, "GAD-7_de.pdf")
+        self.assertEqual(fname, "GAD-7.pdf")
 
     def test_serves_a_second_instrument_by_code(self):
         """The view isn't hardcoded to gad7 — any code with content resolves.
@@ -267,7 +260,7 @@ class SendQuestionnairePdfEmailViewTest(TestCase):
                         kwargs={"pk": self.test_client.pk, "code": "testinstrument"},
                     )
                 )
-                self.assertEqual(response.context["filename"], "TESTINSTRUMENT_de.pdf")
+                self.assertEqual(response.context["filename"], "TESTINSTRUMENT.pdf")
 
 
 class ResolveQuestionnaireSectionTest(TestCase):
@@ -279,7 +272,7 @@ class ResolveQuestionnaireSectionTest(TestCase):
             "columns": [{"de": "Nie", "en": "Never"}, {"de": "Oft", "en": "Often"}],
             "items": [{"de": "Erstens", "en": "First"}, {"de": "Zweitens", "en": "Second"}],
         }
-        resolved = _resolve_questionnaire_section(section, "de", index=2)
+        resolved = _resolve_questionnaire_section(section, index=2, lang="de")
         self.assertEqual(resolved["type"], "grid")
         self.assertEqual(resolved["columns"], ["Nie", "Oft"])
         self.assertEqual(
@@ -305,7 +298,7 @@ class ResolveQuestionnaireSectionTest(TestCase):
             ],
             "items": [{"de": "Erstens", "en": "First"}],
         }
-        resolved = _resolve_questionnaire_section(section, "en", index=1)
+        resolved = _resolve_questionnaire_section(section, index=1, lang="en")
         self.assertEqual(resolved["type"], "grid")
         self.assertEqual(
             resolved["column_groups"],
@@ -330,7 +323,7 @@ class ResolveQuestionnaireSectionTest(TestCase):
             "type": "checklist",
             "items": [{"de": "Scheidung", "en": "Divorce"}, {"de": "Umzug", "en": "Moving"}],
         }
-        resolved = _resolve_questionnaire_section(section, "en", index=0)
+        resolved = _resolve_questionnaire_section(section, index=0, lang="en")
         self.assertEqual(resolved["type"], "checklist")
         self.assertEqual(
             resolved["rows"],
@@ -346,18 +339,18 @@ class ResolveQuestionnaireSectionTest(TestCase):
             "intro": {"de": "Bitte angeben:", "en": "Please indicate:"},
             "lines": 2,
         }
-        resolved = _resolve_questionnaire_section(section, "en", index=3)
+        resolved = _resolve_questionnaire_section(section, index=3, lang="en")
         self.assertEqual(resolved["type"], "freetext")
         self.assertEqual(resolved["intro"], "Please indicate:")
         self.assertEqual(resolved["field_names"], ["s3_f0", "s3_f1"])
 
     def test_freetext_defaults_to_one_line(self):
-        resolved = _resolve_questionnaire_section({"type": "freetext"}, "de", index=0)
+        resolved = _resolve_questionnaire_section({"type": "freetext"}, index=0, lang="de")
         self.assertEqual(resolved["field_names"], ["s0_f0"])
 
     def test_unknown_type_raises_value_error(self):
         with self.assertRaises(ValueError):
-            _resolve_questionnaire_section({"type": "essay"}, "de", index=0)
+            _resolve_questionnaire_section({"type": "essay"}, index=0, lang="de")
 
 
 class MixedSectionQuestionnairePdfTest(TestCase):
@@ -426,12 +419,10 @@ class MixedSectionQuestionnairePdfTest(TestCase):
                 json.dumps(content), encoding="utf-8"
             )
             with override_settings(MY_PRACTICE_DATA_DIR=data_dir):
-                pdf_bytes, filename = generate_questionnaire_pdf_bytes(
-                    "mixed-test", self.practice, "de"
-                )
+                pdf_bytes, filename = generate_questionnaire_pdf_bytes("mixed-test", self.practice)
 
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
-        self.assertEqual(filename, "MIXED-TEST_de.pdf")
+        self.assertEqual(filename, "MIXED-TEST.pdf")
 
         fields = self._get_form_fields(pdf_bytes)
         field_names = set(fields)

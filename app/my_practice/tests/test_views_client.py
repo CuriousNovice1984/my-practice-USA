@@ -150,7 +150,6 @@ class ClientDetailViewTest(TestCase):
         self.service_type = ServiceType.objects.create(
             code="individual",
             name="60 Min Session",
-            name_de="60 Min. Psychotherapie",
             practice=self.practice,
         )
 
@@ -444,7 +443,7 @@ class ClientCreateViewTest(TestCase):
         response = self.client_instance.get(reverse("client_intake"))
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertContains(response, "Klient:in speichern")  # Create button text
+        self.assertContains(response, "Save client")  # Create button text
 
     def test_client_create_form_submission(self):
         """Test creating a new client."""
@@ -453,7 +452,6 @@ class ClientCreateViewTest(TestCase):
             "full_name": "Test Client",
             "email": "test@example.com",
             "phone": "123-456-7890",
-            "language": "de",
             "salutation": "Herr",
             "hourly_rate_60": "90.00",
             "hourly_rate_90": "130.00",
@@ -868,7 +866,7 @@ class ClientDocumentUploadTest(TestCase):
 
 
 class ClientGdprDeleteTest(TestCase):
-    """Test client_gdpr_delete_confirm and client_gdpr_delete views."""
+    """Test client_records_delete_confirm and client_gdpr_delete views."""
 
     def setUp(self):
         self.practice = Practice.objects.create(
@@ -895,16 +893,16 @@ class ClientGdprDeleteTest(TestCase):
 
     def test_confirm_page_for_eligible_client(self):
         response = self.http.get(
-            reverse("client_gdpr_delete_confirm", kwargs={"pk": self.eligible_client.pk})
+            reverse("client_records_delete_confirm", kwargs={"pk": self.eligible_client.pk})
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "my_practice/client_gdpr_delete_confirm.html")
+        self.assertTemplateUsed(response, "my_practice/client_records_delete_confirm.html")
 
     def test_confirm_page_rejects_active_client(self):
         self.eligible_client.active = True
         self.eligible_client.save()
         response = self.http.get(
-            reverse("client_gdpr_delete_confirm", kwargs={"pk": self.eligible_client.pk})
+            reverse("client_records_delete_confirm", kwargs={"pk": self.eligible_client.pk})
         )
         self.assertRedirects(response, reverse("client_list"))
 
@@ -917,13 +915,13 @@ class ClientGdprDeleteTest(TestCase):
         )
         Session.objects.create(client=recent_client, session_date=date.today(), duration=60)
         response = self.http.get(
-            reverse("client_gdpr_delete_confirm", kwargs={"pk": recent_client.pk})
+            reverse("client_records_delete_confirm", kwargs={"pk": recent_client.pk})
         )
         self.assertRedirects(response, reverse("client_list"))
 
     def test_delete_get_not_allowed(self):
         response = self.http.get(
-            reverse("client_gdpr_delete", kwargs={"pk": self.eligible_client.pk})
+            reverse("client_records_delete", kwargs={"pk": self.eligible_client.pk})
         )
         self.assertEqual(response.status_code, 405)
 
@@ -931,7 +929,7 @@ class ClientGdprDeleteTest(TestCase):
         self.eligible_client.active = True
         self.eligible_client.save()
         response = self.http.post(
-            reverse("client_gdpr_delete", kwargs={"pk": self.eligible_client.pk})
+            reverse("client_records_delete", kwargs={"pk": self.eligible_client.pk})
         )
         self.assertRedirects(response, reverse("client_list"))
         self.assertTrue(Client.objects.filter(pk=self.eligible_client.pk).exists())
@@ -946,7 +944,7 @@ class ClientGdprDeleteTest(TestCase):
             file=SimpleUploadedFile("beleg.pdf", content, content_type="application/pdf"),
             document_date=date.today(),
         )
-        response = self.http.post(reverse("client_gdpr_delete", kwargs={"pk": client_pk}))
+        response = self.http.post(reverse("client_records_delete", kwargs={"pk": client_pk}))
         self.assertRedirects(response, reverse("client_list"))
         self.assertFalse(Client.objects.filter(pk=client_pk).exists())
         mock_send.assert_called_once()
@@ -958,18 +956,18 @@ class ClientGdprDeleteTest(TestCase):
     def test_delete_continues_when_email_send_fails(self, mock_send):
         client_pk = self.eligible_client.pk
         response = self.http.post(
-            reverse("client_gdpr_delete", kwargs={"pk": client_pk}), follow=True
+            reverse("client_records_delete", kwargs={"pk": client_pk}), follow=True
         )
         self.assertFalse(Client.objects.filter(pk=client_pk).exists())
         page_messages = list(response.context["messages"])
-        self.assertTrue(any("konnte nicht gesendet werden" in str(m) for m in page_messages))
+        self.assertTrue(any("could not be sent" in str(m) for m in page_messages))
 
     def test_delete_client_without_email_skips_notification(self):
         self.eligible_client.email = ""
         self.eligible_client.save()
         with patch("my_practice.views.client_views.EmailMessage.send") as mock_send:
             response = self.http.post(
-                reverse("client_gdpr_delete", kwargs={"pk": self.eligible_client.pk})
+                reverse("client_records_delete", kwargs={"pk": self.eligible_client.pk})
             )
         self.assertRedirects(response, reverse("client_list"))
         mock_send.assert_not_called()

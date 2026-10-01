@@ -178,7 +178,7 @@ class Command(BaseCommand):
             category_display = ", ".join(categories) if len(categories) > 1 else categories[0]
 
             self.stdout.write(
-                f"  {dup['date']} | {dup['amount']}€ | {category_display} | Count: {count}"
+                f"  {dup['date']} | ${dup['amount']} | {category_display} | Count: {count}"
             )
             desc_short = dup["description"][:60]
             self.stdout.write(f"    Description: {desc_short}...")

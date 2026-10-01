@@ -33,7 +33,7 @@ class TimeOffNoticeForm(StyledFormMixin, forms.Form):
     """Form for selecting recipients and customizing the time-off heads-up email.
 
     ``recipients.queryset`` is annotated with ``last_session_date``/``next_session_date``
-    so the template can render a scannable table (code, language, last/next session)
+    so the template can render a scannable table (code, last/next session)
     instead of a plain name list — the queryset is exposed as
     ``form.recipients.field.queryset`` for that purpose.
     """
@@ -43,12 +43,8 @@ class TimeOffNoticeForm(StyledFormMixin, forms.Form):
         widget=forms.CheckboxSelectMultiple,
         label=_("Recipients"),
     )
-    subject_de = forms.CharField(label=_("Subject (German)"), max_length=200)
-    body_de = forms.CharField(label=_("Message (German)"), widget=forms.Textarea(attrs={"rows": 8}))
-    subject_en = forms.CharField(label=_("Subject (English)"), max_length=200)
-    body_en = forms.CharField(
-        label=_("Message (English)"), widget=forms.Textarea(attrs={"rows": 8})
-    )
+    subject = forms.CharField(label=_("Subject"), max_length=200)
+    body = forms.CharField(label=_("Message"), widget=forms.Textarea(attrs={"rows": 8}))
 
     def __init__(self, *args, practice: Practice, **kwargs):
         super().__init__(*args, **kwargs)

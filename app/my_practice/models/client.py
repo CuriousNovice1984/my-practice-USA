@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from ..us_states import US_STATE_CHOICES
 from .base import PracticeScopedQuerySet, TimestampedModel
 
 
@@ -70,17 +71,6 @@ class ClientQuerySet(PracticeScopedQuerySet):
 class Client(TimestampedModel):
     """Client model - matches existing 'clients' table"""
 
-    class Language(StrEnum):
-        """Invoice language for bilingual invoice generation."""
-
-        DE = "de"
-        EN = "en"
-
-    LANGUAGE_CHOICES = [
-        (Language.DE, _("German")),
-        (Language.EN, _("English")),
-    ]
-
     id = models.AutoField(primary_key=True)
 
     # Practice relationship - which practice this client belongs to
@@ -109,11 +99,21 @@ class Client(TimestampedModel):
     email = models.EmailField(blank=True, validators=[EmailValidator()], verbose_name=_("Email"))
     phone = models.CharField(max_length=50, blank=True, verbose_name=_("Phone"))
     address = models.TextField(blank=True, verbose_name=_("Address"))
+    state = models.CharField(
+        max_length=2,
+        choices=US_STATE_CHOICES,
+        blank=True,
+        verbose_name=_("State (client location)"),
+        help_text=_(
+            "Where the client is located during sessions — you need a current "
+            "license in this state, including for telehealth."
+        ),
+    )
     cost_carrier = models.CharField(
         max_length=200,
         blank=True,
-        verbose_name=_("Cost carrier"),
-        help_text=_("Cost carrier / health insurance (e.g. 'self-pay', 'Allianz PKV')"),
+        verbose_name=_("Payment source"),
+        help_text=_("How the client pays (e.g. 'self-pay', 'HSA/FSA card')"),
     )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
 
@@ -164,32 +164,16 @@ class Client(TimestampedModel):
         verbose_name=_("Cancellation fee"),
     )
 
-    language = models.CharField(
-        max_length=2,
-        choices=LANGUAGE_CHOICES,
-        default=Language.DE,
-        verbose_name=_("Preferred language"),
-    )
     salutation = models.CharField(
         max_length=100,
         blank=True,
         verbose_name=_("Email salutation"),
         help_text=_(
-            "Custom salutation for emails (e.g., 'Dear John', 'Liebe Maria'). "
-            "If empty, will use 'Dear {name}' (EN) or 'Liebe:r {name}' (DE)."
+            "Custom salutation for emails (e.g., 'Dear John'). "
+            "If empty, 'Dear {first name}' is used."
         ),
     )
     active = models.BooleanField(default=True, verbose_name=_("Active"))
-    needs_gebueh_invoice = models.BooleanField(
-        default=False,
-        verbose_name=_("GebüH-Rechnung"),
-        help_text=_("GebüH-Ziffern und Diagnose auf der Rechnung ausweisen (PKV / Beihilfe)"),
-    )
-    gebueh_no_diagnosis = models.BooleanField(
-        default=False,
-        verbose_name=_("No diagnosis on invoice"),
-        help_text=_("Omit the diagnosis line from GebüH invoices for this client"),
-    )
     is_online_client = models.BooleanField(
         default=False,
         verbose_name=_("Online client"),
@@ -237,21 +221,23 @@ def client_document_upload_path(instance: "ClientDocument", filename: str) -> st
 
 
 class ClientDocument(TimestampedModel):
-    """A document attached to a client (contract, intake form, referral, etc.)."""
+    """A document attached to a client (informed consent, intake paperwork, referral, etc.)."""
 
     class DocumentType(StrEnum):
         INTRO_NOTES = "intro_notes"
         INTAKE = "intake"
-        ANAMNESE = "anamnese"
-        CONTRACT = "contract"
+        HEALTH_HISTORY = "health_history"
+        CONSENT = "consent"
+        RELEASE = "release"
         REFERRAL = "referral"
         OTHER = "other"
 
     DOC_TYPE_CHOICES = [
         (DocumentType.INTRO_NOTES, _("Intro meeting (notes)")),
-        (DocumentType.INTAKE, _("Intake form")),
-        (DocumentType.ANAMNESE, _("Anamnesis questionnaire")),
-        (DocumentType.CONTRACT, _("Treatment contract")),
+        (DocumentType.INTAKE, _("Intake paperwork")),
+        (DocumentType.HEALTH_HISTORY, _("Health history questionnaire")),
+        (DocumentType.CONSENT, _("Informed consent")),
+        (DocumentType.RELEASE, _("Release of information")),
         (DocumentType.REFERRAL, _("Referral")),
         (DocumentType.OTHER, _("Other")),
     ]
@@ -283,6 +269,25 @@ class ClientDocument(TimestampedModel):
         verbose_name=_("Document date"),
         help_text=_("Date of the document (e.g. signing date)"),
     )
+    uploaded_via_portal = models.BooleanField(
+        default=False,
+        verbose_name=_("Uploaded by client"),
+        help_text=_("Uploaded through the client forms portal"),
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Reviewed"),
+        help_text=_("When a portal upload was looked at; staff uploads need no review"),
+    )
+
+    # Uploading one of these document types completes the matching onboarding
+    # step on the client: {document type: (Client date field, step name)}
+    ONBOARDING_STEPS: dict[str, tuple[str, str]] = {
+        DocumentType.INTAKE: ("intake_sent_date", "intake"),
+        DocumentType.CONSENT: ("contract_signed_date", "contract"),
+        DocumentType.HEALTH_HISTORY: ("questionnaire_sent_date", "questionnaire"),
+    }
 
     class Meta:
         ordering = ["-document_date", "-created_at"]
@@ -293,6 +298,21 @@ class ClientDocument(TimestampedModel):
         return (
             f"{self.client.client_code} — {self.get_document_type_display()} ({self.document_date})"
         )
+
+    def complete_onboarding_step(self) -> str | None:
+        """Mark the client's onboarding step for this document type done, if not already.
+
+        Returns the step name that was completed, or None if nothing changed.
+        """
+        step = self.ONBOARDING_STEPS.get(str(self.document_type))
+        if step is None:
+            return None
+        field, name = step
+        if getattr(self.client, field):
+            return None
+        setattr(self.client, field, self.document_date)
+        self.client.save(update_fields=[field])
+        return name
 
     @property
     def filename(self) -> str:

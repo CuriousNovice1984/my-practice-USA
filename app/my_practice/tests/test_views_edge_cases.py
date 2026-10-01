@@ -54,7 +54,7 @@ class ExpenseWithdrawalEdgeCasesTest(TestCase):
         data = {
             "date": date.today(),
             "amount": "-100.00",  # Negative!
-            "category": "miete",  # Valid category
+            "category": "rent",  # Valid category
             "description": "Test expense",
             "is_tax_deductible": True,
         }
@@ -93,7 +93,7 @@ class ExpenseWithdrawalEdgeCasesTest(TestCase):
         expense = CompanyExpense.objects.create(
             date=date.today(),
             amount=Decimal("100.00"),
-            category="miete",  # Valid category
+            category="rent",  # Valid category
             description="Original",
             is_tax_deductible=True,
             practice=self.practice,
@@ -268,7 +268,6 @@ class ClientEdgeCasesTest(TestCase):
             "email": "not-an-email",  # Invalid!
             "hourly_rate_60": "90.00",
             "hourly_rate_90": "130.00",
-            "language": "de",
         }
 
         response = self.client.post(reverse("client_intake"), data)
@@ -287,7 +286,6 @@ class ClientEdgeCasesTest(TestCase):
             "email": "unicode@example.com",
             "hourly_rate_60": "90.00",
             "hourly_rate_90": "130.00",
-            "language": "de",
         }
 
         response = self.client.post(reverse("client_intake"), data)
@@ -305,7 +303,6 @@ class ClientEdgeCasesTest(TestCase):
             "email": "rich@example.com",
             "hourly_rate_60": "9999.99",  # Very high!
             "hourly_rate_90": "9999.99",
-            "language": "de",
         }
 
         response = self.client.post(reverse("client_intake"), data)
