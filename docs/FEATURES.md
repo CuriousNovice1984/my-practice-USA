@@ -11,17 +11,34 @@ This document is the exhaustive reference — every feature that's shipped, grou
 If you just want the highlights, the README's "What it does" section is shorter and a
 better starting point. Jump to a section:
 
-- [Core Features](#core-features) — clinical documentation, client management, invoicing, GebüH billing, sessions
+- [Core Features](#core-features) — clinical documentation, client management, invoicing, sessions
 - [Analytics & Reporting](#analytics--reporting) — dashboard, analytics tabs, tax reports, inquiry pipeline
 - [Financial Management](#financial-management) — withdrawals, expenses, time off
 - [Data Import & Integration](#data-import--integration) — CSV import, Google Calendar
 - [Technical Features](#technical-features) — UI/UX, performance, security, testing, DevOps
-- [Self-hosting](#self-hosting) — Docker image, update checks
+- [Self-hosting](#self-hosting) — locally built Docker image
 
 For what's changed recently, see [CHANGELOG.md](CHANGELOG.md) — that's the dated,
 chronological record; this document only tracks current state.
 
 ---
+
+
+## US fork (v1.0.0)
+
+This fork targets a solo, self-pay LPC practice in Texas. Sections below inherited from
+upstream may still mention German specifics that no longer apply (GebüH, VAT, Berlin
+holidays, bilingual PDFs, update checks); [CHANGELOG v1.0.0](CHANGELOG.md) lists what was removed.
+
+- ✅ English-only UI, `America/Chicago`, USD (`$1,234.56`), dates as `DD MMM YY`
+- ✅ US federal holidays (observed dates) for capacity and working-day calculations
+- ✅ Tax overview: IRS 1040-ES quarterly periods and due dates, self-employment tax estimate, simplified home-office deduction, Schedule C expense categories
+- ✅ State license tracker (`/practice/licenses/`) with 90-day renewal tasks in the Focus Queue and a warning when a client's state isn't one you're licensed in
+- ✅ Plaid bank connection: link accounts, choose which import, sync on demand or via `manage.py plaid_sync`; transactions reuse the bank review and invoice-matching pipeline
+- ✅ US-format bank CSV import (`MM/DD/YYYY`, `1,234.56`, parenthesized negatives, optional balance/account columns)
+- ✅ Client forms portal: blank forms to download, private expiring per-client upload links, uploads filed by document type and queued for review ([CLIENT_PORTAL.md](operations/CLIENT_PORTAL.md))
+- ✅ Records retention date per client (configurable years; minors counted from age 18) with a guarded delete flow
+- ✅ No update checks or registry pulls; `./prod.py update` pulls this repository and rebuilds locally
 
 ## 🏠 Core Features
 

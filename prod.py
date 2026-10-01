@@ -4,7 +4,6 @@
 Requirements: Python 3, Docker with the Compose plugin.
 """
 
-import json
 import os
 import re
 import secrets
@@ -12,17 +11,16 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.request
 
-VERSION = "v0.7.1"  # updated each release — keeps prod.py and docker-compose.prod.yml in sync
+VERSION = "v1.0.0"  # updated each release — keeps prod.py and docker-compose.prod.yml in sync
 
 COMPOSE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docker-compose.prod.yml")
 COMPOSE = ["docker", "compose", "-f", COMPOSE_FILE]
-IMAGE = f"ghcr.io/dholbach/my-practice:{VERSION}"
-ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-ENV_DOCS = f"https://github.com/dholbach/my-practice/blob/{VERSION}/.env.example"
-RELEASES_API = "https://api.github.com/repos/dholbach/my-practice/releases/latest"
-RAW_BASE = f"https://raw.githubusercontent.com/dholbach/my-practice/{VERSION}"
+REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+# Built locally from this checkout — the fork publishes no registry images
+IMAGE = f"my-practice-usa:{VERSION}"
+ENV_FILE = os.path.join(REPO_DIR, ".env")
+ENV_DOCS = os.path.join(REPO_DIR, ".env.example")
 
 # Without these the stack starts but cannot work: Postgres refuses to initialise
 # with a blank password, and Django cannot sign sessions or read encrypted
@@ -128,7 +126,7 @@ def _check_docker():
 
 
 def _generate_fernet_key():
-    """Generate a Fernet key using the already-pulled image (no host deps needed)."""
+    """Generate a Fernet key using the freshly built image (no host deps needed)."""
     result = subprocess.run(
         [
             "docker",
@@ -145,7 +143,7 @@ def _generate_fernet_key():
     if result.returncode != 0 or not result.stdout.strip():
         abort(
             "Could not generate FERNET_KEY using the Docker image.\n"
-            "  Make sure the image pulled successfully, then re-run ./prod.py setup\n"
+            "  Make sure the image built successfully, then re-run ./prod.py setup\n"
             "  Or generate it manually:\n"
             "    pip install cryptography\n"
             '    python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"\n'
@@ -245,14 +243,15 @@ def _wait_for_healthy(timeout=120):
 
 
 def cmd_setup(args):
-    """First-time setup: generate secrets, pull image, start, create login.
+    """First-time setup: build the image, generate secrets, start, create login.
 
-    Pass --yes to skip the metered-connection prompt before the image pull.
+    Pass --yes to skip the metered-connection prompt before the image build
+    (it downloads the Python and Node base images).
     """
     print("my-practice setup")
     print("=" * 50)
 
-    if "--yes" not in args and not _confirm_metered_download("Pulling the image"):
+    if "--yes" not in args and not _confirm_metered_download("Building the image"):
         abort("Aborted — pass --yes to ./prod.py setup to proceed anyway.")
 
     # 1. Preflight
@@ -262,32 +261,13 @@ def cmd_setup(args):
     _require_no_foreign_containers()
 
     if not os.path.exists(COMPOSE_FILE):
-        print("  docker-compose.prod.yml not found — downloading...")
-        compose_url = f"{RAW_BASE}/docker-compose.prod.yml"
-        try:
-            with (
-                urllib.request.urlopen(compose_url, timeout=10) as r,
-                open(COMPOSE_FILE, "wb") as f,
-            ):
-                f.write(r.read())
-            print(f"  Saved to {COMPOSE_FILE}")
-        except Exception as e:
-            abort(
-                f"Could not download docker-compose.prod.yml: {e}\n"
-                "  Download it manually:\n"
-                "    curl -O https://raw.githubusercontent.com/dholbach/my-practice/main/docker-compose.prod.yml\n"
-                "  then re-run ./prod.py setup"
-            )
+        abort("docker-compose.prod.yml not found — run ./prod.py from the repository checkout.")
 
-    # 2. Pull image (needed before we can generate the Fernet key inside it)
-    step("Pulling image")
-    result = subprocess.run(["docker", "pull", IMAGE])
+    # 2. Build the image (needed before we can generate the Fernet key inside it)
+    step("Building image")
+    result = compose("build", "django")
     if result.returncode != 0:
-        abort(
-            "Could not pull the image from GHCR.\n"
-            "  Check your internet connection and try again.\n"
-            "  If the problem persists: https://github.com/dholbach/my-practice/issues"
-        )
+        abort("Could not build the image — see the Docker output above.")
 
     # 3. Generate secrets (only for keys not already set)
     step("Generating secrets")
@@ -318,11 +298,11 @@ def cmd_setup(args):
 
     print()
     print("  ⚠  Keep your .env safe — especially FERNET_KEY.")
-    print("     FERNET_KEY encrypts clinical notes (Art. 9 GDPR data).")
+    print("     FERNET_KEY encrypts clinical notes and bank/portal tokens.")
     print("     Losing it means losing access to that encrypted content.")
     print()
     print("  .env controls much more than these three keys (email, calendar,")
-    print("  data directory, HTTPS, and more). Review the full reference:")
+    print("  data directory, HTTPS, Plaid, the client portal, and more). Review the reference:")
     print(f"  {ENV_DOCS}")
 
     # 4. Start the stack
@@ -377,7 +357,7 @@ def cmd_setup(args):
     print()
     print("  Next steps:")
     print("    ./prod.py logs          — check everything looks healthy")
-    print("    ./prod.py update        — upgrade to a new release when one is out")
+    print("    ./prod.py update        — pull your latest code and rebuild")
     print(f"    {ENV_DOCS}")
     print("                            — full .env reference (email, calendar, backups, ...)")
     return subprocess.CompletedProcess(args=[], returncode=0)
@@ -557,28 +537,24 @@ def cmd_restart(_args):
 
 
 def cmd_update(args):
-    """Pull the latest image and restart. Pass --yes to skip the metered-connection prompt."""
+    """Pull the latest code from your own git remote, rebuild and restart.
+
+    Pass --yes to skip the metered-connection prompt.
+    """
     _require_secrets()
     _require_no_foreign_containers()
-    if "--yes" not in args and not _confirm_metered_download("Pulling the latest image"):
+    if "--yes" not in args and not _confirm_metered_download("Rebuilding the image"):
         print("Aborted.")
         return subprocess.CompletedProcess(args=[], returncode=1)
 
-    try:
-        with urllib.request.urlopen(RELEASES_API, timeout=5) as r:
-            latest = json.loads(r.read())["tag_name"]
-        print(f"Latest release: {latest}")
-        if latest != VERSION:
-            new_base = RAW_BASE.replace(VERSION, latest)
-            print(f"  This script is {VERSION}. A newer version is available.")
-            print("  To update prod.py and docker-compose.prod.yml:")
-            print(f"    curl -O {new_base}/prod.py")
-            print(f"    curl -O {new_base}/docker-compose.prod.yml")
-            print()
-    except Exception:
-        pass  # offline or rate-limited — just pull whatever is in the registry
+    if os.path.isdir(os.path.join(REPO_DIR, ".git")):
+        step("Pulling latest code")
+        result = subprocess.run(["git", "-C", REPO_DIR, "pull", "--ff-only"])
+        if result.returncode != 0:
+            return result
 
-    result = compose("pull")
+    step("Rebuilding image")
+    result = compose("build", "django")
     if result.returncode != 0:
         return result
     return compose("up", "-d", "--remove-orphans")
@@ -611,11 +587,11 @@ def cmd_shell(_args):
 # ── dispatch ─────────────────────────────────────────────────────────────────
 
 COMMANDS = {
-    "setup": (cmd_setup, "First-time setup: secrets, pull, start, create login"),
+    "setup": (cmd_setup, "First-time setup: secrets, build, start, create login"),
     "start": (cmd_start, "Start the stack"),
     "stop": (cmd_stop, "Stop the stack"),
     "restart": (cmd_restart, "Restart the Django container"),
-    "update": (cmd_update, "Pull the latest image and restart"),
+    "update": (cmd_update, "git pull this repo, rebuild the image and restart"),
     "logs": (cmd_logs, "Follow Django logs"),
     "status": (cmd_status, "Show container status"),
     "manage": (cmd_manage, "Run a Django management command"),
@@ -632,7 +608,7 @@ def print_help():
     print()
     print("Examples:")
     print("  ./prod.py setup                         # first-time setup (recommended)")
-    print("  ./prod.py update                        # pull latest image + restart")
+    print("  ./prod.py update                        # git pull, rebuild + restart")
     print("  ./prod.py logs                          # follow Django logs")
     print("  ./prod.py logs --tail 50                # last 50 lines")
     print("  ./prod.py status                        # container health")

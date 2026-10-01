@@ -1,69 +1,44 @@
 # Release Checklist
 
+This fork builds its image locally and never pulls from a registry or from upstream.
+A "release" is a version bump on `main` that `./prod.py update` picks up with
+`git pull --ff-only` before it rebuilds.
+
 ## 1. Version-bump PR
 
-Version bumps go through a PR like any other change to `main` (branch-protected — no direct commits).
-
-**Version strings — update all three, they must match:**
+**Version strings: update all three, they must match** (`test_release_guardrails.py`
+enforces it):
 
 | File | What to change |
 |------|---------------|
 | `app/my_practice/version.py` | `VERSION = "vX.Y.Z"` |
-| `prod.py` | `VERSION = "vX.Y.Z"` (line ~15) |
-| `docker-compose.prod.yml` | `image: ghcr.io/dholbach/my-practice:vX.Y.Z` |
-
-`prod.py` constructs download URLs and the image pull from `VERSION`; `docker-compose.prod.yml` pins what self-hosters actually run.
+| `prod.py` | `VERSION = "vX.Y.Z"` |
+| `docker-compose.prod.yml` | `image: my-practice-usa:vX.Y.Z` |
 
 **Docs pass** (same PR):
 
-- [ ] `docs/CHANGELOG.md` — add a release section with highlights, grouped by Feature/Bug fix/Refactor/i18n/Tests/Deps (see prior entries for the style)
-- [ ] `docs/FEATURES.md` — add user-facing additions under the right section
-- [ ] `PROJECTS.md` — update Recent Activity, cap at 2 entries
-
-```bash
-git checkout -b chore/release-vX.Y.Z
-git add app/my_practice/version.py prod.py docker-compose.prod.yml docs/ PROJECTS.md
-git commit -m "chore: bump version to vX.Y.Z"
-git push -u origin chore/release-vX.Y.Z
-gh pr create --title "chore: bump version to vX.Y.Z" --body "..."
-```
+- [ ] `docs/CHANGELOG.md`: add a release section with highlights
+- [ ] `docs/FEATURES.md`: add user-facing additions under the right section
+- [ ] `PROJECTS.md`: update Recent Activity, cap at 2 entries
 
 ## 2. Merge, then tag
 
-Once the version-bump PR is merged into `main`:
-
 ```bash
 git checkout main && git pull --ff-only
-git tag vX.Y.Z
-git push origin vX.Y.Z
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-Tagging triggers the GitHub Actions image build (`image.yml`), which fires on
-`push` to `v*` tags and builds `linux/amd64` + `linux/arm64` images, pushing
-both a versioned tag and `:latest`.
+The tag is a bookmark only. No workflow builds or publishes images.
 
-## 3. GitHub Release with a real changelog
+## 3. Deploy
 
-Required: `./prod.py update` queries the GitHub Releases API
-(`/releases/latest`) to detect newer versions — a bare git tag is not enough.
-
-Write actual release notes (pull the highlights straight from the
-`docs/CHANGELOG.md` entry for this version) — not just a pointer to the file:
+On the practice machine:
 
 ```bash
-gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(cat <<'EOF'
-## Highlights
-- ...
-- ...
-
-Full changelog: docs/CHANGELOG.md
-EOF
-)"
+# take a backup first (docs/guides/BACKUP_SETUP.md)
+./prod.py update     # git pull --ff-only, docker compose build, up -d (migrations run on start)
 ```
 
-## 4. Verify
-
-- [ ] Image appears at `ghcr.io/dholbach/my-practice:vX.Y.Z` (check Actions tab)
-- [ ] `./dev.py smoke vX.Y.Z` — boots the released image with a throwaway DB and verifies migrations + login page (runs safely alongside the dev stack)
-- [ ] `./prod.py update` on an older install reports the new version
-- [ ] `./prod.py setup` on a clean directory pulls the correct versioned image
+- [ ] The footer shows the new version
+- [ ] Log in, open a client, the invoice list and the tax overview
+- [ ] If the portal is published, open a test client's upload link from outside the tailnet
