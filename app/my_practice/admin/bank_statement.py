@@ -5,6 +5,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy
 
 from ..models import BankTransaction
+from ..models.plaid import PlaidAccount, PlaidItem
 
 
 @admin.register(BankTransaction)
@@ -134,3 +135,23 @@ class BankTransactionAdmin(admin.ModelAdmin):
                 obj.matched_invoice.invoice_number,
             )
         return "-"
+
+
+class PlaidAccountInline(admin.TabularInline):
+    model = PlaidAccount
+    extra = 0
+    fields = ("name", "mask", "subtype", "import_enabled")
+    readonly_fields = ("name", "mask", "subtype")
+
+
+@admin.register(PlaidItem)
+class PlaidItemAdmin(admin.ModelAdmin):
+    """Linked banks. The access token is never shown — manage connections on /bank/plaid/."""
+
+    list_display = ("institution_name", "practice", "last_synced_at", "last_error")
+    fields = ("practice", "institution_name", "item_id", "last_synced_at", "last_error")
+    readonly_fields = ("practice", "item_id", "last_synced_at", "last_error")
+    inlines = [PlaidAccountInline]
+
+    def has_add_permission(self, request):
+        return False

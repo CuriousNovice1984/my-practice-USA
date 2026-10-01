@@ -147,6 +147,16 @@ from .operational_views import (
     checklist_unpause_item,
 )
 
+# Plaid bank connection
+from .plaid_views import (
+    plaid_exchange,
+    plaid_home,
+    plaid_link_token,
+    plaid_remove,
+    plaid_sync,
+    plaid_toggle_account,
+)
+
 # Practice views
 from .practice_views import (
     PracticeCreateView,
@@ -201,6 +211,12 @@ from .withdrawal_views import (
 
 __all__ = [
     "license_list",
+    "plaid_exchange",
+    "plaid_home",
+    "plaid_link_token",
+    "plaid_remove",
+    "plaid_sync",
+    "plaid_toggle_account",
     # Client views
     "ClientListView",
     "ClientIntakeView",

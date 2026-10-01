@@ -936,6 +936,11 @@
   .license-row:last-child { border-bottom: none; }
   .license-row__status { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
   .license-delete-col { display: flex; align-items: center; max-width: 80px; }
+  .plaid-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+  .plaid-item-header { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: space-between; align-items: center; }
+  .plaid-account-row { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border); }
+  .plaid-account-row:last-child { border-bottom: none; }
+  .plaid-account-row button { border: none; cursor: pointer; }
   .analytics-panel { margin-bottom: 1.25rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); overflow: hidden; }
   .analytics-toggle { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; cursor: pointer; background: var(--color-bg-muted); user-select: none; flex-wrap: wrap; }
   .analytics-toggle:hover { background: var(--color-bg-secondary); }

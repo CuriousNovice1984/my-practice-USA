@@ -8,9 +8,14 @@
 <div class="bank-import-page">
     <div class="flex-between mb-4">
         <h1 class="mb-0">💳 {% trans "Bank import" %}</h1>
-        <a href="{% url 'bank_review' %}" class="btn btn-secondary">
-            📋 {% trans "Go to review" %}
-        </a>
+        <div class="plaid-actions">
+            <a href="{% url 'plaid_home' %}" class="btn btn-secondary">
+                🔗 {% trans "Bank connection (Plaid)" %}
+            </a>
+            <a href="{% url 'bank_review' %}" class="btn btn-secondary">
+                📋 {% trans "Go to review" %}
+            </a>
+        </div>
     </div>
 
     <!-- Upload Form -->

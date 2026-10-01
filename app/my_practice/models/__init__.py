@@ -20,6 +20,7 @@ from .inquiry import (
 from .invoice import Invoice, InvoiceItem, InvoiceQuerySet
 from .licensure import ProviderLicense
 from .operational import ChecklistItemPause, OperationalChecklistCompletion
+from .plaid import PlaidAccount, PlaidItem
 from .practice import CapacityPeriod, Practice, UserPractice
 from .service import ServiceType
 from .session import Session
@@ -59,6 +60,8 @@ __all__ = [
     "TimeOff",
     "PracticeTodo",
     "ProviderLicense",
+    "PlaidAccount",
+    "PlaidItem",
     "BankTransaction",
     "OperationalChecklistCompletion",
     "ChecklistItemPause",

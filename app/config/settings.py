@@ -315,6 +315,15 @@ SECURE_CSP = {
     "font-src": [CSP.SELF],
 }
 
+# Plaid bank connection (optional). Link runs from Plaid's CDN in an iframe;
+# the server calls Plaid's API with these credentials. Leave unset to disable.
+PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID", "")
+PLAID_SECRET = os.environ.get("PLAID_SECRET", "")
+PLAID_ENV = os.environ.get("PLAID_ENV", "sandbox")
+if PLAID_CLIENT_ID:
+    SECURE_CSP["script-src"].append("https://cdn.plaid.com")
+    SECURE_CSP["frame-src"] = [CSP.SELF, "https://cdn.plaid.com"]
+
 # Security settings for production
 if not DEBUG:
     # HTTPS — disable when running behind a plain HTTP reverse proxy or on a local

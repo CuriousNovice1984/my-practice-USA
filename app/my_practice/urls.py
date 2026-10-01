@@ -275,6 +275,16 @@ urlpatterns = [
     ),
     # Bank statement import
     path("bank/import/", views.BankImportView.as_view(), name="bank_import"),
+    path("bank/plaid/", views.plaid_home, name="plaid_home"),
+    path("bank/plaid/link-token/", views.plaid_link_token, name="plaid_link_token"),
+    path("bank/plaid/exchange/", views.plaid_exchange, name="plaid_exchange"),
+    path("bank/plaid/sync/", views.plaid_sync, name="plaid_sync"),
+    path(
+        "bank/plaid/accounts/<int:pk>/toggle/",
+        views.plaid_toggle_account,
+        name="plaid_toggle_account",
+    ),
+    path("bank/plaid/<int:pk>/remove/", views.plaid_remove, name="plaid_remove"),
     path("bank/review/", views.BankReviewView.as_view(), name="bank_review"),
     path(
         "bank/expenses/",
