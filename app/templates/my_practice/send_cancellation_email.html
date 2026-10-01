@@ -3,17 +3,17 @@
 
 {% block title %}{% trans "Send cancellation email" %}{% endblock %}
 
-{% block page_title %}🤒 {% trans "Send cancellation email" %}{% endblock %}
+{% block page_title %}{% trans "Send cancellation email" %}{% endblock %}
 {% block page_subtitle %}<span class="sensitive-data">{{ client.full_name }}</span> ({{ client.client_code }}){% endblock %}
 
 {% block content %}
 
 <div class="email-preview">
-    <h2>🤒 {% trans "Cancellation due to illness" %}</h2>
+    <h2>{% trans "Cancellation due to illness" %}</h2>
 
     {% if not client.salutation %}
     <div class="callout callout-warning">
-        <strong>⚠️ {% trans "No personal salutation on file for this client" %}</strong><br>
+        <strong>{% trans "No personal salutation on file for this client" %}</strong><br>
         {% trans "The email uses a generic salutation. You can adjust the salutation in the text field below." %}
     </div>
     {% endif %}
@@ -44,7 +44,7 @@
 
         <div class="button-group">
             <button type="submit" class="btn btn-primary">
-                📧 {% trans "Send cancellation" %}
+                {% trans "Send cancellation" %}
             </button>
             <a href="{% url 'client_detail' client.pk %}" class="btn btn-secondary">
                 {% trans "Cancel" %}

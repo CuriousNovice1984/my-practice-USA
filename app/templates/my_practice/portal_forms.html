@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load icons %}
 
 {% block title %}{% trans "Portal forms" %}{% endblock %}
-{% block page_title %}📄 {% trans "Portal forms" %}{% endblock %}
+{% block page_title %}{% trans "Portal forms" %}{% endblock %}
 {% block page_subtitle %}{% trans "Blank forms clients download from their upload link" %}{% endblock %}
 
 {% block content %}
@@ -18,7 +19,7 @@
             <form method="post" action="{% url 'portal_form_toggle' practice_form.pk %}">
                 {% csrf_token %}
                 {% if practice_form.active %}
-                <button type="submit" class="badge--ok" title="{% trans 'Click to stop offering' %}">✓ {% trans "Offered" %}</button>
+                <button type="submit" class="badge--ok" title="{% trans 'Click to stop offering' %}">{% trans "Offered" %}</button>
                 {% else %}
                 <button type="submit" class="badge--neutral" title="{% trans 'Click to offer' %}">{% trans "Hidden" %}</button>
                 {% endif %}
@@ -26,7 +27,7 @@
             <form method="post" action="{% url 'portal_form_delete' practice_form.pk %}"
                   onsubmit="return confirm('{% trans "Delete this form?" %}')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-secondary btn-sm">🗑️</button>
+                <button type="submit" class="btn btn-secondary btn-sm">{% icon "trash" %}</button>
             </form>
         </div>
         {% empty %}
@@ -46,7 +47,7 @@
         </div>
         {% endfor %}
         <div class="form-actions">
-            <button type="submit" class="btn">➕ {% trans "Add form" %}</button>
+            <button type="submit" class="btn">{% trans "Add form" %}</button>
             <a href="{% url 'portal_uploads' %}" class="btn btn-secondary">{% trans "Review uploads" %}</a>
         </div>
     </form>

@@ -2,9 +2,12 @@
 {% load payment_tags %}
 {% load static i18n %}
 
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{% trans "Bank transactions waiting for a decision" %}{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>{{ page_title }}</h1>
 
     <!-- Statistics -->
     <div class="expense-stats-card">
@@ -55,10 +58,10 @@
 
             <div class="expense-action-panel__buttons">
                 <button type="submit" name="action" value="group" class="btn btn-primary">
-                    ✓ {% trans "Group into expense" %}
+                    {% trans "Group into expense" %}
                 </button>
                 <button type="submit" name="action" value="ignore" class="btn btn-secondary">
-                    ➖ {% trans "Ignore" %}
+                    {% trans "Ignore" %}
                 </button>
             </div>
         </div>
@@ -101,7 +104,7 @@
     {% else %}
     <div class="expense-empty-state">
         <div class="expense-empty-state__title">
-            ✓ {% trans "All transactions matched" %}
+            {% trans "All transactions matched" %}
         </div>
         <div class="expense-empty-state__desc">
             {% trans "There are no unmatched negative transactions." %}

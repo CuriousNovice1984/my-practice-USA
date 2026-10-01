@@ -90,6 +90,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.i18n",
+                "my_practice.context_processors.scene",
             ],
             # Disable template caching in DEBUG mode for instant updates
             "debug": DEBUG,

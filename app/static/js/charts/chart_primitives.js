@@ -53,7 +53,7 @@ function drawLegend(ctx, padding, items) {
 /**
  * Draw points on chart
  */
-function drawPoints(ctx, points, color = '#667eea', radius = 5) {
+function drawPoints(ctx, points, color = '#2f6b5d', radius = 5) {
     points.forEach(point => {
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);

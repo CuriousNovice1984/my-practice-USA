@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}{% trans "Bank connection" %}{% endblock %}
-{% block page_title %}🏦 {% trans "Bank connection" %}{% endblock %}
+{% block page_title %}{% trans "Bank connection" %}{% endblock %}
 {% block page_subtitle %}{% trans "Import transactions directly from your bank via Plaid" %}{% endblock %}
 
 {% block extra_head_scripts %}
@@ -28,12 +28,12 @@ PLAID_ENV=sandbox   # or production</pre>
                 data-link-token-url="{% url 'plaid_link_token' %}"
                 data-exchange-url="{% url 'plaid_exchange' %}"
                 data-error-label="{% trans 'Could not open the bank connection:' %}">
-            ➕ {% trans "Connect a bank" %}
+            {% trans "Connect a bank" %}
         </button>
         {% if items %}
         <form method="post" action="{% url 'plaid_sync' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-secondary">🔄 {% trans "Sync transactions now" %}</button>
+            <button type="submit" class="btn btn-secondary">{% trans "Sync transactions now" %}</button>
         </form>
         {% endif %}
         <a href="{% url 'bank_import' %}" class="btn btn-secondary">{% trans "CSV bank import" %}</a>
@@ -60,7 +60,7 @@ PLAID_ENV=sandbox   # or production</pre>
             <form method="post" action="{% url 'plaid_toggle_account' account.pk %}">
                 {% csrf_token %}
                 {% if account.import_enabled %}
-                <button type="submit" class="badge--ok" title="{% trans 'Click to stop importing' %}">✓ {% trans "Importing" %}</button>
+                <button type="submit" class="badge--ok" title="{% trans 'Click to stop importing' %}">{% trans "Importing" %}</button>
                 {% else %}
                 <button type="submit" class="badge--neutral" title="{% trans 'Click to import' %}">{% trans "Not imported" %}</button>
                 {% endif %}

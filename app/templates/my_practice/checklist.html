@@ -1,14 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
+{% load icons %}
 
 {% block title %}{{ checklist_type_display }}{% endblock %}
+{% block page_title %}{{ checklist_type_display }}{% endblock %}
+{% block page_subtitle %}{% trans "Operational checklist" %}{% endblock %}
 
 {% block content %}
 <div class="content-container">
     <div class="checklist-header">
         <div>
-            <h1 class="mb-0">📋 {{ checklist_type_display }}</h1>
             <p class="text-muted mt-1">
                 {% trans "Period:" %} {{ period_start|date:"F Y" }}
             </p>
@@ -27,7 +29,7 @@
     {% if checklist.is_completed %}
     <div class="checklist-done-banner">
         <div class="checklist-done-banner__title">
-            ✅ {% blocktrans with date=checklist.completed_at|date:"d M y" time=checklist.completed_at|time:"H:i" %}Completed on {{ date }} at {{ time }}{% endblocktrans %}
+            {% blocktrans with date=checklist.completed_at|date:"d M y" time=checklist.completed_at|time:"H:i" %}Completed on {{ date }} at {{ time }}{% endblocktrans %}
         </div>
         {% if checklist.notes %}
         <div class="checklist-done-banner__notes">
@@ -43,7 +45,7 @@
     <div class="checklist-list checklist-list--completed">
         {% for item in items %}
         <div class="checklist-item-done checklist-list__divider">
-            <span class="checklist-item-done__icon">✅</span>
+            <span class="checklist-item-done__icon">{% icon "check" %}</span>
             <span class="checklist-item-done__title">{{ item.title }}</span>
         </div>
         {% endfor %}
@@ -129,7 +131,7 @@
 
         <div class="checklist-submit-row">
             <button type="submit" id="complete-btn" class="btn btn-primary checklist-submit-btn" disabled>
-                ✅ {% trans "Complete checklist" %}
+                {% trans "Complete checklist" %}
             </button>
             <span id="progress-hint" class="checklist-progress-hint">
                 {% trans "0 of ? completed" %}

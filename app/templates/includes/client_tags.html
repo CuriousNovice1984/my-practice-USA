@@ -18,7 +18,7 @@ Usage: {% include 'includes/client_tags.html' with client=client editable=True %
     {% if editable %}
         <div class="tag-dropdown" id="tagDropdown{{ client.id }}">
             <button type="button" class="tag-add-btn">
-                ➕ {% trans "Add tag" %}
+                {% trans "Add tag" %}
             </button>
             <div class="tag-dropdown-content" id="tagDropdownContent{{ client.id }}">
                 {% for tag in available_tags %}

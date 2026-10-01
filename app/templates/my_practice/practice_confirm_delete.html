@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="warning-box">
-    <h3>⚠️ {% trans "Warning: deactivate practice" %}</h3>
+    <h3>{% trans "Warning: deactivate practice" %}</h3>
     <p>{% trans "You are about to deactivate this practice. Please note:" %}</p>
     <ul>
         <li>{% trans "The practice will not be deleted, only deactivated" %}</li>
@@ -47,7 +47,7 @@
 
     <div class="form-actions">
         <button type="submit" class="btn btn-danger">
-            🗑️ {% trans "Yes, deactivate practice" %}
+            {% trans "Yes, deactivate practice" %}
         </button>
         <a href="{% url 'practice_management' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
     </div>

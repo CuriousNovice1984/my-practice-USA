@@ -3,17 +3,18 @@
 {% load payment_tags %}
 
 {% block title %}{% trans "Bank import" %}{% endblock %}
+{% block page_title %}{% trans "Bank import" %}{% endblock %}
+{% block page_subtitle %}{% trans "Upload a CSV export from your bank" %}{% endblock %}
 
 {% block content %}
 <div class="bank-import-page">
     <div class="flex-between mb-4">
-        <h1 class="mb-0">💳 {% trans "Bank import" %}</h1>
         <div class="plaid-actions">
             <a href="{% url 'plaid_home' %}" class="btn btn-secondary">
-                🔗 {% trans "Bank connection (Plaid)" %}
+                {% trans "Bank connection (Plaid)" %}
             </a>
             <a href="{% url 'bank_review' %}" class="btn btn-secondary">
-                📋 {% trans "Go to review" %}
+                {% trans "Go to review" %}
             </a>
         </div>
     </div>
@@ -61,7 +62,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary upload-submit-btn">
-                📤 {% trans "Import & process" %}
+                {% trans "Import & process" %}
             </button>
         </form>
     </div>
@@ -108,7 +109,7 @@
                             <td>
                                 {% if trans.match_confidence == 'exact' %}
                                     <span class="import-badge import-badge--matched">
-                                        ✓ {% trans "Exact" %}
+                                        {% trans "Exact" %}
                                     </span>
                                 {% elif trans.match_confidence == 'fuzzy' %}
                                     <span class="import-badge import-badge--fuzzy">
@@ -116,19 +117,19 @@
                                     </span>
                                 {% elif trans.match_confidence == 'manual' %}
                                     <span class="import-badge import-badge--manual">
-                                        ✍️ {% trans "Manual" %}
+                                        {% trans "Manual" %}
                                     </span>
                                 {% elif trans.match_confidence == 'ignored' %}
                                     <span class="import-badge import-badge--neutral">
-                                        ➖ {% trans "Ignored" %}
+                                        {% trans "Ignored" %}
                                     </span>
                                 {% elif trans.match_confidence == 'auto-withdrawal' %}
                                     <span class="import-badge import-badge--neutral">
-                                        💸 {% trans "Withdrawal" %}
+                                        {% trans "Withdrawal" %}
                                     </span>
                                 {% elif trans.match_confidence == 'auto-expense' %}
                                     <span class="import-badge import-badge--neutral">
-                                        📋 {% trans "Expense" %}
+                                        {% trans "Expense" %}
                                     </span>
                                 {% else %}
                                     <a href="{% url 'bank_review' %}#trans-{{ trans.id }}" class="import-badge import-badge--open">

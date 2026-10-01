@@ -1,10 +1,15 @@
 {% extends 'my_practice/portal_base.html' %}
-{% load i18n %}
+{% load i18n icons %}
 
 {% block content %}
+<header class="portal-hero">
+    <p class="portal-hero__eyebrow">{% trans "Private upload" %}</p>
+    <h1 class="portal-hero__title">{% blocktrans with name=practice.name %}Secure document upload for {{ name }}{% endblocktrans %}</h1>
+    <p class="portal-hero__note">{% blocktrans with date=link.expires_at|date:"d M y" %}This private link works until {{ date }}. Please don't share it.{% endblocktrans %}</p>
+</header>
+
+{% if uploaded or errors %}
 <div class="portal-card">
-    <h1>{% blocktrans with name=practice.name %}Secure document upload for {{ name }}{% endblocktrans %}</h1>
-    <p class="portal-muted">{% blocktrans with date=link.expires_at|date:"d M y" %}This private link works until {{ date }}. Please don't share it.{% endblocktrans %}</p>
 
     {% if uploaded %}
     <div class="portal-notice portal-notice--success">
@@ -18,6 +23,7 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 
 {% if practice_forms %}
 <div class="portal-card">
@@ -25,8 +31,14 @@
     <ul class="portal-form-list">
         {% for practice_form in practice_forms %}
         <li>
-            <a href="{% url 'portal_form_download' link.token practice_form.pk %}">📄 {{ practice_form.title }}</a>
-            {% if practice_form.description %}<div class="portal-muted">{{ practice_form.description }}</div>{% endif %}
+            <a class="portal-form" href="{% url 'portal_form_download' link.token practice_form.pk %}">
+                <span class="portal-form__icon">{% icon "file" %}</span>
+                <span class="portal-form__text">
+                    <span class="portal-form__title">{{ practice_form.title }}</span>
+                    {% if practice_form.description %}<span class="portal-muted">{{ practice_form.description }}</span>{% endif %}
+                </span>
+                <span class="portal-form__action">{% trans "Download" %}</span>
+            </a>
         </li>
         {% endfor %}
     </ul>
@@ -59,7 +71,7 @@
             <label for="portal-note">{% trans "Note (optional)" %}</label>
             <input type="text" name="note" id="portal-note" class="form-control" maxlength="200">
         </div>
-        <button type="submit" class="btn">📤 {% trans "Upload" %}</button>
+        <button type="submit" class="btn btn-lg">{% trans "Upload" %}</button>
     </form>
     {% else %}
     <p>{% trans "The upload limit for this link has been reached. Please ask your counselor for a new link." %}</p>

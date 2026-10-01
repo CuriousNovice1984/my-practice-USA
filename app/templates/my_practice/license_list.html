@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}{% trans "Licenses" %}{% endblock %}
-{% block page_title %}🪪 {% trans "Licenses" %}{% endblock %}
+{% block page_title %}{% trans "Licenses" %}{% endblock %}
 {% block page_subtitle %}{% trans "States you are licensed to practice in" %}{% endblock %}
 
 {% block content %}
@@ -69,7 +69,7 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn">💾 {% trans "Save licenses" %}</button>
+        <button type="submit" class="btn">{% trans "Save licenses" %}</button>
         <a href="{% url 'practice_management' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
     </div>
 </form>

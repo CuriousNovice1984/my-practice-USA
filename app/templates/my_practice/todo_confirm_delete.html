@@ -3,13 +3,12 @@
 
 {% block title %}{% trans "Delete to-do" %}{% endblock %}
 
-{% block page_icon %}🗑️{% endblock %}
 {% block page_title %}{% trans "Delete to-do" %}{% endblock %}
 
 {% block content %}
 <div class="confirm-delete">
     <div class="warning-box">
-        <h2>⚠️ {% trans "Really delete?" %}</h2>
+        <h2>{% trans "Really delete?" %}</h2>
         <p>{% trans "Are you sure you want to delete this task?" %}</p>
 
         <div class="object-details">
@@ -21,7 +20,7 @@
                 <span class="badge">{{ object.get_category_display }}</span>
                 <span class="badge">{{ object.get_priority_display }}</span>
                 {% if object.due_date %}
-                <span>📅 {{ object.due_date|date:"d M y" }}</span>
+                <span>{{ object.due_date|date:"d M y" }}</span>
                 {% endif %}
             </div>
         </div>
@@ -30,7 +29,7 @@
     <form method="post">
         {% csrf_token %}
         <div class="form-actions">
-            <button type="submit" class="btn btn-danger">🗑️ {% trans "Yes, delete" %}</button>
+            <button type="submit" class="btn btn-danger">{% trans "Yes, delete" %}</button>
             <a href="{% url 'focus_queue' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
         </div>
     </form>

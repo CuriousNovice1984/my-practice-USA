@@ -13,13 +13,13 @@
                     data-copy="{{ subject }}"
                     x-data="{ copied: false }"
                     x-on:click="navigator.clipboard.writeText($el.dataset.copy).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                    x-text="copied ? '✓ {% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
+                    x-text="copied ? '{% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
         </div>
         {% endif %}
         <pre class="bp-text">{{ body }}</pre>
         <button type="button" class="btn btn-secondary bp-copy-btn"
                 x-data="{ copied: false }"
                 x-on:click="navigator.clipboard.writeText($el.previousElementSibling.textContent).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                x-text="copied ? '✓ {% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
+                x-text="copied ? '{% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
     </div>
 </section>

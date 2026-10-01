@@ -72,7 +72,7 @@ def calendar_oauth2callback(request: HttpRequest) -> HttpResponse:
         practice = getattr(request, "current_practice", None)
         GoogleCalendarOAuth.save_token(flow.credentials, practice=practice)
 
-        messages.success(request, _("✅ Google Calendar connected successfully!"))
+        messages.success(request, _("Google Calendar connected successfully!"))
         return redirect("calendar_import")
 
     except Exception as e:

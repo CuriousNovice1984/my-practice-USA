@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
+{% load icons %}
 {% load payment_tags %}
 
 {% block title %}{% trans "Inquiries" %}{% endblock %}
 
-{% block page_icon %}📬{% endblock %}
 {% block page_title %}{% trans "Inquiries" %}{% endblock %}
 {% block page_subtitle %}{% trans "Prospective clients & inquiry management" %}{% endblock %}
 
 {% block content %}
 <div class="inquiry-container">
     <div class="page-header">
-        <h1>📬 {% trans "Inquiries" %}</h1>
+        <h1>{% trans "Inquiries" %}</h1>
         <a href="{% url 'inquiry_create' %}" class="btn">+ {% trans "New inquiry" %}</a>
     </div>
 
@@ -23,8 +23,8 @@
         <span class="marketing-period-badge {% if period.is_active %}marketing-period-active{% endif %}">
             {{ period.start_date|date:"M y" }}{% if period.end_date %} – {{ period.end_date|date:"M y" }}{% endif %}:
             {{ period.description }}
-            <a href="{% url 'marketing_period_edit' period.pk %}" class="marketing-period-action" title="{% trans "Edit" %}">✎</a>
-            <a href="{% url 'marketing_period_delete' period.pk %}" class="marketing-period-action marketing-period-delete" title="{% trans "Delete" %}">✕</a>
+            <a href="{% url 'marketing_period_edit' period.pk %}" class="marketing-period-action" title="{% trans "Edit" %}">{% icon "pencil" %}</a>
+            <a href="{% url 'marketing_period_delete' period.pk %}" class="marketing-period-action marketing-period-delete" title="{% trans "Delete" %}">{% icon "x" %}</a>
         </span>
         {% endfor %}
         <a href="{% url 'marketing_period_create' %}" class="marketing-periods-manage">+ {% trans "Add" %}</a>
@@ -134,7 +134,7 @@
             {% endfor %}
         </select>
         {% if status_filter or source_filter %}
-        <a href="{% url 'inquiry_list' %}" class="btn-secondary">✕ {% trans "Clear filters" %}</a>
+        <a href="{% url 'inquiry_list' %}" class="btn-secondary">{% trans "Clear filters" %}</a>
         {% endif %}
     </form>
     {% if not status_filter %}
@@ -180,8 +180,8 @@
                     </td>
                     <td><span class="source-badge source-{{ inquiry.source }}">{{ inquiry.get_source_display }}</span></td>
                     <td class="inquiry-contact">
-                        {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">✉ <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
-                        {% if inquiry.phone %}<span class="contact-link">☎ <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
+                        {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">{% icon "mail" %} <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
+                        {% if inquiry.phone %}<span class="contact-link">{% icon "phone" %} <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
                     </td>
                     <td class="inquiry-actions">
                         <a href="{% url 'inquiry_edit' inquiry.pk %}" class="btn-sm">{% trans "Edit" %}</a>
@@ -226,8 +226,8 @@
                         </td>
                         <td><span class="source-badge source-{{ inquiry.source }}">{{ inquiry.get_source_display }}</span></td>
                             <td class="inquiry-contact">
-                            {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">✉ <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
-                            {% if inquiry.phone %}<span class="contact-link">☎ <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
+                            {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">{% icon "mail" %} <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
+                            {% if inquiry.phone %}<span class="contact-link">{% icon "phone" %} <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
                         </td>
                         <td class="inquiry-actions">
                             <a href="{% url 'inquiry_edit' inquiry.pk %}" class="btn-sm">{% trans "Edit" %}</a>

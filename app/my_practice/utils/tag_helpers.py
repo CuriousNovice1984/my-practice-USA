@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 # How far back to look for sessions missing a log entry.
 # Used by the update_client_tags command (tag assignment) and the client list
-# view (live 📝 indicator on client cards).
+# view (live missing-log indicator on client cards).
 SESSION_LOG_WINDOW_DAYS = 14
 
 # Sessions shorter than this threshold (in minutes) are treated as introductory

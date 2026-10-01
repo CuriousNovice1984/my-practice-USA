@@ -4,7 +4,6 @@
 
 {% block title %}{% if object %}{% trans "Edit inquiry" %}{% else %}{% trans "New inquiry" %}{% endif %}{% endblock %}
 
-{% block page_icon %}📬{% endblock %}
 {% block page_title %}{% if object %}{% trans "Edit inquiry" %}{% else %}{% trans "New inquiry" %}{% endif %}{% endblock %}
 
 {% block content %}
@@ -110,7 +109,7 @@
 
         {% if object %}
         <details class="guide-details">
-            <summary>📋 {% trans "Guide: Initial consultation" %}</summary>
+            <summary>{% trans "Guide: Initial consultation" %}</summary>
             <div class="guide-body">
                 <div class="table-container">
                     <table class="guide-table">

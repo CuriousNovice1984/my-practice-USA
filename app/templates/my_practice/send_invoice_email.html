@@ -4,19 +4,19 @@
 
 {% block title %}{% trans "Send invoice" %}{% endblock %}
 
-{% block page_title %}📧 {% trans "Send invoice" %}{% endblock %}
+{% block page_title %}{% trans "Send invoice" %}{% endblock %}
 {% block page_subtitle %}{% trans "Invoice" %} {{ invoice.invoice_number }} - <span class="sensitive-data">{{ invoice.client.full_name }}</span>{% endblock %}
 
 {% block content %}
 <div class="email-preview">
-    <h2>📧 {% trans "Customise and send email" %}</h2>
+    <h2>{% trans "Customise and send email" %}</h2>
 
     <form method="post">
         {% csrf_token %}
 
         {% if not invoice.client.salutation %}
         <div class="warning-box">
-            <strong>⚠️ {% trans "No personal salutation stored for this client" %}</strong>
+            <strong>{% trans "No personal salutation stored for this client" %}</strong>
             {% trans "The email will use a generic salutation. Consider setting a custom salutation in the client profile for a more personal touch." %}
         </div>
         {% endif %}
@@ -49,9 +49,9 @@
         </div>
 
         <div class="callout callout-primary mt-3">
-            <strong class="block mb-1">📎 {% trans "Attachment" %}</strong>
+            <strong class="block mb-1">{% trans "Attachment" %}</strong>
             <a href="{% url 'invoice_pdf' invoice.pk %}" target="_blank" class="link-primary">
-                📄 Invoice_{{ invoice.invoice_number }}.pdf
+                Invoice_{{ invoice.invoice_number }}.pdf
             </a>
             <div class="text-muted mt-1">
                 {% trans "This PDF will be automatically attached to the email" %}
@@ -60,7 +60,7 @@
 
         <div class="button-group">
             <button type="submit" class="btn btn-primary">
-                📧 {% trans "Send" %}
+                {% trans "Send" %}
             </button>
             <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">
                 {% trans "Cancel" %}
@@ -70,6 +70,6 @@
 </div>
 
 <div class="callout callout-success mt-4">
-    <strong>💾 {% trans "IMAP note:" %}</strong> {% trans "The sent email will automatically appear in your Sent folder" %}
+    <strong>{% trans "IMAP note:" %}</strong> {% trans "The sent email will automatically appear in your Sent folder" %}
 </div>
 {% endblock %}

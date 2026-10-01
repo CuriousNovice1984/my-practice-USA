@@ -4,7 +4,6 @@
 
 {% block title %}{% trans "Invoices" %}{% endblock %}
 
-{% block page_icon %}📄{% endblock %}
 {% block page_title %}{% trans "Invoices" %}{% endblock %}
 {% block page_subtitle %}{% trans "Overview of all invoices" %}{% endblock %}
 
@@ -43,7 +42,7 @@
 <div class="filter-panel">
     <details {% if start_date or end_date or min_amount or max_amount %}open{% endif %}>
         <summary class="filter-panel__summary">
-            🔍 {% trans "Filter" %}
+            {% trans "Filter" %}
         </summary>
 
         <form method="get" class="filter-panel__form">
@@ -133,8 +132,8 @@
 </div>
 
 <div class="actions">
-    <a href="{% url 'invoice_create' %}" class="btn">➕ {% trans "New invoice" %}</a>
-    <a href="{% url 'monthly_billing' %}" class="btn btn-primary">📅 {% trans "Monthly billing" %}</a>
+    <a href="{% url 'invoice_create' %}" class="btn">{% trans "New invoice" %}</a>
+    <a href="{% url 'monthly_billing' %}" class="btn btn-primary">{% trans "Monthly billing" %}</a>
 
     {% if current_year != 'all' %}
     <form method="post" action="{% url 'invoice_batch_download' %}" class="d-inline-block ml-1">
@@ -142,7 +141,7 @@
         <input type="hidden" name="year" value="{{ current_year }}">
         <input type="hidden" name="status" value="paid">
         <button type="submit" class="btn btn-secondary" title="{% blocktrans with year=current_year %}Download all paid invoices for {{ year }} as ZIP{% endblocktrans %}">
-            📥 {% blocktrans with year=current_year %}Invoices {{ year }} (ZIP){% endblocktrans %}
+            {% blocktrans with year=current_year %}Invoices {{ year }} (ZIP){% endblocktrans %}
         </button>
     </form>
     {% endif %}
@@ -182,7 +181,7 @@
                 </td>
                 <td class="truncate text-right">{{ invoice.total|currency }}</td>
                 <td class="truncate">
-                    <a href="{% url 'invoice_detail' invoice.pk %}" class="link-plain font-semibold">👁️ {% trans "View" %}</a>
+                    <a href="{% url 'invoice_detail' invoice.pk %}" class="link-plain font-semibold">{% trans "View" %}</a>
                 </td>
             </tr>
             {% endfor %}

@@ -32,7 +32,7 @@
         {{ form.salutation }}
         {{ form.salutation.errors }}
         <div class="helptext">
-            {% blocktrans %}💡 Personal greeting for invoice emails (e.g., "Dear John").<br>
+            {% blocktrans %}Personal greeting for invoice emails (e.g., "Dear John").<br>
             If left empty, a generic salutation will be used. <strong>Highly recommended for better client experience!</strong>{% endblocktrans %}
         </div>
     </div>
@@ -53,7 +53,7 @@
         {{ form.is_online_client }}
         {{ form.is_online_client.errors }}
         <div class="helptext">
-            {% trans "💻 For clients whose sessions are primarily conducted online (video)." %}
+            {% trans "For clients whose sessions are primarily conducted online (video)." %}
         </div>
     </div>
     {% endif %}
@@ -120,8 +120,8 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn">💾 {% if object.pk %}{% trans "Save changes" %}{% else %}{% trans "Save client" %}{% endif %}</button>
-        <a href="{% if next %}{{ next }}{% elif object.pk %}{% url 'client_detail' object.pk %}{% else %}{% url 'client_list' %}{% endif %}" class="btn btn-secondary">❌ {% trans "Cancel" %}</a>
+        <button type="submit" class="btn">{% if object.pk %}{% trans "Save changes" %}{% else %}{% trans "Save client" %}{% endif %}</button>
+        <a href="{% if next %}{{ next }}{% elif object.pk %}{% url 'client_detail' object.pk %}{% else %}{% url 'client_list' %}{% endif %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
     </div>
 </form>
 {% endblock %}

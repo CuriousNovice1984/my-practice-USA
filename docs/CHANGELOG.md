@@ -2,6 +2,20 @@
 
 Major features and milestones in chronological order.
 
+## 2026-10-01 — Photographic interface
+
+The whole UI was redesigned around real photography and an assistant's voice.
+
+- **Shell**: `base.html` rebuilt as a full-bleed photographic hero (page title in the Newsreader serif) under a frosted top bar, with the content card overlapping the photo and a blurred wash of the same photo behind the page. Glass surfaces, pill buttons, refreshed cards, tables, badges, filters and widgets, all on new `--color-*` tokens for a warm "Daylight" theme and a deep "Night" dark theme. Theme and motion preferences are applied before first paint.
+- **Scenes** (`my_practice/scenes.py`, context processor, `scene_tags`): 19 real photographs from the elementary OS, Pop!_OS and Budgie wallpaper collections (CC0, Unsplash and Pexels licenses), self-hosted as responsive WebP, credited in `static/scenes/CREDITS.md`, and mapped to sections by URL name. The dashboard and sign-in follow the time of day. `scripts/scene_media.py` processes new photos and footage.
+- **Assistant**: dashboard greeting plus a "Today at a glance" briefing (`utils/briefing.py`, client codes only, invoice figures via `RevenueCalculator`). The command palette is presented as "How can I help?".
+- **Pages**: full-screen sign-in; client portal redesigned on its own photograph; new `404.html`/`500.html`; pages that opened with their own `<h1>` now title the hero instead.
+- **Emoji removed** from all templates and user-facing messages; glyph-only controls use the new `{% icon %}` line icons (`templatetags/icons.py`).
+- **Charts**: new categorical palette drawn from the photography; chart text now reads the real `--color-text-*` tokens, so it follows dark mode.
+- **Fixes along the way**: `.btn-sm`/`.btn-lg` never applied (`.btn` came later in the file); `.btn-danger` buttons rendered in the primary colour; bare `class="btn-secondary"` links had no button shape; the client-detail subtitle could start with a stray "·".
+- **Motion**: slow drift on hero photos and real-footage support, both paused by the top-bar toggle and off under `prefers-reduced-motion`. No footage ships yet, because this environment's network policy blocked the stock-video hosts.
+- **Tests**: `test_scenes.py` covers scene mapping, every scene's files and credit (no orphans), the template tags, the briefing and the rendered shell. The `--year-text` allowlist entry in `test_css_tokens.py` was dropped (token removed).
+
 ## 2026-10-01 — v1.0.0 US fork
 
 Converted for a solo, self-pay LPC practice in Texas (licensed in TX, UT, VA, NM), running locally behind Tailscale. This fork does not pull upstream updates.

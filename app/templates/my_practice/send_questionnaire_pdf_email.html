@@ -4,7 +4,7 @@
 
 {% block title %}{% trans "Send questionnaire" %}{% endblock %}
 
-{% block page_title %}📧 {% trans "Send questionnaire" %}{% endblock %}
+{% block page_title %}{% trans "Send questionnaire" %}{% endblock %}
 {% block page_subtitle %}{{ client.client_code }}{% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
 
         {% if not client.salutation %}
         <div class="warning-box">
-            <strong>⚠️ {% trans "No personal salutation set" %}</strong>
+            <strong>{% trans "No personal salutation set" %}</strong>
             {% trans "A generic salutation will be used. An individual salutation can be set in the client profile." %}
         </div>
         {% endif %}
@@ -47,19 +47,19 @@
         </div>
 
         <div class="attachment-preview">
-            <strong class="block mb-1">📎 {% trans "Attachment" %}</strong>
-            <span class="font-semibold">📄 {{ filename }}</span>
+            <strong class="block mb-1">{% trans "Attachment" %}</strong>
+            <span class="font-semibold">{{ filename }}</span>
             <div class="mt-1 text-sm">
                 {% trans "The questionnaire is attached automatically as a PDF (with fillable fields)." %}
                 <a href="{% url 'questionnaire_pdf' questionnaire_code %}" target="_blank" class="ml-3">
-                    🔍 {% trans "Preview / download" %}
+                    {% trans "Preview / download" %}
                 </a>
             </div>
         </div>
 
         <div class="button-group">
             <button type="submit" class="btn btn-primary">
-                📧 {% trans "Send" %}
+                {% trans "Send" %}
             </button>
             <a href="{% url 'client_detail' client.pk %}" class="btn btn-secondary">
                 {% trans "Cancel" %}

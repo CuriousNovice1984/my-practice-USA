@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}{% trans "Client uploads" %}{% endblock %}
-{% block page_title %}📥 {% trans "Client uploads" %}{% endblock %}
+{% block page_title %}{% trans "Client uploads" %}{% endblock %}
 {% block page_subtitle %}{% trans "Documents clients sent through the forms portal" %}{% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
             </span>
             <form method="post" action="{% url 'portal_upload_mark_reviewed' doc.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-secondary btn-sm">✓ {% trans "Mark reviewed" %}</button>
+                <button type="submit" class="btn btn-secondary btn-sm">{% trans "Mark reviewed" %}</button>
             </form>
         </div>
         {% empty %}

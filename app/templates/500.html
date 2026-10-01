@@ -1,0 +1,28 @@
+{% load static i18n scene_tags %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% trans "Something went wrong" %}</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
+</head>
+<body>
+    {% comment %}Rendered by Django's server_error view with an empty context: no
+       request, no user, no context processors — only tags that need none.{% endcomment %}
+    {% get_scene "dusk" as dusk %}
+    <header class="scene scene--full" data-scene="dusk">
+        <div class="scene__media">{% scene_image dusk %}</div>
+        <div class="scene__scrim" aria-hidden="true"></div>
+        <div class="scene__inner">
+            <p class="scene__eyebrow">{% trans "Something went wrong" %}</p>
+            <h1 class="scene__title greeting__title">{% trans "Let's take a breath." %}</h1>
+            <p class="scene__subtitle greeting__summary">{% trans "The practice app hit an unexpected error. Please try again in a moment." %}</p>
+            <div class="scene__actions">
+                <a class="btn btn-lg btn-on-photo" href="/">{% trans "Try again" %}</a>
+            </div>
+        </div>
+        <a class="scene__credit" href="{{ dusk.source_url }}" target="_blank" rel="noopener noreferrer">{{ dusk.place }} · {{ dusk.photographer }}</a>
+    </header>
+</body>
+</html>

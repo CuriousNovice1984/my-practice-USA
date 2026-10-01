@@ -1,5 +1,6 @@
 {% load payment_tags %}
 {% load i18n %}
+{% load icons %}
 {# Reusable client card component #}
 {# Required context: client, show_days_alert (optional) #}
 
@@ -8,7 +9,7 @@
         <div class="card-header">
             <div class="card-title">
                 <span class="client-code">{{ client.client_code }}</span>
-                {% if client.id in clients_needing_log %}<span class="card-missing-log" title="{% trans "Log missing" %}">📝</span>{% endif %}
+                {% if client.id in clients_needing_log %}<span class="card-missing-log" title="{% trans "Log missing" %}">{% icon "note" %}</span>{% endif %}
             </div>
         </div>
         <div class="client-name sensitive-data">{{ client.full_name }}</div>
@@ -16,7 +17,7 @@
         <div class="card-meta">
             {% if client.total_sessions %}
             <div class="meta-item">
-                📊 <strong>{{ client.total_sessions|floatformat:0 }}</strong> {% trans "Sessions" %}
+                <strong>{{ client.total_sessions|floatformat:0 }}</strong> {% trans "Sessions" %}
             </div>
             {% endif %}
         </div>

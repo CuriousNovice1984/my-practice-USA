@@ -177,7 +177,7 @@ class ClientListView(PracticeScopedListView):
         context["search_query"] = self.request.GET.get("search", "")
         context["current_tag"] = self.request.GET.get("tag", "")
 
-        # Clients with past sessions that have no SessionLog yet — live query for the 📝 indicator.
+        # Clients with past sessions that have no SessionLog yet — live query for the missing-log indicator.
         from ..models import Session
         from ..utils import SESSION_LOG_MIN_DURATION, SESSION_LOG_WINDOW_DAYS
 

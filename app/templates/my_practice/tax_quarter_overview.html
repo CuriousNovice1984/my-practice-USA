@@ -15,7 +15,7 @@
     <div class="mb-4">
         <a href="{% url 'tax_year_summary' %}?year={{ year }}"
            class="text-sm text-secondary link-plain">
-            📋 → {% trans "Tax Year Summary (Schedule C)" %}
+            → {% trans "Tax Year Summary (Schedule C)" %}
         </a>
     </div>
 
@@ -61,7 +61,7 @@
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="status" value="paid">
         <button type="submit" class="btn btn-secondary">
-            📥 {% blocktrans %}Download paid invoices {{ year }} (ZIP){% endblocktrans %}
+            {% blocktrans %}Download paid invoices {{ year }} (ZIP){% endblocktrans %}
         </button>
     </form>
 
@@ -72,7 +72,7 @@
 
     <!-- Quarterly Table -->
     <div class="section-card">
-        <h2>📊 {% blocktrans %}Estimated tax periods {{ year }}{% endblocktrans %}</h2>
+        <h2>{% blocktrans %}Estimated tax periods {{ year }}{% endblocktrans %}</h2>
         <p class="text-sm text-secondary mb-4">
             {% trans "IRS periods aren't calendar quarters: Q2 covers April–May and Q3 June–August. A payment counts toward the period whose due date it was made by." %}
         </p>
@@ -121,9 +121,9 @@
                         </td>
                         <td>
                             {% if q.needs_attention %}
-                                <span class="badge--warn">⚠️ {% trans "Missing" %}</span>
+                                <span class="badge--warn">{% trans "Missing" %}</span>
                             {% elif q.tax_paid %}
-                                <span class="badge--ok">✅ {% trans "Recorded" %}</span>
+                                <span class="badge--ok">{% trans "Recorded" %}</span>
                             {% elif q.revenue == 0 %}
                                 <span class="badge--neutral">{% trans "no revenue" %}</span>
                             {% else %}
@@ -150,7 +150,7 @@
 
     <!-- Annual return result -->
     <div class="section-card mt-6" x-data="taxSettlement()" x-init="init()">
-        <h2>📄 {% trans "Annual return result" %}</h2>
+        <h2>{% trans "Annual return result" %}</h2>
         <p class="text-sm text-secondary mb-4">
             {% trans "Record the balance due or refund from your filed Form 1040." %}
         </p>

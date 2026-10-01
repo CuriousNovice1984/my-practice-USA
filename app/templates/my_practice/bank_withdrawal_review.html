@@ -2,9 +2,12 @@
 {% load payment_tags %}
 {% load static i18n %}
 
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{% trans "Bank transactions waiting for a decision" %}{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>{{ page_title }}</h1>
 
     <!-- Statistics -->
     <div class="expense-stats-card">
@@ -44,10 +47,10 @@
 
             <div class="expense-action-panel__buttons">
                 <button type="submit" name="action" value="group" class="btn btn-primary">
-                    ✓ {% trans "Group into withdrawal" %}
+                    {% trans "Group into withdrawal" %}
                 </button>
                 <button type="submit" name="action" value="ignore" class="btn btn-secondary">
-                    ➖ {% trans "Ignore" %}
+                    {% trans "Ignore" %}
                 </button>
             </div>
         </div>
@@ -96,7 +99,7 @@
     {% else %}
     <div class="expense-empty-state">
         <div class="expense-empty-state__title">
-            ✓ {% trans "All withdrawals matched" %}
+            {% trans "All withdrawals matched" %}
         </div>
         <div class="expense-empty-state__desc">
             {% trans "There are no pending automatically detected withdrawals." %}
@@ -107,7 +110,7 @@
     <!-- Navigation Links -->
     <div class="expense-nav-footer">
         <a href="{% url 'bank_review' %}" class="btn btn-secondary">{% trans "← Review invoices" %}</a>
-        <a href="{% url 'bank_expense_review' %}" class="btn btn-secondary">💸 {% trans "Expenses" %}</a>
+        <a href="{% url 'bank_expense_review' %}" class="btn btn-secondary">{% trans "Expenses" %}</a>
         <a href="{% url 'withdrawal_list' %}" class="btn btn-secondary">{% trans "Withdrawal list" %}</a>
         <a href="{% url 'dashboard' %}" class="btn btn-secondary">{% trans "Overview" %}</a>
     </div>

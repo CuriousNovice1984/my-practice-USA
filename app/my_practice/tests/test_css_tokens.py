@@ -39,7 +39,6 @@ CSS_PATH = Path(settings.BASE_DIR) / "static" / "css" / "tailwind.css"
 # fallback is itself a real token — harmless, and clearer than restating it.
 ALLOWED_UNDEFINED_TOKENS = {
     "--card-bg",  # var(--card-bg, var(--color-bg-secondary))
-    "--year-text",  # set per .year-<n> rule, with a #fff fallback
 }
 
 # Rules still carrying literal hex. Everything here renders the same in both

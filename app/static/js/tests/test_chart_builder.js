@@ -211,7 +211,7 @@ function testChartBuilderBuildGroupedBar() {
     try {
         const builder = new ChartBuilder(canvas);
         const datasets = [
-            { label: 'Revenue', data: [100, 150, 200], color: '#667eea' },
+            { label: 'Revenue', data: [100, 150, 200], color: '#2f6b5d' },
             { label: 'Expense', data: [80, 120, 150], color: '#ef4444' }
         ];
         const labels = ['Jan', 'Feb', 'Mar'];

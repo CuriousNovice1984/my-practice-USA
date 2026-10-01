@@ -57,7 +57,7 @@ CHECKLIST_ITEMS: dict[str, list[dict[str, str]]] = {
         },
         {
             "id": "log_result",
-            "title": gettext_lazy('Log result: "Restore test [DATE] [USB/NAS] [record count] ✅"'),
+            "title": gettext_lazy('Log result: "Restore test [DATE] [USB/NAS] [record count] "'),
         },
     ],
     "quarterly": [
@@ -203,7 +203,7 @@ def checklist_complete(request: HttpRequest, checklist_type: str) -> HttpRespons
 
     messages.success(
         request,
-        _("✅ %(type)s for %(period)s completed.")
+        _("%(type)s for %(period)s completed.")
         % {"type": valid_types[checklist_type], "period": period_start.strftime("%B %Y")},
     )
     return redirect("checklist", checklist_type=checklist_type)

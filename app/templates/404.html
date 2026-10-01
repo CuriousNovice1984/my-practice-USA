@@ -1,0 +1,30 @@
+{% load static i18n scene_tags %}{% get_current_language as CURRENT_LANGUAGE %}<!DOCTYPE html>
+<html lang="{{ CURRENT_LANGUAGE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% trans "Page not found" %}</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.out.css' %}">
+</head>
+<body>
+    {% comment %}Standalone so it renders for anyone, signed in or not, and never
+       shows the app's navigation to a visitor who mistyped a portal link.{% endcomment %}
+    {% get_scene "notfound" as notfound %}
+    <header class="scene scene--full" data-scene="notfound">
+        <div class="scene__media">{% scene_image notfound %}</div>
+        <div class="scene__scrim" aria-hidden="true"></div>
+        <div class="scene__inner">
+            <p class="scene__eyebrow">{% trans "Page not found" %}</p>
+            <h1 class="scene__title greeting__title">{% trans "This path leads nowhere." %}</h1>
+            <p class="scene__subtitle greeting__summary">{% trans "The page you were looking for isn't here. It may have moved, or the link may be out of date." %}</p>
+            {% if user.is_authenticated %}
+            <div class="scene__actions">
+                <a class="btn btn-lg btn-on-photo" href="{% url 'dashboard' %}">{% trans "Back to your overview" %}</a>
+            </div>
+            {% endif %}
+        </div>
+        <a class="scene__credit" href="{{ notfound.source_url }}" target="_blank" rel="noopener noreferrer">{{ notfound.place }} · {{ notfound.photographer }}</a>
+    </header>
+</body>
+</html>

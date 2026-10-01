@@ -8,7 +8,7 @@
 {% block content %}
 <div class="section-card max-w-[600px] mx-auto">
     <div class="callout callout-danger">
-        <strong>⚠️ {% trans "Warning" %}</strong><br>
+        <strong>{% trans "Warning" %}</strong><br>
         {% trans "Do you really want to delete this tag?" %}
     </div>
 
@@ -21,7 +21,7 @@
 
     {% if object.clients.count > 0 %}
     <div class="callout callout-warning">
-        <strong>📌 {% trans "Note:" %}</strong>
+        <strong>{% trans "Note:" %}</strong>
         {% blocktrans count count=object.clients.count %}This tag is currently assigned to <strong>{{ count }} client</strong>.{% plural %}This tag is currently assigned to <strong>{{ count }} clients</strong>.{% endblocktrans %}
         {% trans "These assignments will be removed." %}
     </div>
@@ -31,7 +31,7 @@
         {% csrf_token %}
         <div class="flex gap-4">
             <button type="submit" class="btn btn-danger">
-                🗑️ {% trans "Yes, delete" %}
+                {% trans "Yes, delete" %}
             </button>
             <a href="{% url 'tag_list' %}" class="btn btn-secondary">
                 {% trans "Cancel" %}

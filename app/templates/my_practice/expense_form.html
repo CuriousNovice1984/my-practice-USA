@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static i18n %}
+{% load icons %}
 {% load payment_tags %}
 
 {% block title %}{% if expense %}{% trans "Edit expense" %}{% else %}{% trans "New expense" %}{% endif %}{% endblock %}
 
-{% block page_icon %}💸{% endblock %}
 {% block page_title %}{% if expense %}{% trans "Edit expense" %}{% else %}{% trans "New expense" %}{% endif %}{% endblock %}
 
 {% block content %}
@@ -85,7 +85,7 @@
                 <input type="file" name="receipts" id="id_receipts"
                        accept="application/pdf,image/*" class="receipt-input" multiple>
                 <div class="dropzone-content">
-                    <div class="dropzone-icon">📄</div>
+                    <div class="dropzone-icon">{% icon "file" %}</div>
                     <div class="dropzone-text">{% blocktrans %}Drag files here or <span class="dropzone-link">click</span>{% endblocktrans %}</div>
                     <div class="dropzone-hint">{% trans "PDF, JPG or PNG — multiple files possible" %}</div>
                 </div>
@@ -113,13 +113,13 @@
     <div class="receipts-list" id="receipts-existing">
         {% for r in existing_receipts %}
         <div class="receipt-item">
-            <span class="receipt-icon">📎</span>
+            <span class="receipt-icon">{% icon "paperclip" %}</span>
             <a href="{{ r.file.url }}" target="_blank" class="receipt-filename">
                 {{ r.file.name|slice:"6:" }}
             </a>
             <form method="post" action="{% url 'expense_receipt_delete' r.pk %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="receipt-delete-form">
                 {% csrf_token %}
-                <button type="submit" class="btn-link receipt-delete-btn" title="{% trans 'Delete receipt' %}">🗑</button>
+                <button type="submit" class="btn-link receipt-delete-btn" title="{% trans 'Delete receipt' %}">{% icon "trash" %}</button>
             </form>
         </div>
         {% endfor %}
@@ -156,7 +156,7 @@
                       class="bank-tx-action-form">
                     {% csrf_token %}
                     <button type="submit" class="btn-link bank-tx-unlink-btn"
-                            title="{% trans 'Remove link' %}">✕</button>
+                            title="{% trans 'Remove link' %}">{% icon "x" %}</button>
                 </form>
             </div>
             {% endfor %}

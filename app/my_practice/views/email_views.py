@@ -356,7 +356,7 @@ class SendInvoiceEmailView(View):
         return _dispatch_email(
             request,
             msg,
-            success_html=_success_html(_("✅ Invoice successfully sent to {recipient}"), recipient),
+            success_html=_success_html(_("Invoice successfully sent to {recipient}"), recipient),
             redirect_url=reverse("invoice_detail", kwargs={"pk": invoice.id}),
             on_success=_mark_invoice_sent,
         )
@@ -412,7 +412,7 @@ class SendPaymentReminderView(BaseClientEmailView):
         }
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Payment reminder sent to {recipient}"), recipient)
+        return _success_html(_("Payment reminder sent to {recipient}"), recipient)
 
     def _build_email_content(
         self, client: Client, practice: Practice, open_invoices: list[Invoice]
@@ -476,7 +476,7 @@ class SendCancellationEmailView(BaseClientEmailView):
         return subject, "\n".join(lines)
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Cancellation sent to {recipient}"), recipient)
+        return _success_html(_("Cancellation sent to {recipient}"), recipient)
 
 
 class SendPortalLinkEmailView(BaseClientEmailView):
@@ -513,7 +513,7 @@ class SendPortalLinkEmailView(BaseClientEmailView):
         )
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Upload link sent to {recipient}"), recipient)
+        return _success_html(_("Upload link sent to {recipient}"), recipient)
 
 
 class SendQuestionnairePdfEmailView(BaseClientEmailView):
@@ -561,4 +561,4 @@ class SendQuestionnairePdfEmailView(BaseClientEmailView):
         return (self._get_filename(client), pdf_bytes, "application/pdf")
 
     def get_success_html(self, recipient: str) -> str:
-        return _success_html(_("✅ Questionnaire sent to {recipient}"), recipient)
+        return _success_html(_("Questionnaire sent to {recipient}"), recipient)

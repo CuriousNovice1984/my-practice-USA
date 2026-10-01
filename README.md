@@ -24,6 +24,7 @@ Changes made here are local to this repository.
 | Client forms | A private, expiring upload link per client, so clients download your blank forms and upload completed ones. See [CLIENT_PORTAL.md](docs/operations/CLIENT_PORTAL.md). |
 | Records | Records retention (default 7 years, configurable) replaces the GDPR deletion flow |
 | Removed | German fee schedule (GebüH), German contract and intake PDFs, the language switcher, update-check pings and GHCR image pulls |
+| Interface | A photographic, assistant-style redesign: every section opens on its own real photograph, and the dashboard greets you by time of day with a briefing of what needs you. See [CREDITS.md](app/static/scenes/CREDITS.md) for the photography. |
 | Kept | Google Calendar sync and email sending |
 
 ---

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load payment_tags %}
 {% load static i18n %}
+{% load icons %}
 
 {% block title %}{% blocktrans %}Tax Year Summary {{ year }}{% endblocktrans %}{% endblock %}
 
@@ -12,7 +13,7 @@
     <!-- Cross-link -->
     <div class="tax-nav-link-wrap">
         <a href="{% url 'tax_quarter_overview' %}?year={{ year }}" class="tax-nav-link">
-            📊 → {% trans "Quarterly estimated taxes" %}
+            → {% trans "Quarterly estimated taxes" %}
         </a>
     </div>
     <!-- Year Selector -->
@@ -81,7 +82,7 @@
 
     <!-- Revenue Section -->
     <div class="section-card">
-        <h2>💰 {% blocktrans %}Revenue ({{ year }}){% endblocktrans %}</h2>
+        <h2>{% blocktrans %}Revenue ({{ year }}){% endblocktrans %}</h2>
         <p class="section-subtitle">
             {% blocktrans count counter=invoice_count with total=total_revenue|currency %}{{ counter }} invoice • {{ total }}{% plural %}{{ counter }} invoices • {{ total }}{% endblocktrans %}
         </p>
@@ -147,7 +148,7 @@
 
     <!-- Expenses Section -->
     <div class="section-card">
-        <h2>📊 {% blocktrans %}Tax-deductible expenses ({{ year }}){% endblocktrans %}</h2>
+        <h2>{% blocktrans %}Tax-deductible expenses ({{ year }}){% endblocktrans %}</h2>
         <p class="section-subtitle">
             {% blocktrans count counter=expense_count with total=total_expenses|currency %}{{ counter }} expense • {{ total }}{% plural %}{{ counter }} expenses • {{ total }}{% endblocktrans %}
         </p>
@@ -209,12 +210,12 @@
                             <td>{{ expense.date|date:"d M y" }}</td>
                             <td>{{ expense.description }}</td>
                             <td>{{ expense.get_category_display }}</td>
-                            <td class="text-center">{% if expense.has_invoice %}✓{% else %}–{% endif %}</td>
-                            <td class="text-center">{% if expense.is_filed_in_tax_return %}✓{% else %}–{% endif %}</td>
+                            <td class="text-center">{% if expense.has_invoice %}{% icon "check" %}{% else %}–{% endif %}</td>
+                            <td class="text-center">{% if expense.is_filed_in_tax_return %}{% icon "check" %}{% else %}–{% endif %}</td>
                             <td class="text-right">{{ expense.amount|currency }}</td>
                             <td class="text-center">
                                 <a href="{% url 'expense_update' expense.pk %}?next={{ request.get_full_path|urlencode }}"
-                                   title="{% trans 'Edit' %}">✎</a>
+                                   title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -227,7 +228,7 @@
     <!-- Home office (IRS simplified method) -->
     {% if home_office and home_office.is_configured %}
     <div class="section-card">
-        <h2>🏠 {% blocktrans %}Home office deduction ({{ year }}){% endblocktrans %}</h2>
+        <h2>{% blocktrans %}Home office deduction ({{ year }}){% endblocktrans %}</h2>
         <p class="section-subtitle">
             {% blocktrans with sqft=home_office.counted_square_feet %}Simplified method: {{ sqft }} sq ft × $5{% endblocktrans %}
             — <strong>{% blocktrans with total=home_office_deduction|currency %}{{ total }} deductible{% endblocktrans %}</strong>
@@ -242,7 +243,7 @@
     </div>
     {% elif home_office %}
     <div class="section-card">
-        <h2>🏠 {% trans "Home office deduction" %}</h2>
+        <h2>{% trans "Home office deduction" %}</h2>
         <p class="section-subtitle">
             {% trans "Not configured." %}
             <a href="{% url 'practice_edit' request.current_practice.slug %}">{% trans "Enter your home office square footage in the practice settings ↗" %}</a>
@@ -252,7 +253,7 @@
 
     <!-- Summary Box -->
     <div class="section-card summary-box">
-        <h2>✅ {% blocktrans %}Summary {{ year }}{% endblocktrans %}</h2>
+        <h2>{% blocktrans %}Summary {{ year }}{% endblocktrans %}</h2>
         <div class="table-container">
             <table class="summary-table">
                 <tr>
@@ -283,7 +284,7 @@
         <!-- Allocation note widget -->
         <div class="tax-note-widget" data-save-url="{% url 'save_tax_year_note' %}" data-year="{{ year }}">
             <label class="tax-note-widget__label" for="tax-note-textarea">
-                📝 {% trans "Notes for this tax year (e.g. split key used for the home office)" %}
+                {% trans "Notes for this tax year (e.g. split key used for the home office)" %}
             </label>
             {% blocktrans asvar note_placeholder %}e.g. revenue share therapy 95% / coaching 5% for {{ year }}{% endblocktrans %}
             <textarea id="tax-note-textarea"
@@ -302,7 +303,7 @@
     <!-- Export Tip -->
     <div class="info-tip">
         <p>
-            💡 <strong>{% trans "Tip:" %}</strong> {% blocktrans %}Use <kbd>Ctrl+P</kbd> (or <kbd>Cmd+P</kbd>) to print this page as a PDF{% endblocktrans %}
+            <strong>{% trans "Tip:" %}</strong> {% blocktrans %}Use <kbd>Ctrl+P</kbd> (or <kbd>Cmd+P</kbd>) to print this page as a PDF{% endblocktrans %}
         </p>
         <p>
             {% trans "These figures are planning estimates, not tax advice. Texas has no state income tax, but clients you see in other states (e.g. by telehealth) can create a filing obligation there — confirm with your tax preparer." %}

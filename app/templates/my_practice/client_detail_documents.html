@@ -1,15 +1,16 @@
 <!-- P-026: Client Documents -->
 {% load i18n %}
+{% load icons %}
 <div class="section-card" id="client-portal">
-    <h3>📤 {% trans "Forms portal" %}</h3>
+    <h3>{% trans "Forms portal" %}</h3>
     {% for entry in portal_links %}
     <div class="portal-link-row">
         <span class="portal-link-url">{{ entry.url }}</span>
         <button type="button" class="btn btn-secondary btn-sm" data-copy="{{ entry.url }}"
                 x-data="{ copied: false }"
                 x-on:click="navigator.clipboard.writeText($el.dataset.copy).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
-                x-text="copied ? '✓ {% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
-        {% if client.email %}<a href="{% url 'send_portal_link_email' client.pk %}" class="btn btn-secondary btn-sm">📧 {% trans "Email" %}</a>{% endif %}
+                x-text="copied ? '{% trans "Copied" %}' : '{% trans "Copy" %}'">{% trans "Copy" %}</button>
+        {% if client.email %}<a href="{% url 'send_portal_link_email' client.pk %}" class="btn btn-secondary btn-sm">{% trans "Email" %}</a>{% endif %}
         <form method="post" action="{% url 'portal_link_revoke' entry.link.pk %}" class="inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary btn-sm">{% trans "Revoke" %}</button>
@@ -23,12 +24,12 @@
         {% csrf_token %}
         <label for="portal-link-days">{% trans "Valid for (days)" %}</label>
         <input type="number" name="days" id="portal-link-days" value="{{ portal_link_days }}" min="1" max="90" class="form-control w-auto">
-        <button type="submit" class="btn btn-sm">➕ {% trans "New upload link" %}</button>
+        <button type="submit" class="btn btn-sm">{% trans "New upload link" %}</button>
         <a href="{% url 'portal_forms' %}" class="btn btn-secondary btn-sm">{% trans "Manage forms" %}</a>
     </form>
 </div>
 <div class="section-card" id="client-documents">
-    <h3>📎 {% trans "Documents" %}</h3>
+    <h3>{% trans "Documents" %}</h3>
 
     <!-- Uploaded documents. The <ul> is rendered even when empty so newly
          uploaded rows can be appended without a page reload. -->
@@ -42,12 +43,12 @@
             <form method="post" action="{% url 'portal_upload_mark_reviewed' doc.pk %}" class="inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="client">
-                <button type="submit" class="badge--warn" title="{% trans 'Mark reviewed' %}">{% trans "New from client" %} ✓</button>
+                <button type="submit" class="badge--warn" title="{% trans 'Mark reviewed' %}">{% trans "New from client" %}</button>
             </form>
             {% endif %}
             <button class="btn btn-danger btn-sm" onclick="docDelete(this)"
                     data-doc-id="{{ doc.pk }}"
-                    data-csrf="{{ csrf_token }}">🗑️</button>
+                    data-csrf="{{ csrf_token }}">{% icon "trash" %}</button>
         </li>
         {% endfor %}
     </ul>
@@ -225,7 +226,7 @@
 
         const del = document.createElement('button');
         del.className = 'btn btn-danger btn-sm';
-        del.textContent = '🗑️';
+        del.textContent = '';
         del.dataset.docId = doc.id;
         del.dataset.csrf = csrfToken;
         del.addEventListener('click', function () { docDelete(del); });

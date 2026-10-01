@@ -52,6 +52,17 @@ contract: [docs/guides/CODEBASE_STANDARDS.md](docs/guides/CODEBASE_STANDARDS.md)
 - **No outbound phoning home**: no update checks, no telemetry. Outbound calls are limited to Google Calendar, SMTP, and Plaid (only when `PLAID_*` is configured).
 - **Client portal** (`/portal/<token>/`) is the only path exposed beyond the tailnet (Tailscale Funnel). Its views use `@login_not_required` and must never reveal client names. `FunnelPathGuardMiddleware` 404s Funnel traffic outside `/portal/` and `/static/`. See [docs/operations/CLIENT_PORTAL.md](docs/operations/CLIENT_PORTAL.md).
 
+## Photographic Interface (standing rules)
+The UI is a calm, assistant-style shell built on real photography. Every page renders inside `base.html`'s **scene**: a full-bleed photograph hero with the page title in the display serif, a frosted top bar, and the content card overlapping the photo, while a blurred wash of the same photo sits behind the whole page.
+- **Titles go in the hero.** Set `{% block page_title %}`/`{% block page_subtitle %}`; never open a page's content with its own `<h1>`. Both blocks pass through `strip_emoji`.
+- **No emoji in the UI.** Use words, or `{% icon "pencil" %}` (`templatetags/icons.py`) for a control whose only content is a glyph, and keep its `title`/`aria-label`. Add a path to `icons.PATHS` rather than reaching for an emoji.
+- **Only real photographs and footage**: no illustrations, AI images or stock vectors. Everything is self-hosted under `static/scenes/` (no hotlinking; the app makes no outbound calls), produced with `scripts/scene_media.py`, and credited in **both** `my_practice/scenes.py` and `static/scenes/CREDITS.md`. `my_practice/tests/test_scenes.py` fails on a missing file, a missing credit, an orphaned file, or footage whose `Scene.video` flag doesn't match.
+- **Which photo a page gets**: `scenes.scene_for()` maps URL-name prefixes (`SECTION_PREFIXES`) to scenes; the dashboard and sign-in follow the time of day (dawn/day/dusk/night in `TIME_ZONE`). A new section that should look different needs a prefix entry, not template code.
+- **Footage**: `scripts/scene_media.py video <key> clip.mp4`, then set `video=True` on the scene. The `<video>` only gets its `src` from `base.html`'s script when ambient motion is on, so reduced-motion users never download it. The photo stays as poster and fallback.
+- **Colour on photographs** uses the theme-independent `--color-on-photo*` tokens (light text on a darkened image in both themes); content surfaces use `--color-glass*`/`--color-surface`. Never put theme-dependent text tokens directly on a photo.
+- **Motion** (the slow drift, card rise-in, and any footage) must stop under `prefers-reduced-motion` unless the user switched motion on with the top-bar toggle (`html[data-motion]`).
+- **The dashboard briefing** (`utils/briefing.py`) speaks in the assistant's voice and shows client codes only. The hero isn't covered by privacy mode, so a name must never reach it.
+
 See [PROJECTS.md](PROJECTS.md) for numbered projects with status tracking (TODO/WIP/DONE).
 
 ## Development Commands (use `./dev.py` for everything)
@@ -245,6 +256,7 @@ from my_practice.models import Client
 - **UI Language**: English only (`LANGUAGE_CODE = "en-us"`), see US Locale above
 - **Currency Format**: USD, `$1,234.56` (`format_currency`)
 - **Date Format**: `DD MMM YY` (`05 Mar 26`)
+- **Typography**: Newsreader (display serif: titles, greeting, figures) and Hanken Grotesk (UI), self-hosted in `static/fonts/`
 - **Code Style**: Black formatting, isort for imports
 - **Tests**: Place in `tests/test_<module>.py`, use Django TestCase
 - **Client Privacy**: Always use client codes in templates, respect privacy mode

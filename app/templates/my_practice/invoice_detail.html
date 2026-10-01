@@ -50,7 +50,7 @@
     <div class="form-section">
         <strong>{% trans "Client:" %}</strong>
         <a href="{% url 'client_detail' invoice.client.pk %}" class="link-primary ml-1">
-            👤 {% trans "View details →" %}
+            {% trans "View details →" %}
         </a>
         <br>
         <span class="sensitive-data">
@@ -65,7 +65,7 @@
 
 </div>
 
-<h3 class="mb-2">📋 {% trans "Line items" %}</h3>
+<h3 class="mb-2">{% trans "Line items" %}</h3>
 
 <div class="table-container">
     <table class="data-table">
@@ -132,19 +132,19 @@
 
 <div class="actions">
     <a href="{% url 'invoice_list' %}" class="btn btn-secondary">← {% trans "Back to list" %}</a>
-    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-gradient">✏️ {% trans "Edit" %}</a>
-    <a href="{% url 'invoice_pdf' invoice.pk %}" class="btn btn-secondary" target="_blank">📄 {% trans "View PDF" %}</a>
+    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-gradient">{% trans "Edit" %}</a>
+    <a href="{% url 'invoice_pdf' invoice.pk %}" class="btn btn-secondary" target="_blank">{% trans "View PDF" %}</a>
 
     {% if invoice.status != 'sent' %}
-    <a href="{% url 'send_invoice_email' invoice.pk %}" class="btn btn-secondary">📧 {% trans "Send by email" %}</a>
+    <a href="{% url 'send_invoice_email' invoice.pk %}" class="btn btn-secondary">{% trans "Send by email" %}</a>
     {% else %}
     <span class="text-muted py-2 px-4 bg-bg-secondary rounded-lg inline-block">
-        ✅ {% trans "Email already sent" %}
+        {% trans "Email already sent" %}
     </span>
     {% endif %}
 
     {% trans "Do you really want to delete this invoice? This action cannot be undone." as confirm_delete %}
-    <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger" x-data x-on:click="confirm('{{ confirm_delete }}') || $event.preventDefault()">🗑️ {% trans "Delete" %}</a>
+    <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger" x-data x-on:click="confirm('{{ confirm_delete }}') || $event.preventDefault()">{% trans "Delete" %}</a>
 </div>
 
 <script>

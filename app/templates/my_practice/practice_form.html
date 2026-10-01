@@ -204,7 +204,7 @@
     </div>
 
     <div class="form-section">
-        <h3>🏠 {% trans "Home office" %}</h3>
+        <h3>{% trans "Home office" %}</h3>
         <div class="form-group">
             <label for="{{ form.home_office_sqft.id_for_label }}">{% trans "Home office area (sq ft)" %}</label>
             {{ form.home_office_sqft }}
@@ -214,7 +214,7 @@
 
     {% if object and capacity_formset %}
     <div class="form-section">
-        <h3>📅 {% trans "Capacity periods" %}</h3>
+        <h3>{% trans "Capacity periods" %}</h3>
         <p class="form-hint">{% trans "Define available therapy hours per week. Each entry is in effect from its start date until the next one." %}</p>
         {{ capacity_formset.management_form }}
         {% for period_form in capacity_formset %}
@@ -243,7 +243,7 @@
 
     <div class="form-actions">
         <button type="submit" class="btn">
-            💾 {% if object %}{% trans "Save changes" %}{% else %}{% trans "Create practice" %}{% endif %}
+            {% if object %}{% trans "Save changes" %}{% else %}{% trans "Create practice" %}{% endif %}
         </button>
         <a href="{% url 'practice_management' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
     </div>

@@ -1,27 +1,28 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load icons %}
 
 {% block title %}{% trans "Time off" %}{% endblock %}
 
-{% block page_title %}🌴 {% trans "Time off" %}{% endblock %}
+{% block page_title %}{% trans "Time off" %}{% endblock %}
 {% block page_subtitle %}{% trans "Holidays, vacation, and other periods when the practice is closed" %}{% endblock %}
 
 {% block content %}
 
 <div class="mt-3 mb-4 flex gap-4 justify-end">
     <a href="{% url 'timeoff_create' %}" class="btn btn-success btn-sm">
-        ➕ {% trans "New time off" %}
+        {% trans "New time off" %}
     </a>
 </div>
 
 <div class="card mb-4">
-    <h3 class="m-0 mb-3">📅 {% trans "Upcoming & current" %} <span class="text-sm text-secondary">({{ upcoming|length }})</span></h3>
+    <h3 class="m-0 mb-3">{% trans "Upcoming & current" %} <span class="text-sm text-secondary">({{ upcoming|length }})</span></h3>
 
     {% if upcoming %}
     <form method="get" action="{% url 'timeoff_notify' %}">
         <div class="mb-3">
             <button type="submit" class="btn btn-sm btn-secondary">
-                📧 {% trans "Send heads-up email for selected" %}
+                {% trans "Send heads-up email for selected" %}
             </button>
         </div>
         <div class="table-container table-container--wide">
@@ -48,12 +49,12 @@
                         <td class="text-right">{{ time_off.duration_days }} {% trans "workdays" %}</td>
                         <td class="text-center whitespace-nowrap">
                             {% if time_off.is_current %}
-                            <span class="badge badge-current">🏖️ {% trans "Currently off" %}</span>
+                            <span class="badge badge-current">{% trans "Currently off" %}</span>
                             {% else %}
-                            <span class="badge badge-info">📅 {% trans "Upcoming" %}</span>
+                            <span class="badge badge-info">{% trans "Upcoming" %}</span>
                             {% endif %}
-                            <a href="{% url 'timeoff_update' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">✏️</a>
-                            <a href="{% url 'timeoff_delete' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">🗑️</a>
+                            <a href="{% url 'timeoff_update' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
+                            <a href="{% url 'timeoff_delete' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">{% icon "trash" %}</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -69,7 +70,7 @@
 </div>
 
 <div class="card">
-    <h3 class="m-0 mb-3">✅ {% trans "Past" %} <span class="text-sm text-secondary">({{ past|length }})</span></h3>
+    <h3 class="m-0 mb-3">{% trans "Past" %} <span class="text-sm text-secondary">({{ past|length }})</span></h3>
 
     {% if past %}
     <div class="table-container table-container--wide">
@@ -93,8 +94,8 @@
                     <td>{{ time_off.end_date|date:"d M y" }}</td>
                     <td class="text-right">{{ time_off.duration_days }} {% trans "workdays" %}</td>
                     <td class="text-center whitespace-nowrap">
-                        <a href="{% url 'timeoff_update' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">✏️</a>
-                        <a href="{% url 'timeoff_delete' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">🗑️</a>
+                        <a href="{% url 'timeoff_update' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary" title="{% trans 'Edit' %}">{% icon "pencil" %}</a>
+                        <a href="{% url 'timeoff_delete' time_off.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-danger" title="{% trans 'Delete' %}">{% icon "trash" %}</a>
                     </td>
                 </tr>
                 {% endfor %}

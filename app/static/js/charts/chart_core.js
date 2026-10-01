@@ -85,8 +85,14 @@ function getCSSVariable(varName, fallback) {
         return fallback || null;
     }
 
-    // Try to get the CSS variable value first
-    const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    // Try to get the CSS variable value first. Chart code asks for the short
+    // names (--text-primary, --border-color); the design tokens in tailwind.css
+    // are --color-*, so look those up first.
+    const styles = getComputedStyle(document.documentElement);
+    const aliases = { '--text-primary': '--color-text-primary', '--text-secondary': '--color-text-secondary', '--border-color': '--color-border' };
+    const token = aliases[varName] ? styles.getPropertyValue(aliases[varName]).trim() : '';
+    if (token) return token;
+    const value = styles.getPropertyValue(varName).trim();
     if (value && value !== '') return value;
 
     // If CSS variable not loaded yet, use theme-aware fallback for text colors

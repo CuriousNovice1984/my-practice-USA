@@ -348,8 +348,8 @@ class BankReviewView(FormMixin, PracticeScopedListView):
             messages.success(
                 request,
                 ngettext(
-                    "✅ %(count)s transaction with already-paid invoice ignored.",
-                    "✅ %(count)s transactions with already-paid invoices ignored.",
+                    "%(count)s transaction with already-paid invoice ignored.",
+                    "%(count)s transactions with already-paid invoices ignored.",
                     ignored_count,
                 )
                 % {"count": ignored_count},
@@ -532,7 +532,7 @@ class BankReviewView(FormMixin, PracticeScopedListView):
             notes = f"Auto-erstellt beim Bestätigen am {transaction.transaction_date}"
             messages.info(
                 request,
-                _("📌 Alias '%(name)s' for %(code)s saved.")
+                _("Alias '%(name)s' for %(code)s saved.")
                 % {"name": transaction.payer_name, "code": invoice.client.client_code},
             )
         else:

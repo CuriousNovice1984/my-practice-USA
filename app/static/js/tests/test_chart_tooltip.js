@@ -216,7 +216,7 @@ function testComparisonTooltip() {
                 { name: 'Revenue', value: 1000 },
                 { name: 'Expense', value: 500 }
             ],
-            colors: ['#667eea', '#ef4444']
+            colors: ['#2f6b5d', '#ef4444']
         };
 
         tooltip.show(100, 100, data);

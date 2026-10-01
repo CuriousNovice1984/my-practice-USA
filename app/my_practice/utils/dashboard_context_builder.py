@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 
 from ..models import Client, CompanyExpense, Invoice, TimeOff
+from .briefing import build_briefing
 from .dashboard_widgets import CapacityMonitoringWidgetBuilder
 from .practice_helpers import get_user_practices
 from .revenue_helpers import RevenueCalculator
@@ -39,6 +40,8 @@ class DashboardContextAssembler:
         context.update(self._build_timeoff())
         context.update(self._build_widgets())
         context.update(self._build_multi_practice())
+        context["briefing"] = build_briefing(self.practice, context["status_stats"], self.today)
+        context["today"] = self.today
         return context
 
     def _build_statistics(self) -> dict:
@@ -142,7 +145,7 @@ class DashboardContextAssembler:
                 "includes/capacity_monitoring_widget_content.html", cap_ctx
             ),
             "capacity_badge": (
-                mark_safe(f'<span class="stat-badge warning">⚠️ {_("Capacity")}</span>')
+                mark_safe(f'<span class="stat-badge warning">{_("Capacity")}</span>')
                 if cap_ctx.get("show_warning")
                 else ""
             ),

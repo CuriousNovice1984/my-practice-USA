@@ -187,7 +187,7 @@ class ComparisonTooltip extends ChartTooltip {
 
                 if (data.values && Array.isArray(data.values)) {
                     data.values.forEach(item => {
-                        const color = item.color || '#667eea';
+                        const color = item.color || '#2f6b5d';
                         lines.push(`
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                                 <div style="width: 12px; height: 12px; background: ${color}; border-radius: 2px;"></div>

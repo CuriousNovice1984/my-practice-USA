@@ -3,7 +3,6 @@
 
 {% block title %}{% if object %}{% trans "Edit TODO" %}{% else %}{% trans "New task" %}{% endif %}{% endblock %}
 
-{% block page_icon %}✅{% endblock %}
 {% block page_title %}{% if object %}{% trans "Edit TODO" %}{% else %}{% trans "Create new task" %}{% endif %}{% endblock %}
 
 {% block content %}
@@ -78,7 +77,7 @@
         {% endif %}
 
         <div class="form-actions">
-            <button type="submit" class="btn">💾 {% trans "Save" %}</button>
+            <button type="submit" class="btn">{% trans "Save" %}</button>
             <a href="{% if next %}{{ next }}{% else %}{% url 'focus_queue' %}{% endif %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
         </div>
     </form>

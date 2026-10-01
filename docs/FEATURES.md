@@ -40,6 +40,17 @@ holidays, bilingual PDFs, update checks); [CHANGELOG v1.0.0](CHANGELOG.md) lists
 - ✅ Records retention date per client (configurable years; minors counted from age 18) with a guarded delete flow
 - ✅ No update checks or registry pulls; `./prod.py update` pulls this repository and rebuilds locally
 
+## Interface (photographic shell)
+
+- ✅ Every page opens on a real photograph chosen for its section (jellyfish for the Focus Queue, Yosemite's Tunnel View for invoices, Monument Valley for licenses, …); 19 scenes, all self-hosted and credited ([CREDITS.md](../app/static/scenes/CREDITS.md))
+- ✅ Dashboard as an assistant's briefing: a time-of-day greeting over a dawn/day/dusk/night scene, a one-line summary, and "Today at a glance" (next session by client code, due tasks, portal uploads, license renewals, new inquiries, drafts and unpaid invoices), each linking to where it's handled
+- ✅ Full-screen sign-in, a client portal set on soft petals and sky, and 404/500 pages that match
+- ✅ "How can I help?" opens the command palette from a frosted top bar that turns to glass on scroll
+- ✅ Newsreader display serif and Hanken Grotesk UI type, warm "Daylight" and deep "Night" palettes, glass surfaces over a blurred wash of each page's photo
+- ✅ Slow ambient drift on the hero photo, with a pause toggle; off automatically for reduced-motion users
+- ✅ Real-footage support per scene (`scripts/scene_media.py video`), loaded only when motion is on
+- ✅ Line icons instead of emoji throughout; charts recoloured to a palette drawn from the photography
+
 ## 🏠 Core Features
 
 ### Clinical Documentation (Protokoll Tab)

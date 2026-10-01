@@ -287,7 +287,7 @@ class PracticeAnalyzer:
 
     def _period_insights(self, analysis) -> list[str]:
         insights = [
-            _("📅 Analyzing %(label)s (%(days)s days)")
+            _("Analyzing %(label)s (%(days)s days)")
             % {
                 "label": analysis["period"]["label"],
                 "days": analysis["period"]["days"],
@@ -298,7 +298,7 @@ class PracticeAnalyzer:
         if active_count > 0:
             active_pct = (active_count / total_count * 100) if total_count > 0 else 0
             insights.append(
-                _("👥 %(active)s of %(total)s clients active (%(pct)s%%)")
+                _("%(active)s of %(total)s clients active (%(pct)s%%)")
                 % {
                     "active": active_count,
                     "total": total_count,
@@ -326,12 +326,12 @@ class PracticeAnalyzer:
         concentration = (top_3 / total_sessions) * 100
         if concentration > 60:
             return [
-                _("⚠️ High concentration: Top 3 clients = %(pct)s%% of sessions")
+                _("High concentration: Top 3 clients = %(pct)s%% of sessions")
                 % {"pct": f"{concentration:.0f}"}
             ]
         if concentration > 40:
             return [
-                _("📊 Top 3 clients account for %(pct)s%% of sessions")
+                _("Top 3 clients account for %(pct)s%% of sessions")
                 % {"pct": f"{concentration:.0f}"}
             ]
         return []
@@ -342,7 +342,7 @@ class PracticeAnalyzer:
         if not active:
             return []
         avg = sum(c["sessions_in_period"] for c in active) / len(active)
-        return [_("📈 Average: %(avg)sh per active client") % {"avg": f"{avg:.1f}"}]
+        return [_("Average: %(avg)sh per active client") % {"avg": f"{avg:.1f}"}]
 
     @staticmethod
     def _probatoric_insight(clients) -> list[str]:
@@ -352,8 +352,8 @@ class PracticeAnalyzer:
         ph = sum(c["sessions_in_period"] for c in probatoric)
         return [
             ngettext(
-                "🌱 %(n)s new client (%(h)sh)",
-                "🌱 %(n)s new clients (%(h)sh)",
+                "%(n)s new client (%(h)sh)",
+                "%(n)s new clients (%(h)sh)",
                 len(probatoric),
             )
             % {"n": len(probatoric), "h": f"{ph:.1f}"}
@@ -364,35 +364,29 @@ class PracticeAnalyzer:
         dormant = [c for c in clients if c["classification"] == "dormant"]
         if len(dormant) <= 5:
             return []
-        return [_("💤 %(n)s dormant clients (no activity this period)") % {"n": len(dormant)}]
+        return [_("%(n)s dormant clients (no activity this period)") % {"n": len(dormant)}]
 
     def _capacity_insights(self, capacity) -> list[str]:
         cap_pct = capacity["capacity_percentage"]
         rem = capacity["remaining_hours"]
         vals = {"pct": cap_pct, "rem": f"{rem:.0f}"}
         if cap_pct < 30:
-            return [
-                _("📉 Low utilization: Only %(pct)s%% capacity used (%(rem)sh available)") % vals
-            ]
+            return [_("Low utilization: Only %(pct)s%% capacity used (%(rem)sh available)") % vals]
         if cap_pct < 60:
-            return [
-                _("📊 Moderate utilization: %(pct)s%% capacity used (%(rem)sh available)") % vals
-            ]
+            return [_("Moderate utilization: %(pct)s%% capacity used (%(rem)sh available)") % vals]
         if cap_pct < 80:
-            return [_("✅ Good utilization: %(pct)s%% capacity used (%(rem)sh available)") % vals]
+            return [_("Good utilization: %(pct)s%% capacity used (%(rem)sh available)") % vals]
         if cap_pct < 100:
-            return [
-                _("⚠️ High utilization: %(pct)s%% capacity used (only %(rem)sh remaining)") % vals
-            ]
-        return [_("🔴 At/over capacity: %(pct)s%% utilized") % vals]
+            return [_("High utilization: %(pct)s%% capacity used (only %(rem)sh remaining)") % vals]
+        return [_("At/over capacity: %(pct)s%% utilized") % vals]
 
     def _revenue_insights(self, clients) -> list[str]:
         unbilled = [c for c in clients if c["invoices_count"] == 0 and c["sessions_in_period"] > 0]
         if unbilled:
             return [
                 ngettext(
-                    "💰 Revenue opportunity: %(n)s client with sessions but no invoices",
-                    "💰 Revenue opportunity: %(n)s clients with sessions but no invoices",
+                    "Revenue opportunity: %(n)s client with sessions but no invoices",
+                    "Revenue opportunity: %(n)s clients with sessions but no invoices",
                     len(unbilled),
                 )
                 % {"n": len(unbilled)}

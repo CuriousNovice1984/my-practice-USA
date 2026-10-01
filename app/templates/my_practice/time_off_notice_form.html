@@ -3,7 +3,7 @@
 
 {% block title %}{% trans "Send heads-up email" %}{% endblock %}
 
-{% block page_title %}📧 {% trans "Send heads-up email" %}{% endblock %}
+{% block page_title %}{% trans "Send heads-up email" %}{% endblock %}
 {% block page_subtitle %}{% for time_off in time_offs %}{{ time_off.title }} ({{ time_off.start_date|date:"d M y" }} – {{ time_off.end_date|date:"d M y" }}){% if not forloop.last %}, {% endif %}{% endfor %}{% endblock %}
 
 {% block content %}
@@ -15,7 +15,7 @@
     {% endfor %}
 
     <div class="form-section">
-        <h3>👥 {% trans "Recipients" %}</h3>
+        <h3>{% trans "Recipients" %}</h3>
         {% if form.recipients.errors %}<div class="error">{{ form.recipients.errors }}</div>{% endif %}
         {% if form.recipients.field.queryset.exists %}
         <div class="table-container">
@@ -49,7 +49,7 @@
     </div>
 
     <div class="form-section">
-        <h3>✉️ {% trans "Message" %}</h3>
+        <h3>{% trans "Message" %}</h3>
 
         <div class="form-group">
             <label for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
@@ -69,7 +69,7 @@
 
     <div class="button-group">
         <button type="submit" class="btn btn-primary">
-            📧 {% trans "Send heads-up email" %}
+            {% trans "Send heads-up email" %}
         </button>
         <a href="{% url 'timeoff_list' %}" class="btn btn-secondary">
             {% trans "Cancel" %}
