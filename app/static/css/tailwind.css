@@ -2579,14 +2579,22 @@
     object-fit: cover;
   }
 
+  /* Footage sits over the photograph. It is visible from first paint when
+     motion is on (html.motion-on, set in <head>), or once switched on later
+     (.has-footage); the poster is the clip's own first frame, so playback
+     starts without a visible change. */
   .scene__video {
     position: absolute;
     inset: 0;
     opacity: 0;
-    transition: opacity 1.6s ease;
   }
 
-  .scene__video.is-playing { opacity: 1; }
+  .motion-on .scene__video,
+  .scene.has-footage .scene__video { opacity: 1; }
+
+  /* The photograph's drift is hidden under the footage; don't animate it. */
+  .motion-on .scene--footage .scene__img,
+  .scene.has-footage .scene__img { animation: none; }
 
   /* The photograph breathes: a very slow push-in, the way a camera would
      drift across a still scene. Paused with the motion toggle and for anyone
@@ -2666,21 +2674,37 @@
      missing first part never leaves a dangling "·". */
   .subtitle-parts > * + *::before { content: "·"; margin: 0 0.5em; opacity: 0.7; }
 
+  .scene__credit,
+  .scene__credit a {
+    color: var(--color-on-photo-faint);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+    transition: color 0.2s ease;
+  }
+
   .scene__credit {
     position: absolute;
     right: var(--gutter);
     bottom: calc(var(--overlap) + 0.8rem);
     max-width: 40%;
-    color: var(--color-on-photo-faint);
-    font-size: 0.72rem;
-    letter-spacing: 0.02em;
-    text-decoration: none;
+    margin: 0;
     text-align: right;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
-    transition: color 0.2s ease;
   }
 
-  .scene__credit:hover { color: var(--color-on-photo); }
+  .scene__credit:hover,
+  .scene__credit a:hover { color: var(--color-on-photo); }
+
+  /* The credit names whatever is on screen: the footage while it shows, the
+     photograph otherwise. */
+  .scene__credit-footage { display: none; }
+
+  .motion-on .scene__credit-footage,
+  .scene.has-footage .scene__credit-footage { display: inline; }
+
+  .motion-on .scene--footage .scene__credit-photo,
+  .scene.has-footage .scene__credit-photo { display: none; }
 
   .scene__eyebrow {
     margin-bottom: 0.9rem;
