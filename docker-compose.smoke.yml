@@ -34,7 +34,6 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - FERNET_KEY=${FERNET_KEY}
-      - UPDATE_CHECK_DISABLED=true
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/admin/login/"]
       interval: 5s

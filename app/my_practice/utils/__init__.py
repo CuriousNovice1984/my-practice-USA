@@ -43,7 +43,6 @@ from .date_helpers import DateRangeHelper
 from .financial_list_context_builder import FinancialListContextBuilder
 from .invoice_filter_helper import InvoiceFilterHelper
 from .invoice_helpers import get_next_invoice_number
-from .practice_days import FahrtkostenResult, PracticeDayCalculator
 from .practice_helpers import (
     get_current_practice,
     get_user_practices,
@@ -108,7 +107,5 @@ __all__ = [
     "switch_practice",
     "get_user_practices",
     "is_practice_owner",
-    "PracticeDayCalculator",
-    "FahrtkostenResult",
     "WeeklyFocusWidgetBuilder",
 ]

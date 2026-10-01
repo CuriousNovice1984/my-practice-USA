@@ -86,7 +86,7 @@ class SessionModelTests(ClinicalTestBase):
         """Session __str__ returns client code + formatted date."""
         s = Session.objects.create(client=self.client_obj, session_date=date(2026, 3, 15))
         self.assertIn("AB-1", str(s))
-        self.assertIn("15.03.2026", str(s))
+        self.assertIn("15 Mar 26", str(s))
 
     def test_session_ordering(self):
         """Sessions are ordered by session_date descending."""
@@ -429,8 +429,8 @@ class SupervisionViewTests(ClinicalTestBase):
         html = response.content.decode()
         self.assertEqual(response.status_code, 200)
         timeline = html[html.index('class="cn-session-list"') :]
-        self.assertLess(timeline.index("24.03.2026"), timeline.index("Frage zur Abgrenzung"))
-        self.assertLess(timeline.index("Frage zur Abgrenzung"), timeline.index("10.03.2026"))
+        self.assertLess(timeline.index("24 Mar 26"), timeline.index("Frage zur Abgrenzung"))
+        self.assertLess(timeline.index("Frage zur Abgrenzung"), timeline.index("10 Mar 26"))
         self.assertIn("Körperwahrnehmung stärker einbeziehen", timeline)
 
     def test_supervision_queue_loads(self):
@@ -568,9 +568,7 @@ class SessionDurationEditViewTests(ClinicalTestBase):
         """
         from ..models import Invoice, InvoiceItem, ServiceType
 
-        service = ServiceType.objects.create(
-            code="individual", name_en="Individual Session", name_de="Einzelsitzung"
-        )
+        service = ServiceType.objects.create(code="individual")
         invoice = Invoice.objects.create(
             client=self.client_obj,
             invoice_number="TEST-1",
@@ -760,9 +758,7 @@ class SessionQuickActionViewTests(ClinicalTestBase):
         """Deleting the log of an already-billed session keeps the Session (only the log goes)."""
         from ..models import Invoice, InvoiceItem, ServiceType
 
-        service = ServiceType.objects.create(
-            code="individual", name_en="Individual Session", name_de="Einzelsitzung"
-        )
+        service = ServiceType.objects.create(code="individual")
         invoice = Invoice.objects.create(
             client=self.client_obj,
             invoice_number="TEST-2",
@@ -796,9 +792,7 @@ class SessionQuickActionViewTests(ClinicalTestBase):
     def test_delete_blocked_when_billed(self):
         from ..models import Invoice, InvoiceItem, ServiceType
 
-        service = ServiceType.objects.create(
-            code="individual", name_en="Individual Session", name_de="Einzelsitzung"
-        )
+        service = ServiceType.objects.create(code="individual")
         invoice = Invoice.objects.create(
             client=self.client_obj,
             invoice_number="TEST-3",
@@ -851,8 +845,6 @@ class SessionQuickActionViewTests(ClinicalTestBase):
         ServiceType.objects.create(
             practice=self.practice,
             code="therapy_60",
-            name_en="Therapy 60",
-            name_de="Therapie 60",
         )
         session = Session.objects.create(
             client=self.client_obj, session_date=date(2026, 3, 20), duration=60

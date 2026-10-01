@@ -9,7 +9,7 @@ from typing import Any
 from ..models import CompanyExpense, Invoice, TaxYearNote
 from .aggregation_helpers import get_category_breakdown, get_grand_total
 from .chart_helpers import format_month_key, format_month_label
-from .practice_days import HomeOfficeDayCalculator, PracticeDayCalculator
+from .practice_days import HomeOfficeCalculator, self_employment_tax_estimate
 from .revenue_helpers import RevenueCalculator
 
 
@@ -57,7 +57,6 @@ class TaxYearContextBuilder:
         self.user = user
         self._practice_split = self._compute_practice_split()
         # Set by _build_deductions(); used by _build_split_context()
-        self._fahrtkosten_deduction = Decimal("0")
         self._home_office_deduction = Decimal("0")
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -66,15 +65,15 @@ class TaxYearContextBuilder:
         context: dict = {"year": self.year}
         context.update(self._build_revenue())
         context.update(self._build_expenses(expense_sort))
-        context.update(self._build_deductions())
+        profit_before_home_office = Decimal(str(context["total_revenue"])) - Decimal(
+            context["total_expenses"]
+        )
+        context.update(self._build_deductions(profit_before_home_office))
         context.update(self._build_available_years())
         context.update(self._build_split_context())
-        context["gross_profit"] = (
-            Decimal(str(context["total_revenue"]))
-            - Decimal(context["total_expenses"])
-            - self._fahrtkosten_deduction
-            - self._home_office_deduction
-        )
+        net_profit = profit_before_home_office - self._home_office_deduction
+        context["net_profit"] = net_profit
+        context["se_tax_estimate"] = self_employment_tax_estimate(net_profit)
         context["tax_year_note"] = (
             TaxYearNote.objects.filter(practice=self.practice, year=self.year).first()
             if self.practice
@@ -138,30 +137,24 @@ class TaxYearContextBuilder:
             "expense_sort": expense_sort,
         }
 
-    def _build_deductions(self) -> dict:
-        fahrtkosten = (
-            PracticeDayCalculator(self.practice, self.year).calculate() if self.practice else None
-        )
-        self._fahrtkosten_deduction = (
-            Decimal(str(fahrtkosten.deduction_total))
-            if fahrtkosten and fahrtkosten.is_configured
-            else Decimal("0")
-        )
-
+    def _build_deductions(self, profit_before_home_office: Decimal) -> dict:
         home_office = (
-            HomeOfficeDayCalculator(self.practice, self.year).calculate() if self.practice else None
+            HomeOfficeCalculator(self.practice, self.year).calculate() if self.practice else None
         )
-        self._home_office_deduction = (
-            Decimal(str(home_office.deduction_total))
+        allowed = (
+            home_office.deduction_total
             if home_office and home_office.is_configured
             else Decimal("0")
         )
+        # The simplified deduction can't create a loss: it's limited to the
+        # business's gross income minus its other expenses.
+        limit = max(profit_before_home_office, Decimal("0"))
+        self._home_office_deduction = min(allowed, limit)
 
         return {
-            "fahrtkosten": fahrtkosten,
-            "fahrtkosten_deduction": self._fahrtkosten_deduction,
             "home_office": home_office,
             "home_office_deduction": self._home_office_deduction,
+            "home_office_limited": self._home_office_deduction < allowed,
         }
 
     def _build_available_years(self) -> dict:
@@ -169,7 +162,7 @@ class TaxYearContextBuilder:
 
     def _build_split_context(self) -> dict:
         ps = self._practice_split
-        fd, hd = self._fahrtkosten_deduction, self._home_office_deduction
+        hd = self._home_office_deduction
         return {
             "show_multi_practice_allocation_notice": ps is not None,
             "active_practice_count": self.user.practices.filter(is_active=True).count(),
@@ -179,12 +172,6 @@ class TaxYearContextBuilder:
             ),
             "home_office_split_sessions": (
                 (hd * ps.session_share).quantize(Decimal("0.01")) if ps else None
-            ),
-            "fahrtkosten_split_revenue": (
-                (fd * ps.revenue_share).quantize(Decimal("0.01")) if ps else None
-            ),
-            "fahrtkosten_split_sessions": (
-                (fd * ps.session_share).quantize(Decimal("0.01")) if ps else None
             ),
             "revenue_share_pct": (
                 (ps.revenue_share * 100).quantize(Decimal("0.1")) if ps else None

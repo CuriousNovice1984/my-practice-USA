@@ -21,7 +21,7 @@
         <div class="cn-supervision-item cn-status-{{ item.status }}">
             <div class="cn-supervision-content">{{ item.content }}</div>
             <div class="cn-supervision-meta">
-                <span class="cn-date-hint">{{ item.created_at|date:"d.m.Y" }}</span>
+                <span class="cn-date-hint">{{ item.created_at|date:"d M y" }}</span>
             </div>
             <div class="cn-supervision-actions">
             {% url 'supervision_item_toggle' group.client.pk item.pk as toggle_url %}

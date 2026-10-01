@@ -192,7 +192,7 @@ class Command(BaseCommand):
                 lambda t: (
                     f"{t.transaction_date}: "
                     f"{t.payer_name[:30] if len(t.payer_name) > 30 else t.payer_name} | "
-                    f"{t.amount}€ | {t.match_confidence}"
+                    f"${t.amount} | {t.match_confidence}"
                 ),
             )
 
@@ -204,7 +204,7 @@ class Command(BaseCommand):
                     expenses_qs,
                     expense_count,
                     lambda e: (
-                        f"{e.date}: {e.amount}€ | "
+                        f"{e.date}: ${e.amount} | "
                         f"{e.description[:50] if len(e.description) > 50 else e.description}"
                     ),
                 )
@@ -217,7 +217,7 @@ class Command(BaseCommand):
                     withdrawals_qs,
                     withdrawal_count,
                     lambda w: (
-                        f"{w.date}: {w.amount}€ | "
+                        f"{w.date}: ${w.amount} | "
                         f"{w.description[:50] if len(w.description) > 50 else w.description}"
                     ),
                 )

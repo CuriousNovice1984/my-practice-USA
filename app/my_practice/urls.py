@@ -79,23 +79,6 @@ urlpatterns = [
     ),
     path("invoices/<int:pk>/delete/", views.invoice_delete, name="invoice_delete"),
     path("invoices/<int:pk>/pdf/", views.invoice_pdf, name="invoice_pdf"),
-    path("clients/<int:pk>/contract-pdf/", views.contract_pdf, name="contract_pdf"),
-    path(
-        "clients/<int:pk>/send-contract/",
-        views.SendContractEmailView.as_view(),
-        name="send_contract_email",
-    ),
-    path("clients/<int:pk>/intake-form-pdf/", views.intake_form_pdf, name="intake_form_pdf"),
-    path(
-        "clients/<int:pk>/send-intake-form/",
-        views.SendIntakeFormEmailView.as_view(),
-        name="send_intake_form_email",
-    ),
-    path(
-        "clients/<int:pk>/send-questionnaire/",
-        views.SendQuestionnaireEmailView.as_view(),
-        name="send_questionnaire_docx",
-    ),
     path("questionnaires/<str:code>/pdf/", views.questionnaire_pdf, name="questionnaire_pdf"),
     path(
         "clients/<int:pk>/send-questionnaire-pdf/<str:code>/",
@@ -116,14 +99,14 @@ urlpatterns = [
         name="client_document_delete",
     ),
     path(
-        "clients/<int:pk>/gdpr-delete/",
-        views.client_gdpr_delete_confirm,
-        name="client_gdpr_delete_confirm",
+        "clients/<int:pk>/records-delete/",
+        views.client_records_delete_confirm,
+        name="client_records_delete_confirm",
     ),
     path(
-        "clients/<int:pk>/gdpr-delete/confirm/",
-        views.client_gdpr_delete,
-        name="client_gdpr_delete",
+        "clients/<int:pk>/records-delete/confirm/",
+        views.client_records_delete,
+        name="client_records_delete",
     ),
     path(
         "invoices/<int:invoice_id>/send-email/",
@@ -216,7 +199,6 @@ urlpatterns = [
     path("reports/revenue/", views.revenue_report, name="revenue_report"),
     path("reports/tax-summary/", views.tax_year_summary, name="tax_year_summary"),
     path("reports/tax-summary/note/", views.save_tax_year_note, name="save_tax_year_note"),
-    path("reports/tax-workday-audit/", views.tax_workday_audit, name="tax_workday_audit"),
     path("reports/tax-quarter/", views.tax_quarter_overview, name="tax_quarter_overview"),
     # Google Calendar integration
     path("calendar/authorize/", views.calendar_authorize, name="calendar_authorize"),
@@ -373,11 +355,6 @@ urlpatterns = [
         "clients/<int:pk>/sessions/<int:session_pk>/bill/",
         views.session_bill,
         name="session_bill",
-    ),
-    path(
-        "clients/<int:client_pk>/sessions/<int:session_pk>/gebueh/",
-        views.gebueh_leistung_create,
-        name="gebueh_leistung_create",
     ),
     path(
         "clients/<int:pk>/supervision/new/",

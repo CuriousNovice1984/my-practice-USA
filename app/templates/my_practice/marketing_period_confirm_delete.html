@@ -12,11 +12,11 @@
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "From" %}:</span>
-    <span class="font-semibold">{{ period.start_date|date:"d.m.Y" }}</span>
+    <span class="font-semibold">{{ period.start_date|date:"d M y" }}</span>
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "To" %}:</span>
-    <span class="font-semibold">{% if period.end_date %}{{ period.end_date|date:"d.m.Y" }}{% else %}{% trans "ongoing" %}{% endif %}</span>
+    <span class="font-semibold">{% if period.end_date %}{{ period.end_date|date:"d M y" }}{% else %}{% trans "ongoing" %}{% endif %}</span>
 </div>
 {% endblock %}
 

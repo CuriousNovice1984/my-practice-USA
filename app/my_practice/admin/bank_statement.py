@@ -56,7 +56,7 @@ class BankTransactionAdmin(admin.ModelAdmin):
         (
             gettext_lazy("Payment Partner"),
             {
-                "fields": ("payer_name", "payer_iban", "reference"),
+                "fields": ("payer_name", "payer_account", "reference"),
             },
         ),
         (
@@ -97,7 +97,7 @@ class BankTransactionAdmin(admin.ModelAdmin):
         color = "#16a34a" if obj.is_income else "#dc2626"  # green : red
         amount_str = f"{obj.amount:+.2f}"
         return format_html(
-            '<span style="color: {}; font-weight: 600;">{} €</span>',
+            '<span style="color: {}; font-weight: 600;">${}</span>',
             color,
             amount_str,
         )

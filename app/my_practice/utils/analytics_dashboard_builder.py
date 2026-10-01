@@ -13,7 +13,7 @@ from django.utils import timezone
 from ..models import CompanyExpense, CompanyWithdrawal, Invoice, TimeOff
 from ..utils.capacity_helpers import get_capacity_trends
 from ..utils.date_helpers import DateRangeHelper
-from ..utils.practice_days import berlin_public_holidays
+from ..utils.practice_days import us_federal_holidays
 from ..utils.timeoff_helpers import (
     calculate_timeoff_for_period,
     calculate_timeoff_for_year,
@@ -414,13 +414,13 @@ class AnalyticsDashboardBuilder:
         return yearly_data
 
     def _get_timeoff_by_type_for_year(self, year: int) -> dict:
-        """Get time-off workdays (Mon-Fri, excluding Berlin public holidays) broken down by type for a specific year."""
+        """Get time-off workdays (Mon-Fri, excluding US federal holidays) broken down by type for a specific year."""
         year_start = date(year, 1, 1)
         year_end = date(year, 12, 31)
 
         # Get all timeoff that touches this year
         timeoff_periods = TimeOff.objects.filter(start_date__lte=year_end, end_date__gte=year_start)
-        holidays = berlin_public_holidays(year)
+        holidays = us_federal_holidays(year)
 
         type_days: dict[str, int] = defaultdict(int)
 

@@ -8,47 +8,39 @@ from django import template
 from django.utils.safestring import mark_safe
 
 from ..utils.chart_helpers import MONTH_ABBREVIATIONS
-from ..utils.formatting import format_currency_de
+from ..utils.formatting import format_currency, format_currency_rounded
 
 register = template.Library()
 
 
 @register.filter(name="currency")
-def currency(value, symbol="€"):
+def currency(value, symbol="$"):
     """
-    Format a number as currency with German/EU format.
-    Uses period as thousands separator and comma as decimal separator.
-    Usage: {{ value|currency }} or {{ value|currency:'$' }}
-    Example: 11064.03 -> "11.064,03 €"
+    Format a number as US currency.
+    Usage: {{ value|currency }}
+    Example: 11064.03 -> "$11,064.03"
     """
-    if value is None:
+    if value is None or value == "":
         return "–"
 
     try:
-        return format_currency_de(value, symbol)
+        return format_currency(value, symbol)
     except ValueError, TypeError:
         return value
 
 
 @register.filter(name="currency_rounded")
-def currency_rounded(value, symbol="€"):
+def currency_rounded(value, symbol="$"):
     """
-    Format a number as currency with German/EU format, rounded to full euros.
-    Usage: {{ value|currency_rounded }} or {{ value|currency_rounded:'$' }}
-    Example: 11064.57 -> "11.065 €"
+    Format a number as US currency, rounded to whole dollars.
+    Usage: {{ value|currency_rounded }}
+    Example: 11064.57 -> "$11,065"
     """
-    if value is None:
+    if value is None or value == "":
         return "–"
 
     try:
-        value = float(value)
-        # Round to nearest integer
-        rounded = round(value)
-        # Format with thousands separator
-        formatted = f"{rounded:,}"
-        # Convert to German format: replace , with .
-        formatted = formatted.replace(",", ".")
-        return f"{formatted}\u00a0{symbol}"
+        return format_currency_rounded(value, symbol)
     except ValueError, TypeError:
         return value
 
@@ -127,7 +119,7 @@ def js_number(value, default=0):
 def stat_card(label, value, suffix="", color="primary"):
     """
     Render a stat card component.
-    Usage: {% stat_card label="Revenue" value=1234.56 suffix="€" color="success" %}
+    Usage: {% stat_card label="Revenue" value=1234.56 suffix="$" color="success" %}
     """
     color_classes = {
         "primary": "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);",
@@ -234,21 +226,6 @@ def abs_value(value):
         return abs(float(value))
     except ValueError, TypeError:
         return 0
-
-
-_WEEKDAY_NAMES = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
-
-@register.filter(name="weekday_name")
-def weekday_name(value):
-    """
-    Convert a weekday integer (0=Mon … 6=Sun) to a short German name.
-    Usage: {{ 0|weekday_name }} → 'Mo'
-    """
-    try:
-        return _WEEKDAY_NAMES[int(value)]
-    except ValueError, TypeError, IndexError:
-        return str(value)
 
 
 @register.filter(name="privacy_name")

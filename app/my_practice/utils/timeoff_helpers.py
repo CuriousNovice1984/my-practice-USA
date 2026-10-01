@@ -8,7 +8,7 @@ other time-off statistics.
 from datetime import date
 
 from .date_helpers import DateRangeHelper
-from .practice_days import berlin_public_holidays
+from .practice_days import us_federal_holidays
 
 
 def calculate_timeoff_for_year(year: int) -> dict:
@@ -48,7 +48,7 @@ def calculate_timeoff_for_period(start_date, end_date):
     # Build holiday set once, covering all years in the range
     _holidays: set[date] = set()
     for yr in range(start_date.year, end_date.year + 1):
-        _holidays |= berlin_public_holidays(yr)
+        _holidays |= us_federal_holidays(yr)
 
     total_days_off = 0
     total_workdays_off = 0

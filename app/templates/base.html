@@ -47,7 +47,7 @@
                     {% else %}
                         {% block page_icon %}🏥{% endblock %}
                     {% endif %}
-                    {% block page_title %}{% if request.current_practice and request.current_practice.short_title_de %}{% if CURRENT_LANGUAGE == "en" %}{{ request.current_practice.short_title_en|default:request.current_practice.short_title_de }}{% else %}{{ request.current_practice.short_title_de }}{% endif %}{% else %}{% trans "Practice management" %}{% endif %}{% endblock %}
+                    {% block page_title %}{% if request.current_practice and request.current_practice.short_title %}{{ request.current_practice.short_title }}{% else %}{% trans "Practice management" %}{% endif %}{% endblock %}
                     </h1>
                     <p class="subtitle">{% block page_subtitle %}{% trans "Practice management" %}{% endblock %}</p>
                 </div>
@@ -61,12 +61,12 @@
                     {% if user.is_authenticated and user.practices.exists %}
                     <div class="dropdown practice-switcher">
                         {% trans "Practice" as practice_fallback %}
-                        <span>{% if CURRENT_LANGUAGE == "en" %}{{ request.current_practice.short_title_en|default:request.current_practice.short_title_de|default:practice_fallback }}{% else %}{{ request.current_practice.short_title_de|default:practice_fallback }}{% endif %} ▾</span>
+                        <span>{{ request.current_practice.short_title|default:practice_fallback }} ▾</span>
                         <div class="dropdown-content">
                             {% for practice in user.practices.all %}
                             <a href="{% url 'practice_switch' practice.slug %}"
                                {% if practice.id == request.current_practice.id %}class="current-practice"{% endif %}>
-                                {% if CURRENT_LANGUAGE == "en" %}{{ practice.short_title_en|default:practice.short_title_de|default:practice.name }}{% else %}{{ practice.short_title_de|default:practice.name }}{% endif %}
+                                {{ practice.short_title|default:practice.name }}
                                 {% if practice.id == request.current_practice.id %}✓{% endif %}
                             </a>
                             {% endfor %}
@@ -74,14 +74,6 @@
                         </div>
                     </div>
                     {% endif %}
-                    <form id="lang-form" action="{% url 'set_language' %}" method="post" class="hidden">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <input type="hidden" name="language" id="lang-input" value="">
-                    </form>
-                    <button class="lang-toggle" id="langToggle" title="Sprache wechseln / Switch language">
-                        {{ CURRENT_LANGUAGE|upper }}
-                    </button>
                     <button class="theme-toggle" id="themeToggle" title="{% trans 'Toggle dark mode' %}">
                         🌙
                     </button>
@@ -110,14 +102,6 @@
                 {{ message|safe }}
             </div>
             {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if update_available %}
-        <div x-data="{ show: true }" x-show="show" class="update-banner">
-            <span>{{ current_version }} → <a href="https://github.com/dholbach/my-practice/releases/tag/{{ latest_version }}" target="_blank" rel="noopener"><strong>{{ latest_version }}</strong></a> {% trans "available" %}</span>
-            <a href="https://github.com/dholbach/my-practice/blob/main/UPGRADING.md" target="_blank" rel="noopener">Upgrade</a>
-            <button @click="show = false" class="update-banner__dismiss" title="{% trans 'Close' %}">✕</button>
         </div>
         {% endif %}
 
@@ -175,19 +159,6 @@
 
                 // Save state to localStorage
                 localStorage.setItem('privacyMode', isActive);
-            });
-        })();
-
-        // Language switcher
-        (function() {
-            const toggle = document.getElementById('langToggle');
-            const form = document.getElementById('lang-form');
-            const input = document.getElementById('lang-input');
-            const currentLang = '{{ CURRENT_LANGUAGE }}';
-
-            toggle.addEventListener('click', function() {
-                input.value = currentLang === 'de' ? 'en' : 'de';
-                form.submit();
             });
         })();
 

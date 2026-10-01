@@ -35,7 +35,7 @@ class TaxYearSummaryViewTest(TestCase):
             slug="tax-views-fix",
             title="Test Practitioner",
             email="test@practice.com",
-            city="Berlin",
+            city="Austin",
         )
         # Add user to practice and set in session
         self.practice.users.add(self.user)
@@ -135,9 +135,10 @@ class TaxYearSummaryViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        # Gross profit = revenue - tax-deductible expenses
-        expected_gross = Decimal("1000.00") - Decimal("200.00")
-        self.assertEqual(response.context["gross_profit"], expected_gross)
+        # Net profit = revenue - tax-deductible expenses (no home office configured)
+        self.assertEqual(response.context["net_profit"], Decimal("800.00"))
+        # Self-employment tax estimate: 800 × 0.9235 × 0.153
+        self.assertEqual(response.context["se_tax_estimate"], Decimal("113.04"))
 
     def test_tax_summary_empty_year(self):
         """Test tax summary for year with no data"""
@@ -172,21 +173,27 @@ class TaxYearSummaryViewTest(TestCase):
             self.assertIn("count", first_month)
 
     def test_tax_summary_home_office_deduction(self):
-        """Home-office deduction is calculated from non-practice weekdays."""
-        self.practice.practice_weekdays = [0, 2, 4]
-        self.practice.save(update_fields=["practice_weekdays"])
+        """Simplified method: $5 per square foot of home office."""
+        self.practice.home_office_sqft = 100
+        self.practice.save(update_fields=["home_office_sqft"])
 
         response = self.client_http.get(reverse("tax_year_summary"), {"year": 2025})
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("home_office", response.context)
-        self.assertIn("home_office_deduction", response.context)
-        self.assertGreater(response.context["home_office_deduction"], Decimal("0"))
+        self.assertEqual(response.context["home_office_deduction"], Decimal("500"))
+        self.assertFalse(response.context["home_office_limited"])
+        self.assertEqual(response.context["net_profit"], Decimal("300.00"))
 
-        expected_profit = (
-            Decimal("1000.00") - Decimal("200.00") - response.context["home_office_deduction"]
-        )
-        self.assertEqual(response.context["gross_profit"], expected_profit)
+    def test_home_office_deduction_cannot_create_a_loss(self):
+        """The simplified deduction is limited to net profit before it."""
+        self.practice.home_office_sqft = 300  # $1,500 > $800 profit
+        self.practice.save(update_fields=["home_office_sqft"])
+
+        response = self.client_http.get(reverse("tax_year_summary"), {"year": 2025})
+
+        self.assertEqual(response.context["home_office_deduction"], Decimal("800.00"))
+        self.assertTrue(response.context["home_office_limited"])
+        self.assertEqual(response.context["net_profit"], Decimal("0.00"))
 
     def test_tax_summary_shows_multi_practice_allocation_notice(self):
         """Allocation notice appears when user has more than one active practice."""
@@ -195,7 +202,7 @@ class TaxYearSummaryViewTest(TestCase):
             slug="tax-views-fix-coaching",
             title="Coach",
             email="coach@example.com",
-            city="Berlin",
+            city="Austin",
         )
         second_practice.users.add(self.user)
 
@@ -203,7 +210,7 @@ class TaxYearSummaryViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["show_multi_practice_allocation_notice"])
-        self.assertContains(response, "Pauschalen-Aufteilung bei mehreren Tätigkeiten")
+        self.assertContains(response, "Home office split for multiple practices")
 
     def test_practice_split_computes_ratios(self):
         """practice_split contains revenue and session-share ratios when multi-practice."""
@@ -212,7 +219,7 @@ class TaxYearSummaryViewTest(TestCase):
             slug="tax-views-fix-coaching2",
             title="Coach",
             email="coach2@example.com",
-            city="Berlin",
+            city="Austin",
         )
         second_practice.users.add(self.user)
 
@@ -221,13 +228,12 @@ class TaxYearSummaryViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         split = response.context["practice_split"]
         self.assertIsNotNone(split)
-        # This practice has 1000€ revenue; second has 0€ → share should be 1
+        # This practice has $1000 revenue; second has $0 → share should be 1
         self.assertEqual(split.revenue_share, Decimal("1"))
         # No sessions in DB → falls back to 1
         self.assertEqual(split.session_share, Decimal("1"))
         # Pre-computed split amounts are present
         self.assertIn("home_office_split_revenue", response.context)
-        self.assertIn("fahrtkosten_split_revenue", response.context)
 
     def test_practice_split_is_none_for_single_practice(self):
         """practice_split is None when only one active practice."""
@@ -250,7 +256,7 @@ class TaxYearNoteViewTest(TestCase):
             slug="note-test-practice",
             title="Dr. Muster",
             email="note@example.com",
-            city="Berlin",
+            city="Austin",
         )
         self.practice.users.add(self.user)
         session = self.client_http.session
@@ -370,47 +376,3 @@ class TaxYearNoteViewTest(TestCase):
         response = self.client_http.get(reverse("tax_year_summary"), {"year": 2024})
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["tax_year_note"])
-
-
-class WorkdayAuditViewTest(TestCase):
-    """Tests for tax_workday_audit view."""
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="audituser", password="12345")
-        self.client_http = TestClient()
-        self.client_http.login(username="audituser", password="12345")
-
-        self.practice = Practice.objects.create(
-            name="Audit Test Practice",
-            slug="audit-test-practice",
-            title="Dr. Audit",
-            email="audit@example.com",
-            city="Berlin",
-            practice_weekdays=[0, 2, 4],  # Mon, Wed, Fri in-practice
-        )
-        self.practice.users.add(self.user)
-        session = self.client_http.session
-        session["current_practice_slug"] = self.practice.slug
-        session.save()
-
-    def test_audit_page_loads(self):
-        """GET tax_workday_audit returns 200."""
-        response = self.client_http.get(reverse("tax_workday_audit"), {"year": 2025})
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "my_practice/tax_workday_audit.html")
-
-    def test_audit_context_has_entries(self):
-        """Audit result contains entries for a full year."""
-        response = self.client_http.get(reverse("tax_workday_audit"), {"year": 2025})
-        self.assertEqual(response.status_code, 200)
-        audit = response.context["audit"]
-        self.assertIsNotNone(audit)
-        self.assertGreater(len(audit.entries), 0)
-
-    def test_audit_practice_vs_home_office_split(self):
-        """Practice weekdays produce practice-day entries; others are home-office."""
-        response = self.client_http.get(reverse("tax_workday_audit"), {"year": 2025})
-        audit = response.context["audit"]
-        # With Mon/Wed/Fri as practice days, both practice_days and home_office_days > 0
-        self.assertGreater(audit.practice_days, 0)
-        self.assertGreater(audit.home_office_days, 0)

@@ -113,7 +113,9 @@ class Invoice(TimestampedModel):
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name=gettext_lazy("Tax rate (%)"),
-        help_text=gettext_lazy("Kleinunternehmer = 0%"),
+        help_text=gettext_lazy(
+            "Counseling services are generally not subject to sales tax — leave at 0%"
+        ),
     )
     tax_amount = models.DecimalField(
         max_digits=10,
@@ -178,7 +180,7 @@ class Invoice(TimestampedModel):
                             % {
                                 "number": self.invoice_number,
                                 "client_code": existing.client.client_code,
-                                "date": existing.invoice_date.strftime("%d.%m.%Y"),
+                                "date": existing.invoice_date.strftime("%d %b %y"),
                             }
                         }
                     )

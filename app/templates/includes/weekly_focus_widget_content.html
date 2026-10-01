@@ -15,7 +15,7 @@ via the "Today" quick action. Read-only here; manage due dates in the queue.
             <div class="weekly-sessions-list">
                 {% for session in week_sessions %}
                 <div class="weekly-session-item {% if session.is_today %}is-today{% elif session.is_past %}is-past{% endif %}">
-                    <span class="weekly-session-date">{{ session.date|date:"D d.m." }}</span>
+                    <span class="weekly-session-date">{{ session.date|date:"D d M" }}</span>
                     {% if session.time %}
                         <span class="weekly-session-time">{{ session.time|time:"H:i" }}</span>
                     {% endif %}
@@ -45,7 +45,7 @@ via the "Today" quick action. Read-only here; manage due dates in the queue.
                     </div>
                     {% if task.due_date %}
                         <span class="weekly-focus-task-due {% if task.is_overdue %}due-overdue{% endif %}">
-                            {{ task.due_date|date:"d.m." }}
+                            {{ task.due_date|date:"d M" }}
                         </span>
                     {% endif %}
                 </div>

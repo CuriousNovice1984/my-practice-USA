@@ -24,11 +24,6 @@
             <div class="helptext">{{ form.client_code.help_text }}</div>
             {% endif %}
         </div>
-        <div class="form-group">
-            {{ form.language.label_tag }}
-            {{ form.language }}
-            {{ form.language.errors }}
-        </div>
     </div>
 
     {% if form.salutation %}
@@ -37,7 +32,7 @@
         {{ form.salutation }}
         {{ form.salutation.errors }}
         <div class="helptext">
-            {% blocktrans %}💡 Personal greeting for invoice emails (e.g., "Dear John", "Liebe Maria").<br>
+            {% blocktrans %}💡 Personal greeting for invoice emails (e.g., "Dear John").<br>
             If left empty, a generic salutation will be used. <strong>Highly recommended for better client experience!</strong>{% endblocktrans %}
         </div>
     </div>
@@ -59,28 +54,6 @@
         {{ form.is_online_client.errors }}
         <div class="helptext">
             {% trans "💻 For clients whose sessions are primarily conducted online (video)." %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if form.needs_gebueh_invoice %}
-    <div class="form-group">
-        {{ form.needs_gebueh_invoice.label_tag }}
-        {{ form.needs_gebueh_invoice }}
-        {{ form.needs_gebueh_invoice.errors }}
-        <div class="helptext">
-            {% trans "Enable GebüH billing (official German fee schedule for licensed alternative practitioners) for this client." %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if form.gebueh_no_diagnosis %}
-    <div class="form-group">
-        {{ form.gebueh_no_diagnosis.label_tag }}
-        {{ form.gebueh_no_diagnosis }}
-        {{ form.gebueh_no_diagnosis.errors }}
-        <div class="helptext">
-            {% trans "Omit the diagnosis line from this client's GebüH invoices." %}
         </div>
     </div>
     {% endif %}

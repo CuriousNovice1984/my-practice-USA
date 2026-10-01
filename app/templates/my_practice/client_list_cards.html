@@ -96,8 +96,8 @@
 {% endif %}
 
 {% if clients_deletion_eligible %}
-<div class="section-header section-header--gdpr">
-    {% trans "Clients eligible for deletion (GDPR Art. 17)" %}
+<div class="section-header section-header--retention">
+    {% trans "Records retention ended — eligible for destruction" %}
     <span class="count">{{ clients_deletion_eligible|length }}</span>
 </div>
 <div class="table-container">
@@ -116,10 +116,10 @@
         <tr>
           <td>{{ client.client_code }}</td>
           <td><span class="sensitive-data">{{ client.full_name }}</span></td>
-          <td>{{ client.last_session_date|date:"d.m.Y" }}</td>
+          <td>{{ client.last_session_date|date:"d M y" }}</td>
           <td>{% if client.email %}✓{% else %}—{% endif %}</td>
           <td>
-            <a href="{% url 'client_gdpr_delete_confirm' client.pk %}"
+            <a href="{% url 'client_records_delete_confirm' client.pk %}"
                class="btn btn-sm btn-danger">
               {% if client.email %}{% trans "Delete & notify" %}{% else %}{% trans "Delete" %}{% endif %}
             </a>

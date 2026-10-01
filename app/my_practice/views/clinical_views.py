@@ -32,7 +32,6 @@ from ..models.clinical import (
     SESSION_LOG_TEMPLATE,
     MoodTag,
 )
-from ..models.gebueh import GebuhZiffer, Leistungserfassung
 from ..utils.view_helpers import safe_next
 
 
@@ -116,7 +115,7 @@ def session_log_create(request, pk):
 
         messages.success(
             request,
-            _("Session log for %(date)s saved.") % {"date": session_date.strftime("%d.%m.%Y")},
+            _("Session log for %(date)s saved.") % {"date": session_date.strftime("%d %b %y")},
         )
         return redirect(reverse("client_detail", kwargs={"pk": pk}) + "#ptab-protokoll")
 
@@ -419,7 +418,7 @@ def session_duration_edit(request, pk, session_pk):
                 "Session of %(date)s cannot be edited: it has already been billed. "
                 "Remove the invoice item first."
             )
-            % {"date": session.session_date.strftime("%d.%m.%Y")},
+            % {"date": session.session_date.strftime("%d %b %y")},
         )
         return redirect(reverse("client_detail", kwargs={"pk": pk}) + "#ptab-protokoll")
     try:
@@ -455,10 +454,10 @@ def session_delete(request, client_pk, session_pk):
                 "Session of %(date)s cannot be deleted: it has already been billed. "
                 "Remove the invoice item first."
             )
-            % {"date": session.session_date.strftime("%d.%m.%Y")},
+            % {"date": session.session_date.strftime("%d %b %y")},
         )
     else:
-        date_str = session.session_date.strftime("%d.%m.%Y")
+        date_str = session.session_date.strftime("%d %b %y")
         session.delete()  # SessionLog cascades via OneToOne(on_delete=CASCADE)
         messages.success(request, _("Session of %(date)s deleted.") % {"date": date_str})
     return redirect(reverse("client_detail", kwargs={"pk": client_pk}) + "#ptab-protokoll")
@@ -565,130 +564,3 @@ def session_toggle_billable(request, client_pk, session_pk):
             fallback=reverse("client_detail", kwargs={"pk": client_pk}) + "#ptab-protokoll",
         )
     )
-
-
-# ─── GebüH Leistungserfassung ──────────────────────────────────────────────────
-
-
-def gebueh_leistung_create(request, client_pk, session_pk):
-    """
-    Quick-entry form for GebüH Ziffern on a session.
-
-    GET: Checkbox list of all Ziffern with satz_max; shows existing entries if re-entering.
-    POST: Replaces existing Leistungserfassung for this session, emits soft warnings for
-          frequency overruns and Alleinleistung conflicts.
-    Only accessible when client.needs_gebueh_invoice is True.
-    """
-    from datetime import timedelta
-
-    client = _get_scoped_client(request, client_pk)
-    if not client.needs_gebueh_invoice:
-        messages.error(request, _("GebüH billing is not enabled for this client."))
-        return redirect(reverse("client_detail", kwargs={"pk": client_pk}) + "#ptab-protokoll")
-
-    session = get_object_or_404(Session, pk=session_pk, client=client)
-    ziffern = GebuhZiffer.objects.all()
-    existing = list(session.gebueh_leistungen.select_related("ziffer").all())
-    existing_ziffer_ids = {le.ziffer_id for le in existing}
-
-    if request.method == "POST":
-        selected_ids_raw = request.POST.getlist("ziffern")
-        try:
-            selected_ids = [int(x) for x in selected_ids_raw]
-        except ValueError:
-            messages.error(request, _("Invalid input."))
-            return redirect(request.path)
-
-        selected_ziffern = list(GebuhZiffer.objects.filter(pk__in=selected_ids))
-
-        if not selected_ziffern:
-            # Allow clearing — remove all entries for this session
-            session.gebueh_leistungen.all().delete()
-            messages.success(
-                request,
-                _("GebüH entries for %(date)s cleared.")
-                % {"date": session.session_date.strftime("%d.%m.%Y")},
-            )
-            return redirect(reverse("client_detail", kwargs={"pk": client_pk}) + "#ptab-protokoll")
-
-        # ── Soft warnings ──────────────────────────────────────────────────────
-
-        # Alleinleistung: Ziffer 4 must not be combined with others
-        alleinleistung_nummern = {"4"}
-        selected_nummern = {z.nummer for z in selected_ziffern}
-        if alleinleistung_nummern & selected_nummern and len(selected_ziffern) > 1:
-            messages.warning(
-                request,
-                _(
-                    "Warning: Ziffer %(nr)s may only be billed as a standalone service "
-                    "and must not be combined with other Ziffern."
-                )
-                % {"nr": ", ".join(alleinleistung_nummern & selected_nummern)},
-            )
-
-        # Frequency check for Ziffern with bezugszeitraum_tage
-        today = timezone.localdate()
-        for ziffer in selected_ziffern:
-            if ziffer.max_haeufigkeit and ziffer.bezugszeitraum_tage:
-                since = today - timedelta(days=ziffer.bezugszeitraum_tage)
-                count = (
-                    Leistungserfassung.objects.filter(
-                        session__client=client,
-                        ziffer=ziffer,
-                        session__session_date__gte=since,
-                        session__session_date__lte=today,
-                    )
-                    .exclude(session=session)
-                    .count()
-                )
-                if count >= ziffer.max_haeufigkeit:
-                    messages.warning(
-                        request,
-                        _(
-                            "Warning: Ziffer %(nr)s – already billed %(count)s× within "
-                            "%(days)s days (maximum: %(max)s×)."
-                        )
-                        % {
-                            "nr": ziffer.nummer,
-                            "count": count,
-                            "days": ziffer.bezugszeitraum_tage,
-                            "max": ziffer.max_haeufigkeit,
-                        },
-                    )
-
-        # ── Replace existing entries ───────────────────────────────────────────
-        session.gebueh_leistungen.all().delete()
-        vereinbarter_betrag = Leistungserfassung.compute_vereinbarter_betrag(session)
-        remaining = vereinbarter_betrag
-        for ziffer in selected_ziffern:
-            # Ziffer.satz_max is only the fee schedule's ceiling for this code —
-            # never bill more than what's actually charged for the session. When
-            # several codes are selected, each one draws from what's left of the
-            # agreed fee (in sort_order) so the combined total never exceeds it.
-            betrag = min(ziffer.satz_max, remaining)
-            remaining -= betrag
-            Leistungserfassung.objects.create(
-                session=session,
-                ziffer=ziffer,
-                betrag=betrag,
-                vereinbarter_betrag=vereinbarter_betrag,
-            )
-
-        messages.success(
-            request,
-            _("%(count)s GebüH code(s) saved for %(date)s.")
-            % {
-                "count": len(selected_ziffern),
-                "date": session.session_date.strftime("%d.%m.%Y"),
-            },
-        )
-        return redirect(reverse("client_detail", kwargs={"pk": client_pk}) + "#ptab-protokoll")
-
-    context = {
-        "client": client,
-        "session": session,
-        "ziffern": ziffern,
-        "existing_ziffer_ids": existing_ziffer_ids,
-        "existing": existing,
-    }
-    return render(request, "my_practice/gebueh_leistung_form.html", context)

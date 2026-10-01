@@ -23,7 +23,6 @@ class ClientAdmin(admin.ModelAdmin):
         "client_code",
         "full_name",
         "email",
-        "language",
         "practice",
         "online_badge",
         "active_status",
@@ -34,7 +33,6 @@ class ClientAdmin(admin.ModelAdmin):
     list_filter = [
         "active",
         "is_online_client",
-        "language",
         "practice",
         "tags",
         "created_at",
@@ -60,7 +58,6 @@ class ClientAdmin(admin.ModelAdmin):
                     "client_code",
                     "full_name",
                     "date_of_birth",
-                    "language",
                     "practice",
                 )
             },
@@ -97,8 +94,6 @@ class ClientAdmin(admin.ModelAdmin):
                     "notes",
                     "active",
                     "is_online_client",
-                    "needs_gebueh_invoice",
-                    "gebueh_no_diagnosis",
                 )
             },
         ),

@@ -30,24 +30,9 @@
                 <div class="expense-action-panel__field-wide">
                     <label class="expense-action-panel__field-label">{% trans "Category" %}</label>
                     <select name="category" required class="expense-action-panel__select">
-                        <option value="miete">{% trans "Rent" %}</option>
-                        <option value="telefon">{% trans "Phone" %}</option>
-                        <option value="verband">{% trans "Association / membership fees" %}</option>
-                        <option value="versicherung">{% trans "Insurance" %}</option>
-                        <option value="konto">{% trans "Account / account fees" %}</option>
-                        <option value="webseite">{% trans "Website / domain" %}</option>
-                        <option value="werbung">{% trans "Advertising / marketing" %}</option>
-                        <option value="software">{% trans "Software" %}</option>
-                        <option value="selbsterfahrung">{% trans "Personal therapy (training)" %}</option>
-                        <option value="supervision">{% trans "Supervision" %}</option>
-                        <option value="training">{% trans "Training / continuing education" %}</option>
-                        <option value="ausbildung_ort">{% trans "Training location" %}</option>
-                        <option value="gruppe">{% trans "Group" %}</option>
-                        <option value="materialien">{% trans "Materials" %}</option>
-                        <option value="hardware">{% trans "Hardware" %}</option>
-                        <option value="literatur">{% trans "Literature" %}</option>
-                        <option value="kongress">{% trans "Conference" %}</option>
-                        <option value="other" selected>{% trans "Other" %}</option>
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}"{% if value == "other" %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -87,7 +72,7 @@
                 <div class="expense-trans-card__body">
                     <div class="expense-trans-card__header">
                         <div>
-                            <span class="expense-trans-card__date">{{ trans.transaction_date|date:"d.m.Y" }}</span>
+                            <span class="expense-trans-card__date">{{ trans.transaction_date|date:"d M y" }}</span>
                             <span class="expense-trans-card__payer">{{ trans.payer_name }}</span>
                         </div>
                         <span class="expense-trans-card__amount">{{ trans.amount|currency }}</span>
@@ -97,9 +82,9 @@
                         {{ trans.reference }}
                     </div>
 
-                    {% if trans.payer_iban %}
-                    <div class="expense-trans-card__iban">
-                        IBAN: {{ trans.payer_iban }}
+                    {% if trans.payer_account %}
+                    <div class="expense-trans-card__meta">
+                        {% trans "Account:" %} {{ trans.payer_account }}
                     </div>
                     {% endif %}
                 </div>

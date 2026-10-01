@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load number_filters %}
 {% load static i18n %}
-{% get_current_language as CURRENT_LANGUAGE %}
 
 {% block title %}{% trans "Calendar import" %}{% endblock %}
 
@@ -113,7 +112,7 @@
                                {% if event.is_cancelled or event.is_duplicate %}disabled{% endif %}>
                     </td>
                     <td>
-                        {% if event.start %}{{ event.start|date:'d.m.Y' }}{% else %}-{% endif %}
+                        {% if event.start %}{{ event.start|date:"d M y" }}{% else %}-{% endif %}
                     </td>
                     <td>
                         {% if event.start %}{{ event.start|date:'H:i' }}{% else %}-{% endif %}
@@ -145,7 +144,7 @@
                             {% for service in service_types %}
                             <option value="{{ service.id }}"
                                     {% if event.suggested_service_type_obj and event.suggested_service_type_obj.id == service.id %}selected{% endif %}>
-                                {% if CURRENT_LANGUAGE == "en" %}{{ service.name_en|default:service.name }}{% else %}{{ service.name_de|default:service.name }}{% endif %}
+                                {{ service.name }}
                             </option>
                             {% endfor %}
                         </select>

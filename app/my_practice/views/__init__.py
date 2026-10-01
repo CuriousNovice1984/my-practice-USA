@@ -11,8 +11,6 @@ from .analytics_views import (
 
 # API views
 from .api_views import (
-    contract_pdf,
-    intake_form_pdf,
     invoice_batch_download,
     invoice_pdf,
     next_invoice_number,
@@ -55,9 +53,9 @@ from .client_views import (
     client_detail,
     client_document_delete,
     client_document_upload,
-    client_gdpr_delete,
-    client_gdpr_delete_confirm,
     client_onboarding_step,
+    client_records_delete,
+    client_records_delete_confirm,
     suggest_client_code,
 )
 
@@ -68,7 +66,6 @@ from .clinical_views import (
     client_note_update,
     client_profile_save,
     client_triage_summary,
-    gebueh_leistung_create,
     session_bill,
     session_delete,
     session_duration_edit,
@@ -90,11 +87,8 @@ from .dashboard_views import dashboard, home
 # Email views
 from .email_views import (
     SendCancellationEmailView,
-    SendContractEmailView,
-    SendIntakeFormEmailView,
     SendInvoiceEmailView,
     SendPaymentReminderView,
-    SendQuestionnaireEmailView,
     SendQuestionnairePdfEmailView,
 )
 
@@ -175,7 +169,7 @@ from .tag_views import (
 )
 
 # Tax views
-from .tax_views import save_tax_year_note, tax_quarter_overview, tax_workday_audit, tax_year_summary
+from .tax_views import save_tax_year_note, tax_quarter_overview, tax_year_summary
 
 # Time-off views
 from .timeoff_views import (
@@ -209,8 +203,8 @@ __all__ = [
     "client_detail",
     "client_document_upload",
     "client_document_delete",
-    "client_gdpr_delete_confirm",
-    "client_gdpr_delete",
+    "client_records_delete_confirm",
+    "client_records_delete",
     "client_onboarding_step",
     "suggest_client_code",
     # Invoice views
@@ -245,8 +239,6 @@ __all__ = [
     "focus_queue_snooze",
     "focus_queue_set_due_today",
     # API views
-    "contract_pdf",
-    "intake_form_pdf",
     "invoice_batch_download",
     "next_invoice_number",
     "invoice_pdf",
@@ -259,11 +251,8 @@ __all__ = [
     "BankWithdrawalReviewView",
     # Email views
     "SendCancellationEmailView",
-    "SendContractEmailView",
-    "SendIntakeFormEmailView",
     "SendInvoiceEmailView",
     "SendPaymentReminderView",
-    "SendQuestionnaireEmailView",
     "SendQuestionnairePdfEmailView",
     # Time-off views
     "timeoff_list",
@@ -293,7 +282,6 @@ __all__ = [
     "tax_year_summary",
     "tax_quarter_overview",
     "save_tax_year_note",
-    "tax_workday_audit",
     # Tag views
     "TagListView",
     "TagCreateView",
@@ -326,7 +314,6 @@ __all__ = [
     "client_note_update",
     "client_profile_save",
     "client_triage_summary",
-    "gebueh_leistung_create",
     "session_bill",
     "session_delete",
     "session_log_create",

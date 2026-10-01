@@ -122,7 +122,7 @@ class ChecklistItemPause(TimestampedModel):
 
     def __str__(self) -> str:
         until = (
-            self.paused_until.strftime("%d.%m.%Y") if self.paused_until else str(_("indefinite"))
+            self.paused_until.strftime("%d %b %y") if self.paused_until else str(_("indefinite"))
         )
         return f"⏸ {self.checklist_type}/{self.item_id} ({_('until')} {until})"
 

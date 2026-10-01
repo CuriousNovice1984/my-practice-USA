@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Confirm GDPR deletion" %}{% endblock %}
-{% block page_title %}{% trans "GDPR deletion" %}{% endblock %}
+{% block title %}{% trans "Confirm records destruction" %}{% endblock %}
+{% block page_title %}{% trans "Destroy client records" %}{% endblock %}
 {% block page_subtitle %}{{ client.client_code }}{% endblock %}
 
 {% block content %}
@@ -23,7 +23,7 @@
   </ul>
 
   <h3>{% trans "Before deletion" %}</h3>
-  <form method="post" action="{% url 'client_gdpr_delete' client.pk %}">
+  <form method="post" action="{% url 'client_records_delete' client.pk %}">
     {% csrf_token %}
 
     <div class="checklist-item">
@@ -36,14 +36,15 @@
     <div class="checklist-item">
       <label>
         <input type="checkbox" name="confirm_retention" required>
-        {% trans "I confirm that the legal 10-year retention period has expired." %}
-        {% trans "Last session:" %} <strong>{{ last_session|date:"d.m.Y" }}</strong>
+        {% blocktrans with years=retention_years %}I confirm that the {{ years }}-year records retention period required by every state I'm licensed in has ended.{% endblocktrans %}
+        {% trans "Last session:" %} <strong>{{ last_session|date:"d M y" }}</strong> ·
+        {% trans "Retention ended:" %} <strong>{{ retention_end|date:"d M y" }}</strong>
       </label>
     </div>
 
     {% if has_email %}
     <p class="help-text">
-      {% blocktrans with client_email=client.email %}A deletion notice will be sent to <strong class="sensitive-data">{{ client_email }}</strong> (Art. 17 GDPR).{% endblocktrans %}
+      {% blocktrans with client_email=client.email %}A notice that the records were destroyed will be sent to <strong class="sensitive-data">{{ client_email }}</strong>.{% endblocktrans %}
     </p>
     {% else %}
     <p class="help-text">

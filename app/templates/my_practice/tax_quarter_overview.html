@@ -3,10 +3,10 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "Quarterly Tax Overview" %} {{ year }}{% endblock %}
+{% block title %}{% trans "Quarterly estimated taxes" %} {{ year }}{% endblock %}
 
-{% block page_title %}{% trans "Quarterly Tax Overview" %}{% endblock %}
-{% block page_subtitle %}{% trans "Advance payments & revenue per quarter" %}{% endblock %}
+{% block page_title %}{% trans "Quarterly estimated taxes" %}{% endblock %}
+{% block page_subtitle %}{% trans "IRS Form 1040-ES periods, due dates and payments" %}{% endblock %}
 
 {% block content %}
 <div class="tax-summary-container">
@@ -15,7 +15,7 @@
     <div class="mb-4">
         <a href="{% url 'tax_year_summary' %}?year={{ year }}"
            class="text-sm text-secondary link-plain">
-            📋 → {% trans "Tax Year Summary (for tax return)" %}
+            📋 → {% trans "Tax Year Summary (Schedule C)" %}
         </a>
     </div>
 
@@ -44,9 +44,14 @@
             <div class="label">{{ year }}</div>
         </div>
         <div class="stat-card primary">
-            <h3>{% trans "Tax Advance Payments" %}</h3>
+            <h3>{% trans "Estimated tax payments" %}</h3>
             <div class="value">{{ total_tax_paid|currency }}</div>
             <div class="label">{{ year }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>{% trans "Est. self-employment tax" %}</h3>
+            <div class="value">{{ total_se_tax_estimate|currency }}</div>
+            <div class="label">{% trans "on net profit" %}</div>
         </div>
     </div>
 
@@ -62,12 +67,15 @@
 
     <!-- Add Payment CTA -->
     <a href="{{ add_payment_url }}" class="add-payment-btn">
-        + {% trans "Record new tax advance payment" %}
+        + {% trans "Record estimated tax payment" %}
     </a>
 
     <!-- Quarterly Table -->
     <div class="section-card">
-        <h2>📊 {% blocktrans %}Quarterly figures {{ year }}{% endblocktrans %}</h2>
+        <h2>📊 {% blocktrans %}Estimated tax periods {{ year }}{% endblocktrans %}</h2>
+        <p class="text-sm text-secondary mb-4">
+            {% trans "IRS periods aren't calendar quarters: Q2 covers April–May and Q3 June–August. A payment counts toward the period whose due date it was made by." %}
+        </p>
 
         <div class="table-container table-container--wide">
             <table class="quarter-table">
@@ -75,10 +83,12 @@
                     <tr>
                         <th>{% trans "Quarter" %}</th>
                         <th>{% trans "Period" %}</th>
+                        <th>{% trans "Due" %}</th>
                         <th class="text-right">{% trans "Revenue" %}</th>
                         <th class="text-right">{% trans "Expenses" %}</th>
                         <th class="text-right">{% trans "Net profit" %}</th>
-                        <th class="text-right">{% trans "Advance payment" %}</th>
+                        <th class="text-right">{% trans "Est. SE tax" %}</th>
+                        <th class="text-right">{% trans "Paid" %}</th>
                         <th>{% trans "Status" %}</th>
                     </tr>
                 </thead>
@@ -90,17 +100,19 @@
                             {% if q.is_current %}<span class="text-xs text-secondary"> ({% trans "current" %})</span>{% endif %}
                         </td>
                         <td class="text-sm text-secondary">
-                            {{ q.start|date:"d.m." }} – {{ q.end|date:"d.m.Y" }}
+                            {{ q.start|date:"d M" }} – {{ q.end|date:"d M y" }}
                         </td>
+                        <td class="text-sm">{{ q.due|date:"d M y" }}</td>
                         <td class="text-right">{{ q.revenue|currency }}</td>
                         <td class="text-right">{{ q.expenses|currency }}</td>
                         <td class="text-right">{{ q.net_profit|currency }}</td>
+                        <td class="text-right">{{ q.se_tax_estimate|currency }}</td>
                         <td class="text-right">
                             {% if q.tax_paid %}
                                 {{ q.tax_paid|currency }}
                                 <ul class="withdrawal-list">
                                     {% for w in q.tax_withdrawals %}
-                                    <li>{{ w.date|date:"d.m." }}: {{ w.amount|currency }}</li>
+                                    <li>{{ w.date|date:"d M" }}: {{ w.amount|currency }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -123,10 +135,11 @@
                 </tbody>
                 <tfoot>
                     <tr class="totals-row">
-                        <td colspan="2"><strong>{% blocktrans %}Total {{ year }}{% endblocktrans %}</strong></td>
+                        <td colspan="3"><strong>{% blocktrans %}Total {{ year }}{% endblocktrans %}</strong></td>
                         <td class="text-right">{{ total_revenue|currency }}</td>
                         <td class="text-right">{{ total_expenses|currency }}</td>
                         <td class="text-right">{{ total_net_profit|currency }}</td>
+                        <td class="text-right">{{ total_se_tax_estimate|currency }}</td>
                         <td class="text-right">{{ total_tax_paid|currency }}</td>
                         <td></td>
                     </tr>
@@ -135,11 +148,11 @@
         </div>
     </div>
 
-    <!-- Annual Tax Settlement (Steuerbescheid) -->
+    <!-- Annual return result -->
     <div class="section-card mt-6" x-data="taxSettlement()" x-init="init()">
-        <h2>📄 {% trans "Tax Assessment (Steuerbescheid)" %}</h2>
+        <h2>📄 {% trans "Annual return result" %}</h2>
         <p class="text-sm text-secondary mb-4">
-            {% trans "Record the outcome of your annual tax return once the assessment notice arrives." %}
+            {% trans "Record the balance due or refund from your filed Form 1040." %}
         </p>
 
         <div x-show="!editing" class="settlement-display">
@@ -147,29 +160,29 @@
                 <div class="settlement-result {% if settlement_amount >= 0 %}settlement-result--owe{% else %}settlement-result--refund{% endif %}">
                     <span class="settlement-label">
                         {% if settlement_amount >= 0 %}
-                            {% trans "Additional payment (Nachzahlung)" %}
+                            {% trans "Balance due" %}
                         {% else %}
-                            {% trans "Refund (Erstattung)" %}
+                            {% trans "Refund" %}
                         {% endif %}
                     </span>
                     <span class="settlement-amount">{{ settlement_amount|currency }}</span>
                     {% if settlement_date %}
                         <span class="text-sm text-secondary ml-4">
-                            {% trans "Assessment date:" %} {{ settlement_date|date:"d.m.Y" }}
+                            {% trans "Filed:" %} {{ settlement_date|date:"d M y" }}
                         </span>
                     {% endif %}
                 </div>
                 {% if net_tax_position is not None %}
                 <div class="settlement-net mt-3 text-sm">
-                    {% trans "Net tax paid (advance payments + settlement):" %}
+                    {% trans "Net tax paid (estimated payments + balance due/refund):" %}
                     <strong>{{ net_tax_position|currency }}</strong>
                 </div>
                 {% endif %}
             {% else %}
-                <p class="text-secondary text-sm">{% trans "No assessment recorded yet." %}</p>
+                <p class="text-secondary text-sm">{% trans "No return result recorded yet." %}</p>
             {% endif %}
             <button class="btn btn-secondary btn-sm mt-3" x-on:click="startEdit()">
-                {% if settlement_amount is not None %}{% trans "Edit" %}{% else %}{% trans "Record assessment" %}{% endif %}
+                {% if settlement_amount is not None %}{% trans "Edit" %}{% else %}{% trans "Record result" %}{% endif %}
             </button>
         </div>
 
@@ -180,10 +193,10 @@
                 </label>
                 <input type="number" step="0.01" class="form-control"
                        x-model="amount"
-                       placeholder="z. B. 320.00 oder -150.00">
+                       placeholder="{% trans "e.g. 320.00 or -150.00" %}">
             </div>
             <div class="form-row mb-4">
-                <label class="form-label">{% trans "Assessment date" %}</label>
+                <label class="form-label">{% trans "Date filed" %}</label>
                 <input type="date" class="form-control" x-model="settlementDate">
             </div>
             <div class="flex gap-2">

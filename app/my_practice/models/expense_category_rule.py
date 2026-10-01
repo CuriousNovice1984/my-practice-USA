@@ -29,7 +29,7 @@ class ExpenseCategoryRule(TimestampedModel):
         max_length=200,
         verbose_name=_("Counterparty"),
         help_text=_(
-            "Normalized IBAN ('iban:...') or payer name ('name:...') used to "
+            "Normalized account ('account:...') or payer name ('name:...') used to "
             "match future transactions"
         ),
     )

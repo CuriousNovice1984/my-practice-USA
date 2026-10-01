@@ -10,10 +10,6 @@ createcachetable is idempotent, so re-running the migration on a database that
 already has the table is safe.
 """
 
-# Carried across the migration reset (see 0001_initial). A fresh database
-# still needs this, so unlike the historical data fixes it could not simply
-# be dropped when the pre-reset migrations were collapsed.
-
 from django.core.management import call_command
 from django.db import migrations
 
@@ -24,7 +20,7 @@ def create_cache_table(_apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("my_practice", "0002_seed_gebueh_ziffern"),
+        ("my_practice", "0001_initial"),
     ]
 
     operations = [

@@ -65,24 +65,6 @@ CHARACTERS: list[tuple[str, str, str, float, bool]] = [
     ("EUR", "Eurydice", "exile", 1.0, True),
 ]
 
-# ── GebüH billing demo clients ────────────────────────────────────────────────
-# Client codes billed via the GebüH fee schedule (Client.needs_gebueh_invoice).
-# Mode drives what the demo shows on the client detail page:
-#   diagnosed       — Arbeitsdiagnose on file; invoices print the ICD-10 code
-#   probatorik      — early in the probationary phase, no diagnosis yet
-#   probatorik_due  — no diagnosis but >= 5 diagnostic codes billed, so the
-#                     client detail callout escalates to its warning variant
-GEBUEH_CLIENT_MODES: dict[str, str] = {
-    "ARA": "diagnosed",
-    "GED": "probatorik",
-    "THR": "probatorik_due",
-}
-
-# GebüH codes used by the seeder, from the schedule loaded in migration 0006.
-GEBUEH_ZIFFER_THERAPY = "19.2"  # Psychotherapie 50–90 Min
-GEBUEH_ZIFFER_ANAMNESE = "1"  # Anamnese / Folgeanamnese
-GEBUEH_ZIFFER_EXPLORATION = "19.5"  # Psychologische Exploration
-
 # ── Session note templates per archetype ─────────────────────────────────────
 NOTE_TEMPLATES: dict[str, list[str]] = {
     "hero": [
@@ -310,12 +292,11 @@ SESSION_LOG_TEMPLATES: dict[str, list[tuple[str, str, str, list[str], str]]] = {
 
 # ── Client profile templates per archetype ────────────────────────────────────
 # (arbeitsdiagnose, intake_notes, case_notes)
-# ICD-10 labels are kept in their official German wording — they are catalogue
-# entries, not UI text, and that is what appears on a German invoice.
+# Diagnoses use ICD-10-CM codes with their US catalogue labels.
 PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
     "hero": [
         (
-            "Anpassungsstörung mit depressiver Reaktion (F43.2)",
+            "Adjustment disorder with depressed mood (F43.21)",
             "Client presents with sustained exhaustion and the feeling of no longer "
             "being able to perform. High strain at work. No psychiatric history. "
             "Social environment stable. Motivated to change.",
@@ -324,7 +305,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
             "Challenge: fear of change. Next phase: consider trauma assessment.",
         ),
         (
-            "Rezidivierende depressive Störung, ggw. mittelgradige Episode (F33.1)",
+            "Major depressive disorder, recurrent, moderate (F33.1)",
             "Client reports recurring phases of low mood since adolescence. First "
             "inpatient treatment 8 years ago. Currently outpatient. Good compliance. "
             "Medication managed by a psychiatrist.",
@@ -335,7 +316,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
     ],
     "exile": [
         (
-            "Posttraumatische Belastungsstörung (F43.1)",
+            "Post-traumatic stress disorder, unspecified (F43.10)",
             "Client with long-standing post-traumatic symptoms: intrusions, avoidance, "
             "sleep disturbance. Multiple traumatisation in childhood and early adulthood. "
             "No acute suicidality. Previous attempts at therapy: 2.",
@@ -344,8 +325,8 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
             "Resources: creative expression, stable housing.",
         ),
         (
-            "Emotional instabile Persönlichkeitsstörung, Borderline-Typ (F60.31)",
-            "Client presented after a crisis intervention in A&E. Self-harming behaviour "
+            "Borderline personality disorder (F60.3)",
+            "Client presented after a crisis intervention in the ER. Self-harming behaviour "
             "in the past, currently in remission. Familiar with DBT basics. "
             "Wishes for deeper relational work.",
             "Work on distress tolerance and identity. Relational dynamics in focus. "
@@ -355,7 +336,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
     ],
     "ruler": [
         (
-            "Zwanghafte Persönlichkeitsstörung (F60.5)",
+            "Obsessive-compulsive personality disorder (F60.5)",
             "Client holds a leadership position. Presents with work stress and "
             "relationship difficulties. Perfectionism and a need for control as "
             "leitmotifs. High intelligence, limited access to emotions.",
@@ -364,7 +345,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
             "Open up deeper levels slowly.",
         ),
         (
-            "Dysthymia (F34.1)",
+            "Dysthymic disorder (F34.1)",
             "Client describes long-standing, low-grade sadness. Functions well "
             "outwardly, chronically exhausted inwardly. First time in therapy. "
             "Sceptical at first, now motivated.",
@@ -375,7 +356,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
     ],
     "seeker": [
         (
-            "Anpassungsstörung mit Angst und depressiver Reaktion, gemischt (F43.22)",
+            "Adjustment disorder with mixed anxiety and depressed mood (F43.23)",
             "Client in a period of upheaval (separation + career change). "
             "Sustained exhaustion, diffuse anxiety, crisis of meaning. "
             "No psychiatric history. Good resources.",
@@ -384,7 +365,7 @@ PROFILE_TEMPLATES: dict[str, list[tuple[str, str, str]]] = {
             "felt experience. Introduce more body work.",
         ),
         (
-            "Generalisierte Angststörung (F41.1)",
+            "Generalized anxiety disorder (F41.1)",
             "Client with a years-long tendency to worry. Physical accompanying symptoms: "
             "sleep disturbance, muscle tension. Previous treatment: behavioural therapy. "
             "Would like a psychodynamic approach.",

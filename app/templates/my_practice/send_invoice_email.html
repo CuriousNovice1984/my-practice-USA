@@ -50,15 +50,9 @@
 
         <div class="callout callout-primary mt-3">
             <strong class="block mb-1">📎 {% trans "Attachment" %}</strong>
-            {% if invoice.client.language == 'de' %}
-                <a href="{% url 'invoice_pdf' invoice.pk %}" target="_blank" class="link-primary">
-                    📄 Rechnung_{{ invoice.invoice_number }}.pdf
-                </a>
-            {% else %}
-                <a href="{% url 'invoice_pdf' invoice.pk %}" target="_blank" class="link-primary">
-                    📄 Invoice_{{ invoice.invoice_number }}.pdf
-                </a>
-            {% endif %}
+            <a href="{% url 'invoice_pdf' invoice.pk %}" target="_blank" class="link-primary">
+                📄 Invoice_{{ invoice.invoice_number }}.pdf
+            </a>
             <div class="text-muted mt-1">
                 {% trans "This PDF will be automatically attached to the email" %}
             </div>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static i18n %}
+{% load payment_tags %}
 
 {% block title %}{% trans "Bank import" %}{% endblock %}
 
@@ -64,10 +65,10 @@
     <div class="format-info-box">
         <h3 class="format-info-box__title">ℹ️ {% trans "Supported formats" %}</h3>
         <ul class="format-info-box__list">
-            <li>{% trans "CSV bank statement (semicolon-separated)" %}</li>
+            <li>{% trans "CSV bank statement — columns are set in practice settings (default: Date, Description, Amount)" %}</li>
             <li>{% trans "UTF-8 encoding" %}</li>
-            <li>{% trans "German decimal format (90,00 €)" %}</li>
-            <li>{% trans "Date format: DD.MM.YYYY" %}</li>
+            <li>{% trans "US decimal format (1,090.00); negative or (parenthesized) amounts are money out" %}</li>
+            <li>{% trans "Date format: MM/DD/YYYY or YYYY-MM-DD" %}</li>
         </ul>
     </div>
 
@@ -91,13 +92,13 @@
                     <tbody>
                         {% for trans in recent_transactions %}
                         <tr>
-                            <td>{{ trans.transaction_date|date:"d.m.Y" }}</td>
+                            <td>{{ trans.transaction_date|date:"d M y" }}</td>
                             <td><span class="sensitive-data">{{ trans.payer_name }}</span></td>
                             <td class="td-reference">
                                 {{ trans.reference }}
                             </td>
                             <td class="td-amount {% if trans.amount > 0 %}text-success{% else %}text-secondary{% endif %}">
-                                {{ trans.amount|floatformat:2 }}&nbsp;€
+                                {{ trans.amount|currency }}
                             </td>
                             <td>
                                 {% if trans.match_confidence == 'exact' %}

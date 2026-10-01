@@ -459,7 +459,7 @@ def _skip_pending_event(request: HttpRequest, event: "PendingCalendarEvent", red
     event.save(update_fields=["status"])
     messages.success(
         request,
-        _("Event on %(date)s skipped.") % {"date": event.event_date.strftime("%d.%m.%Y")},
+        _("Event on %(date)s skipped.") % {"date": event.event_date.strftime("%d %b %y")},
     )
     return redirect_target
 
@@ -613,7 +613,7 @@ def calendar_event_quick_action(request: HttpRequest, pk: int) -> HttpResponse:
         messages.warning(
             request,
             _("Session on %(date)s is already billed.")
-            % {"date": event.event_date.strftime("%d.%m.%Y")},
+            % {"date": event.event_date.strftime("%d %b %y")},
         )
         return redirect_target
 
@@ -623,7 +623,7 @@ def calendar_event_quick_action(request: HttpRequest, pk: int) -> HttpResponse:
         messages.success(
             request,
             _("Event on %(date)s added to invoice %(number)s.")
-            % {"date": event.event_date.strftime("%d.%m.%Y"), "number": invoice.invoice_number},
+            % {"date": event.event_date.strftime("%d %b %y"), "number": invoice.invoice_number},
         )
     except Exception as e:
         messages.error(request, _("Import error: %(error)s") % {"error": e})

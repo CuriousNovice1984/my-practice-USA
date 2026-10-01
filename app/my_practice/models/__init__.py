@@ -11,9 +11,7 @@ from .client_alias import ClientAlias
 from .clinical import ClientNote, ClientProfile, MoodTag, SessionLog, SupervisionItem
 from .expense_category_rule import ExpenseCategoryRule
 from .financial import CompanyExpense, CompanyWithdrawal, ExpenseReceipt, TaxYearNote
-from .gebueh import GebuhZiffer, Leistungserfassung
 from .inquiry import (
-    INQUIRY_LANGUAGE_CHOICES,
     ClientInquiry,
     InquirySource,
     InquiryStatus,
@@ -35,7 +33,6 @@ __all__ = [
     "Client",
     "ClientDocument",
     "ClientInquiry",
-    "INQUIRY_LANGUAGE_CHOICES",
     "InquirySource",
     "InquiryStatus",
     "MarketingPeriod",
@@ -64,6 +61,4 @@ __all__ = [
     "OperationalChecklistCompletion",
     "ChecklistItemPause",
     "TimestampedModel",
-    "GebuhZiffer",
-    "Leistungserfassung",
 ]

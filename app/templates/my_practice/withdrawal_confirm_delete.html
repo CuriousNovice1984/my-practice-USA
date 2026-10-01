@@ -1,5 +1,6 @@
 {% extends 'my_practice/_confirm_delete_base.html' %}
 {% load static i18n %}
+{% load payment_tags %}
 
 {% block title %}{% trans "Delete withdrawal" %}{% endblock %}
 {% block heading %}{% trans "Delete withdrawal" %}{% endblock %}
@@ -9,11 +10,11 @@
 {% block detail_rows %}
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "Date" %}:</span>
-    <span class="font-semibold">{{ withdrawal.date|date:"d.m.Y" }}</span>
+    <span class="font-semibold">{{ withdrawal.date|date:"d M y" }}</span>
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "Amount" %}:</span>
-    <span class="font-semibold text-lg text-link">{{ withdrawal.amount }} €</span>
+    <span class="font-semibold text-lg text-link">{{ withdrawal.amount|currency }}</span>
 </div>
 <div class="flex justify-between p-3 border-b border-border last:border-b-0">
     <span class="font-medium text-text-secondary">{% trans "Category" %}:</span>

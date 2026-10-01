@@ -16,15 +16,15 @@ from django.utils import timezone
 
 from ..models import CapacityPeriod, Session
 from .date_helpers import DateRangeHelper
-from .practice_days import berlin_public_holidays
+from .practice_days import us_federal_holidays
 from .timeoff_helpers import calculate_timeoff_for_period
 
 
 def _build_holiday_set(start_year: int, end_year: int) -> set[date]:
-    """Build the set of Berlin public holidays covering all years in [start_year, end_year]."""
+    """Build the set of US federal holidays covering all years in [start_year, end_year]."""
     holidays: set[date] = set()
     for yr in range(start_year, end_year + 1):
-        holidays |= berlin_public_holidays(yr)
+        holidays |= us_federal_holidays(yr)
     return holidays
 
 

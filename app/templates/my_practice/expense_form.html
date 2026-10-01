@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static i18n %}
+{% load payment_tags %}
 
 {% block title %}{% if expense %}{% trans "Edit expense" %}{% else %}{% trans "New expense" %}{% endif %}{% endblock %}
 
@@ -146,10 +147,10 @@
         <div class="bank-tx-list">
             {% for tx in linked %}
             <div class="bank-tx-row bank-tx-row--linked">
-                <span class="bank-tx-date">{{ tx.transaction_date|date:"d.m.Y" }}</span>
+                <span class="bank-tx-date">{{ tx.transaction_date|date:"d M y" }}</span>
                 <span class="bank-tx-payer">{{ tx.payer_name }}</span>
                 <span class="bank-tx-ref">{{ tx.reference|truncatechars:60 }}</span>
-                <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount }} €</span>
+                <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount|currency }}</span>
                 <form method="post"
                       action="{% url 'expense_unlink_transaction' expense.pk tx.pk %}"
                       class="bank-tx-action-form">
@@ -183,10 +184,10 @@
             <div class="bank-tx-list bank-tx-list--available">
                 {% for tx in available_transactions %}
                 <div class="bank-tx-row bank-tx-row--available">
-                    <span class="bank-tx-date">{{ tx.transaction_date|date:"d.m.Y" }}</span>
+                    <span class="bank-tx-date">{{ tx.transaction_date|date:"d M y" }}</span>
                     <span class="bank-tx-payer">{{ tx.payer_name }}</span>
                     <span class="bank-tx-ref">{{ tx.reference|truncatechars:60 }}</span>
-                    <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount }} €</span>
+                    <span class="bank-tx-amount bank-tx-amount--negative">{{ tx.amount|currency }}</span>
                     <form method="post"
                           action="{% url 'expense_link_transaction' expense.pk %}"
                           class="bank-tx-action-form">
@@ -224,7 +225,7 @@
                     <option value="">{% trans "— Select source …" %}</option>
                     {% for candidate in merge_candidates %}
                     <option value="{{ candidate.pk }}">
-                        {{ candidate.date|date:"d.m.Y" }} – {{ candidate.amount }} € – {{ candidate.description|truncatechars:40|default:no_description }}
+                        {{ candidate.date|date:"d M y" }} – {{ candidate.amount|currency }} – {{ candidate.description|truncatechars:40|default:no_description }}
                     </option>
                     {% endfor %}
                 </select>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load payment_tags %}
 {% load i18n %}
 {% load l10n %}
 
@@ -110,9 +111,9 @@
             {% for trans in recently_matched %}
             <div class="trans-row">
                 <div class="trans-row__meta">
-                    <span class="text-muted text-sm">{{ trans.transaction_date|date:"d.m.Y" }}</span>
+                    <span class="text-muted text-sm">{{ trans.transaction_date|date:"d M y" }}</span>
                     <span class="sensitive-data text-primary fw-500">{{ trans.payer_name }}</span>
-                    <span class="text-success font-semibold">{{ trans.amount|floatformat:2 }}&nbsp;€</span>
+                    <span class="text-success font-semibold">{{ trans.amount|currency }}</span>
                 </div>
                 <div class="trans-row__actions">
                     <span class="text-muted text-sm">→</span>
@@ -189,18 +190,18 @@
             <div class="trans-card__info-grid">
                 <div>
                     <div class="field-label">{% trans "Date" %}</div>
-                    <div class="text-primary font-semibold">{{ trans.transaction_date|date:"d.m.Y" }}</div>
+                    <div class="text-primary font-semibold">{{ trans.transaction_date|date:"d M y" }}</div>
                 </div>
                 <div>
                     <div class="field-label">{% trans "Amount" %}</div>
                     <div class="text-xl font-bold {% if trans.amount < 0 %}text-danger{% else %}text-success{% endif %}">
                         {% if trans.amount < 0 %}🔻{% endif %}
-                        {{ trans.amount|floatformat:2 }}&nbsp;€
+                        {{ trans.amount|currency }}
                     </div>
                     {% if trans.amount < 0 %}
                     <div class="text-xs text-danger mt-1">{% trans "Expense" %}</div>
                     {% elif trans.match_confidence == 'auto-contribution' %}
-                    <div class="text-xs text-success mt-1 font-bold">💰 {% trans "Capital contribution" %}</div>
+                    <div class="text-xs text-success mt-1 font-bold">💰 {% trans "Owner contribution" %}</div>
                     {% endif %}
                 </div>
             </div>
@@ -227,7 +228,7 @@
                         <a href="{% url 'invoice_detail' trans.matching_paid_invoice.pk %}" class="text-warning underline">{{ trans.matching_paid_invoice.invoice_number }}</a>
                         {% trans "was already marked as paid" %}
                         {% if trans.matching_paid_invoice.paid_date %}
-                        ({{ trans.matching_paid_invoice.paid_date|date:"d.m.Y" }})
+                        ({{ trans.matching_paid_invoice.paid_date|date:"d M y" }})
                         {% endif %}
                         → <a href="{% url 'client_detail' trans.matching_paid_invoice.client.pk %}" class="text-warning underline">{{ trans.matching_paid_invoice.client.client_code }}</a>
                     </div>
@@ -236,7 +237,7 @@
                 {% endif %}
                 {% if trans.match_confidence == 'auto-contribution' %}
                 <div class="inline-note inline-note--success">
-                    <div class="box-title">💰 {% trans "Capital contribution from private account" %}</div>
+                    <div class="box-title">💰 {% trans "Owner contribution from private account" %}</div>
                     <div class="text-sm">
                         {% trans "This transaction was transferred from the stored private bank account." %}<br>
                         {% trans "It is presumably a capital contribution (deposit into business assets)." %}
@@ -266,7 +267,7 @@
                         <div class="text-success text-sm">
                             {% trans "Invoice" %} <strong>{{ trans.matching_unpaid_invoice.invoice_number }}</strong>
                             → <strong>{{ trans.matching_unpaid_invoice.client.client_code }}</strong>
-                            ({{ trans.matching_unpaid_invoice.calculate_total|floatformat:2 }}&nbsp;€)
+                            ({{ trans.matching_unpaid_invoice.calculate_total|currency }})
                         </div>
                     </div>
                     <div class="d-flex gap-sm">

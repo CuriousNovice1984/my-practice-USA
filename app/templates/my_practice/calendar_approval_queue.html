@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static i18n %}
-{% get_current_language as CURRENT_LANGUAGE %}
+{% load payment_tags %}
 
 {% block title %}{% trans "Approve calendar events" %}{% endblock %}
 {% block page_title %}{% trans "Approve calendar events" %}{% endblock %}
@@ -65,7 +65,7 @@
                     data-client="{{ group.client.pk }}" data-month="{{ group.month|date:'Y-m' }}">
                 <option value="">{% trans "Select invoice…" %}</option>
                 {% for invoice in group.invoices %}
-                <option value="{{ invoice.pk }}">{{ invoice.invoice_number }} ({{ invoice.invoice_date|date:"d.m.Y" }}){% if invoice.item_count %} · {% blocktrans count counter=invoice.item_count %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktrans %}{% endif %}{% if invoice.total %} · {{ invoice.total|floatformat:0 }} €{% endif %}</option>
+                <option value="{{ invoice.pk }}">{{ invoice.invoice_number }} ({{ invoice.invoice_date|date:"d M y" }}){% if invoice.item_count %} · {% blocktrans count counter=invoice.item_count %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktrans %}{% endif %}{% if invoice.total %} · {{ invoice.total|currency_rounded }}{% endif %}</option>
                 {% endfor %}
                 <option value="new">+ {% trans "Create new invoice" %}</option>
             </select>
@@ -103,7 +103,7 @@
                         <input type="checkbox" class="event-checkbox event-checkbox-group-{{ forloop.parentloop.counter }}"
                                name="event_ids" value="{{ event.pk }}" checked>
                     </td>
-                    <td class="text-primary">{{ event.event_date|date:"d.m.Y" }}</td>
+                    <td class="text-primary">{{ event.event_date|date:"d M y" }}</td>
                     <td class="text-muted">
                         {% if event.event_time %}{{ event.event_time|time:"H:i" }}{% else %}–{% endif %}
                     </td>
@@ -111,7 +111,7 @@
                     <td class="text-primary">{{ event.summary }}</td>
                     <td class="text-muted text-sm">
                         {% if event.suggested_service_type %}
-                            {% if CURRENT_LANGUAGE == "en" %}{{ event.suggested_service_type.name_en|default:event.suggested_service_type.name }}{% else %}{{ event.suggested_service_type.name_de|default:event.suggested_service_type.name }}{% endif %}
+                            {{ event.suggested_service_type.name }}
                         {% else %}
                             <em>—</em>
                         {% endif %}

@@ -20,7 +20,8 @@ class SetupPracticeCommandTests(TestCase):
         practice = Practice.objects.get(slug="anna-mustermann")
         self.assertEqual(practice.name, "Anna Mustermann")
         self.assertEqual(practice.email, "mail@example.com")
-        self.assertFalse(practice.is_kleinunternehmer)
+        self.assertEqual(practice.state, "TX")
+        self.assertEqual(practice.title, "Licensed Professional Counselor (LPC)")
         self.assertIn("Created practice", out.getvalue())
 
     def test_assigns_practice_to_existing_superusers(self):

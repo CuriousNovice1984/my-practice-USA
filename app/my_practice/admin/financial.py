@@ -132,4 +132,4 @@ class CompanyExpenseAdmin(admin.ModelAdmin):
     def amount_display(self, obj):
         """Format amount with Euro symbol"""
         amount_str = f"{float(obj.amount):.2f}"
-        return format_html("<strong>{} €</strong>", amount_str)
+        return format_html("<strong>${}</strong>", amount_str)

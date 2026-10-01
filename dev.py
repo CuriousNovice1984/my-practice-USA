@@ -658,26 +658,6 @@ def cmd_makemigrations(args):
     return run_docker_command(["python", "manage.py", "makemigrations"] + args)
 
 
-def cmd_i18n(args):
-    """Extract and compile translation strings.
-
-    Usage:
-      ./dev.py i18n                # extract + compile (default)
-      ./dev.py i18n makemessages   # extract only
-      ./dev.py i18n compilemessages  # compile only
-    """
-    sub = args[0] if args else None
-    if sub in (None, "makemessages"):
-        result = run_docker_command(
-            ["python", "manage.py", "makemessages", "-l", "de", "-l", "en", "--no-wrap"]
-        )
-        if result.returncode != 0:
-            return result
-    if sub in (None, "compilemessages"):
-        result = run_docker_command(["python", "manage.py", "compilemessages"])
-    return result
-
-
 def cmd_runserver(args):
     """Start development server (if not already running)"""
     print("Note: Django server should already be running in the container")
@@ -1414,7 +1394,6 @@ COMMANDS = {
     "ps": cmd_ps,
     "migrate": cmd_migrate,
     "makemigrations": cmd_makemigrations,
-    "i18n": cmd_i18n,
     "runserver": cmd_runserver,
     "quality": cmd_quality,
     "lint": cmd_lint,
@@ -1456,7 +1435,6 @@ def print_help():
     print("  ps                   - Show container status")
     print("  migrate [args]       - Run migrations")
     print("  makemigrations [args]- Create new migrations")
-    print("  i18n [sub]           - Extract/compile translations (makemessages + compilemessages)")
     print("  runserver            - Info about development server")
     print("  lint                 - Fast lint check: ruff format + ruff check (no tests, ~seconds)")
     print("  lint --verbose       - Lint with full output")

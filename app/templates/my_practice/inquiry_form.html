@@ -62,10 +62,6 @@
                 <label for="{{ form.source.id_for_label }}">{{ form.source.label }}</label>
                 {{ form.source }}
             </div>
-            <div class="form-group">
-                <label for="{{ form.language.id_for_label }}">{{ form.language.label }}</label>
-                {{ form.language }}
-            </div>
         </div>
 
         <div class="form-row">
@@ -182,7 +178,7 @@
             </div>
             {% for tmpl in all_email_templates %}
             <div class="stage-email-card" x-show="status === '{{ tmpl.status }}'"{% if tmpl.status != current_status %} style="display:none"{% endif %}>
-                {% include 'includes/email_card.html' with card_title=tmpl.label card_id="stage-template-"|add:tmpl.status subject_de=tmpl.subject body_de=tmpl.body subject_en=tmpl.subject_en body_en=tmpl.body_en %}
+                {% include 'includes/email_card.html' with card_title=tmpl.label card_id="stage-template-"|add:tmpl.status subject=tmpl.subject body=tmpl.body %}
             </div>
             {% endfor %}
         </div>

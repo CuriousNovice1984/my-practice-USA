@@ -20,14 +20,14 @@ class Command(BaseCommand):
             "name": "no-next-session",
             "color": "orange",
             "category": "attention",
-            "description": "Klient hat keine geplante nächste Sitzung",
+            "description": "Client has no upcoming session scheduled",
             "is_system": True,
         },
         "incomplete-intake": {
             "name": "incomplete-intake",
             "color": "yellow",
             "category": "attention",
-            "description": "Aufnahmeprozess noch nicht abgeschlossen",
+            "description": "Intake process not yet complete",
             "is_system": True,
         },
     }

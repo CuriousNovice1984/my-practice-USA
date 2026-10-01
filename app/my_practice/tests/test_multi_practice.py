@@ -73,7 +73,7 @@ class UserPracticeModelTest(TestCase):
     def test_user_practice_str(self):
         """Test UserPractice string representation"""
         up = UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
-        expected = f"{self.user.username} → {self.practice.name} (Eigentümer)"
+        expected = f"{self.user.username} → {self.practice.name} (Owner)"
         self.assertEqual(str(up), expected)
 
     def test_user_practice_unique_together(self):

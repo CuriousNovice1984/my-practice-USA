@@ -115,7 +115,7 @@ class Command(BaseCommand):
 
         start_dt, end_dt = self._determine_fetch_window(practice, forced_days, future_days)
         self.stdout.write(
-            f"  Window: {start_dt.strftime('%d.%m.%Y')} – {end_dt.strftime('%d.%m.%Y')}"
+            f"  Window: {start_dt.strftime('%d %b %y')} – {end_dt.strftime('%d %b %y')}"
         )
 
         try:

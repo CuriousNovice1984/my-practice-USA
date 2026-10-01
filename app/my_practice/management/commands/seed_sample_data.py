@@ -39,14 +39,9 @@ from ...models import (
     UserPractice,
 )
 from ...models.clinical import ClientProfile, SessionLog
-from ...models.gebueh import Leistungserfassung
 from ...utils.invoice_helpers import get_next_invoice_number
 from ._seed_data import (
     CHARACTERS,
-    GEBUEH_CLIENT_MODES,
-    GEBUEH_ZIFFER_ANAMNESE,
-    GEBUEH_ZIFFER_EXPLORATION,
-    GEBUEH_ZIFFER_THERAPY,
     NOTE_TEMPLATES,
     PROFILE_TEMPLATES,
     SESSION_LOG_TEMPLATES,
@@ -59,12 +54,12 @@ SEED_PENDING_EVENT_PREFIX = "seed-demo-event-"
 # (category, description, amount, day_of_month, months_interval)
 # The category keys are CompanyExpense choice values — do not translate them.
 RECURRING_EXPENSES: list[tuple[str, str, str, int, int]] = [
-    ("miete", "Practice rent", "800.00", 1, 1),
-    ("konto", "Account maintenance fee", "12.00", 5, 1),
-    ("telefon", "Phone & internet", "45.00", 10, 1),
+    ("rent", "Practice rent", "800.00", 1, 1),
+    ("bank_fees", "Account maintenance fee", "12.00", 5, 1),
+    ("phone_internet", "Phone & internet", "45.00", 10, 1),
     ("supervision", "Supervision", "150.00", 15, 3),
     ("software", "Practice management software", "25.00", 20, 3),
-    ("verband", "Professional association fee", "60.00", 1, 12),
+    ("dues", "Professional association fee", "60.00", 1, 12),
 ]
 
 # ── Inquiry seed data ─────────────────────────────────────────────────────────
@@ -139,8 +134,8 @@ class Command(BaseCommand):
             return  # clear-only; run without --clear to reseed
 
         # Always ensure the demo practice has the correct display name (idempotent).
-        Practice.objects.filter(slug=DEMO_SLUG).exclude(short_title_de="Therapie (Demo)").update(
-            short_title_de="Therapie (Demo)", short_title_en="Therapy (Demo)"
+        Practice.objects.filter(slug=DEMO_SLUG).exclude(short_title="Therapy (Demo)").update(
+            short_title="Therapy (Demo)"
         )
 
         # Idempotency check: fictional names like "Frodo Baggins" won't appear in a real practice
@@ -159,7 +154,6 @@ class Command(BaseCommand):
         self._create_notes(clients, char_map, sessions_by_client, rng)
         self._create_session_logs(clients, char_map, sessions_by_client, rng)
         self._create_profiles(clients, char_map, rng)
-        self._create_gebueh_leistungen(clients, char_map, sessions_by_client)
         self._create_invoices(practice, sessions_by_client, service_60, service_90, rng)
         self._create_pending_events(practice, clients, char_map, service_60, rng)
         self._create_inquiries(practice, rng)
@@ -192,11 +186,10 @@ class Command(BaseCommand):
         practice = Practice.objects.create(
             slug=DEMO_SLUG,
             name="Anna Schmidt",
-            short_title_de="Therapie (Demo)",
-            short_title_en="Therapy (Demo)",
-            # Regulated German professional designation — kept untranslated, it is
-            # the licence the practice bills under, not UI text.
-            title="Heilpraktikerin für Psychotherapie",
+            short_title="Therapy (Demo)",
+            title="Licensed Professional Counselor (LPC)",
+            city="Austin",
+            state="TX",
         )
         self.stdout.write(f"  ✓ Created practice: {practice.name}")
         return practice
@@ -222,8 +215,6 @@ class Command(BaseCommand):
             code="therapy_60",
             defaults={
                 "name": "60-Min Therapy Session",
-                "name_de": "Psychotherapie, 60 Min.",
-                "name_en": "60-Min Therapy Session",
                 "default_duration": 60,
                 "practice": None,
             },
@@ -232,8 +223,6 @@ class Command(BaseCommand):
             code="therapy_90",
             defaults={
                 "name": "90-Min Therapy Session",
-                "name_de": "Psychotherapie, 90 Min.",
-                "name_en": "90-Min Therapy Session",
                 "default_duration": 90,
                 "practice": None,
             },
@@ -305,7 +294,6 @@ class Command(BaseCommand):
                 hourly_rate_90=rate_90,
                 active=active,
                 first_seen_date=intake_date,
-                needs_gebueh_invoice=code in GEBUEH_CLIENT_MODES,
             )
             char_map[client.pk] = char_entry
 
@@ -485,13 +473,9 @@ class Command(BaseCommand):
 
         count = 0
         for client in clients:
-            code, _, archetype, _, _ = char_map[client.pk]
+            _, _, archetype, _, _ = char_map[client.pk]
             templates = PROFILE_TEMPLATES[archetype]
             arbeitsdiagnose, intake_notes, case_notes = rng.choice(templates)
-            # Probationary-phase clients have no working diagnosis yet — that is
-            # what surfaces the diagnosis callout on the client detail page.
-            if GEBUEH_CLIENT_MODES.get(code, "").startswith("probatorik"):
-                arbeitsdiagnose = ""
             _, created = ClientProfile.objects.get_or_create(
                 client=client,
                 defaults={
@@ -503,71 +487,6 @@ class Command(BaseCommand):
             if created:
                 count += 1
         self.stdout.write(f"  ✓ Created {count} client profiles")
-
-    # ── GebüH service entries ─────────────────────────────────────────────────
-
-    def _create_gebueh_leistungen(
-        self,
-        clients: list[Client],
-        char_map: dict[int, tuple],
-        sessions_by_client: dict[int, list[Session]],
-    ) -> None:
-        """
-        Record GebüH service lines for the clients billed via the fee schedule.
-
-        Each session gets the therapy code plus, at intake and periodically, a
-        diagnostic code. Amounts follow the same rule as the quick-entry UI: a
-        code bills its satz_max, capped by whatever is left of the session fee,
-        so the recorded lines never exceed what the client is actually charged.
-        """
-        from ...models.gebueh import GebuhZiffer
-
-        wanted = [
-            GEBUEH_ZIFFER_THERAPY,
-            GEBUEH_ZIFFER_ANAMNESE,
-            GEBUEH_ZIFFER_EXPLORATION,
-        ]
-        ziffern = {z.nummer: z for z in GebuhZiffer.objects.filter(nummer__in=wanted)}
-        if len(ziffern) < len(wanted):
-            self.stdout.write("  ℹ️  Skipping GebüH entries (fee schedule not seeded)")
-            return
-
-        count = 0
-        for client in clients:
-            code = char_map[client.pk][0]
-            mode = GEBUEH_CLIENT_MODES.get(code)
-            if mode is None:
-                continue
-
-            sessions = sorted(sessions_by_client.get(client.pk, []), key=lambda s: s.session_date)
-            # Early in the probationary phase only the first few sessions are billed.
-            if mode == "probatorik":
-                sessions = sessions[:3]
-
-            for idx, session in enumerate(sessions):
-                nummern = [GEBUEH_ZIFFER_THERAPY]
-                if idx == 0:
-                    nummern.append(GEBUEH_ZIFFER_ANAMNESE)
-                elif mode != "probatorik" and idx % 4 == 0:
-                    nummern.append(GEBUEH_ZIFFER_EXPLORATION)
-
-                remaining = Leistungserfassung.compute_vereinbarter_betrag(session)
-                agreed = remaining
-                for nummer in nummern:
-                    if remaining <= 0:
-                        break
-                    ziffer = ziffern[nummer]
-                    betrag = min(ziffer.satz_max, remaining)
-                    _, made = Leistungserfassung.objects.get_or_create(
-                        session=session,
-                        ziffer=ziffer,
-                        defaults={"betrag": betrag, "vereinbarter_betrag": agreed},
-                    )
-                    if made:
-                        remaining -= betrag
-                        count += 1
-
-        self.stdout.write(f"  ✓ Created {count} GebüH service entries")
 
     # ── Invoice creation ──────────────────────────────────────────────────────
 
@@ -873,9 +792,6 @@ class Command(BaseCommand):
         # practice behind that neither reseeds nor reads as demo data.
         with transaction.atomic():
             Invoice.objects.filter(client__full_name__in=SEED_NAMES).delete()
-            # Leistungserfassung.session is PROTECT, so the GebüH lines have to go
-            # before the sessions they hang off.
-            Leistungserfassung.objects.filter(session__client__full_name__in=SEED_NAMES).delete()
             Session.objects.filter(client__full_name__in=SEED_NAMES).delete()
             PendingCalendarEvent.objects.filter(
                 google_event_id__startswith=SEED_PENDING_EVENT_PREFIX
@@ -927,7 +843,6 @@ class Command(BaseCommand):
         Order matters — each queryset must be a leaf of the PROTECT graph rooted
         at Practice by the time it runs.
         """
-        Leistungserfassung.objects.filter(session__client__practice=demo_practice).delete()
         # Invoices before sessions: InvoiceItem.session is PROTECT, and an item
         # only goes away with its invoice.
         Invoice.objects.filter(client__practice=demo_practice).delete()

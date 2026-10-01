@@ -75,12 +75,6 @@ class ClientInquiryQuerySet(PracticeScopedQuerySet):
         return self.exclude(status__in=closed)
 
 
-INQUIRY_LANGUAGE_CHOICES = [
-    ("de", _("German")),
-    ("en", _("English")),
-]
-
-
 class ClientInquiry(TimestampedModel):
     """
     Tracks a prospective client from first contact through intake.
@@ -112,13 +106,6 @@ class ClientInquiry(TimestampedModel):
     inquiry_date = models.DateField(
         default=timezone.localdate,
         verbose_name=_("Date received"),
-    )
-    language = models.CharField(
-        max_length=2,
-        choices=INQUIRY_LANGUAGE_CHOICES,
-        default="de",
-        verbose_name=_("Language"),
-        help_text=_("Preferred language of the person inquiring"),
     )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     initial_contact_notes = models.TextField(
@@ -190,7 +177,7 @@ class MarketingPeriod(TimestampedModel):
     Records a marketing channel or budget active during a given timeframe.
 
     Examples:
-      - "Google Ads 5 €/Tag" from April to August 2026
+      - "Google Ads $5/day" from April to August 2026
       - "It's Complicated Premium" from January 2026 onwards
 
     Used to correlate inquiry sources with active spend / subscription periods.
@@ -213,7 +200,7 @@ class MarketingPeriod(TimestampedModel):
     description = models.CharField(
         max_length=500,
         verbose_name=_("Description"),
-        help_text=_('e.g. "Google Ads €5/day" or "It\'s Complicated Premium"'),
+        help_text=_('e.g. "Google Ads $5/day" or "It\'s Complicated Premium"'),
     )
 
     class Meta:

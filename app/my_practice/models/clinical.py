@@ -1,7 +1,7 @@
 """
 Clinical documentation models (P-009).
 
-All narrative content is encrypted at-rest using Fernet (Art. 9 DSGVO).
+All narrative content is encrypted at rest using Fernet (health data).
 Session metadata (mood_tags, session_type) is stored unencrypted to enable
 triage signals without requiring the Fernet key.
 
@@ -23,102 +23,99 @@ from .session import Session
 # Baked into form initial= values (not model defaults) so existing blank
 # ClientProfile rows stay empty and only new forms get the boilerplate.
 #
-# NOT wrapped for i18n: this is authored clinical-documentation scaffolding in
-# Somatic Experiencing terminology, written by/for the therapist's own German-
-# language case notes — not app UI chrome that should switch with the UI
-# language toggle. Same rationale as the authored bilingual email content in
-# utils/email_utils.py, except this has no English counterpart to pair with
-# since it's the practitioner's own working template, not client-facing.
+# NOT wrapped for i18n: this is authored clinical-documentation scaffolding
+# (Somatic Experiencing-informed), the therapist's own working template — not
+# app UI chrome.
 
 INTAKE_NOTES_TEMPLATE = """\
-## Anliegen
+## Presenting concern
 
 
-## Symptomatik
-**Beginn:**
-**Verschlimmerung/Änderung:**
+## Symptoms
+**Onset:**
+**Worsening/changes:**
 
-## Körperlich
-
-
-## Affektiv
+## Physical
 
 
-## Erst-Auslöser
+## Affective
 
 
-## Aktuelle Trigger
+## Initial trigger
 
 
-## Anamnestische Besonderheiten
+## Current triggers
 
 
-## Nervensystem / ANS
-**Erregungslage / Grundmuster:**
+## Notable history
 
-## Limbisches System
-**Nähe-/Distanzmuster:**
-**Empathiefähigkeit:**
+
+## Nervous system / ANS
+**Arousal state / baseline pattern:**
+
+## Limbic system
+**Closeness/distance patterns:**
+**Capacity for empathy:**
 
 ## Neocortical
-**Präsenz / Fokusstabilität:**
+**Presence / focus stability:**
 
-## Glaubenssätze
-
-
-## SIBAM-Elemente
-**Bevorzugt:**
-
-## Ressourcen
+## Core beliefs
 
 
-## Arbeitshypothese
+## SIBAM elements
+**Preferred:**
+
+## Resources
 
 
-## Arbeitsdiagnose
+## Working hypothesis
 
 
-## Therapieziel (Patient)
+## Working diagnosis
 
 
-## "Sicherheit" gestört durch
+## Treatment goal (client)
 
 
-## Prozessaufbau
+## "Safety" disrupted by
 
 
-## Verlauf
+## Treatment plan / process
+
+
+## Course of treatment
 """
 
 CASE_NOTES_TEMPLATE = """\
-## Themen
+## Themes
 
 
-## Familiendynamik
+## Family dynamics
 
 
-## Ich-Du
+## Relational (I–Thou)
 
 
-## Herausforderungen
+## Challenges
 
 
-## Zukünftige Arbeit / Fragen
+## Future work / questions
 
 
 """
 
 SESSION_LOG_TEMPLATE = """\
-## Gefühl danach
+## Felt sense afterwards
 
 
-## Wahrnehmung
+## Observations
 
 
-## Sitzung
+## Session
 
 
-## Was half
+## What helped
 """
 
 

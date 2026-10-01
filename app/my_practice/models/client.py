@@ -70,17 +70,6 @@ class ClientQuerySet(PracticeScopedQuerySet):
 class Client(TimestampedModel):
     """Client model - matches existing 'clients' table"""
 
-    class Language(StrEnum):
-        """Invoice language for bilingual invoice generation."""
-
-        DE = "de"
-        EN = "en"
-
-    LANGUAGE_CHOICES = [
-        (Language.DE, _("German")),
-        (Language.EN, _("English")),
-    ]
-
     id = models.AutoField(primary_key=True)
 
     # Practice relationship - which practice this client belongs to
@@ -112,8 +101,8 @@ class Client(TimestampedModel):
     cost_carrier = models.CharField(
         max_length=200,
         blank=True,
-        verbose_name=_("Cost carrier"),
-        help_text=_("Cost carrier / health insurance (e.g. 'self-pay', 'Allianz PKV')"),
+        verbose_name=_("Payment source"),
+        help_text=_("How the client pays (e.g. 'self-pay', 'HSA/FSA card')"),
     )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
 
@@ -164,32 +153,16 @@ class Client(TimestampedModel):
         verbose_name=_("Cancellation fee"),
     )
 
-    language = models.CharField(
-        max_length=2,
-        choices=LANGUAGE_CHOICES,
-        default=Language.DE,
-        verbose_name=_("Preferred language"),
-    )
     salutation = models.CharField(
         max_length=100,
         blank=True,
         verbose_name=_("Email salutation"),
         help_text=_(
-            "Custom salutation for emails (e.g., 'Dear John', 'Liebe Maria'). "
-            "If empty, will use 'Dear {name}' (EN) or 'Liebe:r {name}' (DE)."
+            "Custom salutation for emails (e.g., 'Dear John'). "
+            "If empty, 'Dear {first name}' is used."
         ),
     )
     active = models.BooleanField(default=True, verbose_name=_("Active"))
-    needs_gebueh_invoice = models.BooleanField(
-        default=False,
-        verbose_name=_("GebüH-Rechnung"),
-        help_text=_("GebüH-Ziffern und Diagnose auf der Rechnung ausweisen (PKV / Beihilfe)"),
-    )
-    gebueh_no_diagnosis = models.BooleanField(
-        default=False,
-        verbose_name=_("No diagnosis on invoice"),
-        help_text=_("Omit the diagnosis line from GebüH invoices for this client"),
-    )
     is_online_client = models.BooleanField(
         default=False,
         verbose_name=_("Online client"),
@@ -237,21 +210,23 @@ def client_document_upload_path(instance: "ClientDocument", filename: str) -> st
 
 
 class ClientDocument(TimestampedModel):
-    """A document attached to a client (contract, intake form, referral, etc.)."""
+    """A document attached to a client (informed consent, intake paperwork, referral, etc.)."""
 
     class DocumentType(StrEnum):
         INTRO_NOTES = "intro_notes"
         INTAKE = "intake"
-        ANAMNESE = "anamnese"
-        CONTRACT = "contract"
+        HEALTH_HISTORY = "health_history"
+        CONSENT = "consent"
+        RELEASE = "release"
         REFERRAL = "referral"
         OTHER = "other"
 
     DOC_TYPE_CHOICES = [
         (DocumentType.INTRO_NOTES, _("Intro meeting (notes)")),
-        (DocumentType.INTAKE, _("Intake form")),
-        (DocumentType.ANAMNESE, _("Anamnesis questionnaire")),
-        (DocumentType.CONTRACT, _("Treatment contract")),
+        (DocumentType.INTAKE, _("Intake paperwork")),
+        (DocumentType.HEALTH_HISTORY, _("Health history questionnaire")),
+        (DocumentType.CONSENT, _("Informed consent")),
+        (DocumentType.RELEASE, _("Release of information")),
         (DocumentType.REFERRAL, _("Referral")),
         (DocumentType.OTHER, _("Other")),
     ]

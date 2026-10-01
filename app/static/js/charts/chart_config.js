@@ -103,7 +103,7 @@ const ChartConfig = {
             showTrendline: true,
             showGrid: true,
             showPoints: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         expense: {
             name: 'Expense Trends',
@@ -113,7 +113,7 @@ const ChartConfig = {
             },
             showGrid: true,
             showValueLabels: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         comparison: {
             name: 'Year Comparison',
@@ -125,14 +125,14 @@ const ChartConfig = {
             showLegend: true,
             showGrid: true,
             barSpacing: 20,
-            valueSuffix: '€'
+            valueSuffix: '$'
         },
         multibar: {
             name: 'Multi-bar Comparison',
             type: 'grouped-bar',
             showGrid: true,
             showLegend: true,
-            valueSuffix: '€'
+            valueSuffix: '$'
         }
     },
 

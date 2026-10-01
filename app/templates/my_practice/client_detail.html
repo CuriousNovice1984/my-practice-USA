@@ -43,7 +43,7 @@
         {% if open_supervision_count %}<span class="cn-badge cn-badge-warn" title="{% trans 'Open supervision topics' %}">🔍 {{ open_supervision_count }}</span>{% endif %}
     </button>
     <button class="page-tab-btn" data-tab="abrechnung" onclick="pageTab('abrechnung', this)">💶 {% trans "Billing" %}
-        {% if stats.open_amount %}<span class="cn-badge cn-badge-warn">{{ stats.open_amount|floatformat:0 }} €</span>{% endif %}
+        {% if stats.open_amount %}<span class="cn-badge cn-badge-warn">{{ stats.open_amount|currency_rounded }}</span>{% endif %}
     </button>
     <div class="cd-header-actions">
         <a href="{% url 'client_list' %}" class="btn btn-secondary btn-sm">{% trans "← List" %}</a>
@@ -61,7 +61,7 @@
         </div>
         <div class="info-card">
             <h4>{% trans "Last session" %}</h4>
-            <div class="value">{% if stats.last_session_date %}{{ stats.last_session_date|date:"d.m.Y" }}{% else %}–{% endif %}</div>
+            <div class="value">{% if stats.last_session_date %}{{ stats.last_session_date|date:"d M y" }}{% else %}–{% endif %}</div>
             {% if stats.last_session_date %}<div class="sub-value">{% blocktrans with ago=stats.last_session_date|timesince %}{{ ago }} ago{% endblocktrans %}</div>{% endif %}
         </div>
         <div class="info-card">
@@ -92,7 +92,7 @@
             <div class="cockpit-session-list">
             {% for log in recent_session_logs %}
             <div class="cockpit-session-row">
-                <span class="cockpit-session-date">{{ log.session.session_date|date:"d.m.Y" }}</span>
+                <span class="cockpit-session-date">{{ log.session.session_date|date:"d M y" }}</span>
                 <span class="cockpit-session-summary">{% if log.summary %}{{ log.summary }}{% else %}<em class="text-muted">–</em>{% endif %}</span>
                 <span class="cockpit-session-badges">
                     {% for tag in log.mood_tags %}
@@ -150,17 +150,6 @@
         <h3>{% trans "Tags" %}</h3>
         {% include 'includes/client_tags.html' with client=client editable=True %}
     </div>
-
-    {% if client.needs_gebueh_invoice and not profile.arbeitsdiagnose %}
-    <div class="callout {% if gebueh_diagnostic_count >= 5 %}callout-warning{% else %}callout-primary{% endif %}">
-        {% if gebueh_diagnostic_count >= 5 %}
-        ⚠️ {% trans "Diagnosis not yet set — the probationary phase appears to be complete. Please update the diagnosis." %}
-        {% else %}
-        {% blocktrans %}Diagnosis not yet set — invoices currently show "Probationary phase". Please update once the probationary phase is complete.{% endblocktrans %}
-        {% endif %}
-        <a href="#id_arbeitsdiagnose" class="ml-1 whitespace-nowrap">{% trans "Edit →" %}</a>
-    </div>
-    {% endif %}
 
     <form method="post" action="{% url 'client_profile_save' client.pk %}" id="client-profile-form"
           data-draft-guard
@@ -221,12 +210,8 @@
             </div>
             {% endif %}
             <div>
-                <div class="contact-label">{% trans "Cost carrier" %}</div>
+                <div class="contact-label">{% trans "Payment source" %}</div>
                 <div class="contact-value"><span class="sensitive-data">{{ client.cost_carrier|default:"–" }}</span></div>
-            </div>
-            <div>
-                <div class="contact-label">{% trans "Language" %}</div>
-                <div class="contact-value">{{ client.get_language_display }}</div>
             </div>
             <div>
                 <div class="contact-label">{% trans "Session format" %}</div>
@@ -234,7 +219,7 @@
             </div>
             <div>
                 <div class="contact-label">{% trans "Hourly rate" %}</div>
-                <div class="stat-value-bold">{{ client.hourly_rate_60|floatformat:0 }}&nbsp;€</div>
+                <div class="stat-value-bold">{{ client.hourly_rate_60|currency_rounded }}</div>
             </div>
             <div>
                 <div class="contact-label">{% trans "Total revenue" %}</div>
@@ -248,7 +233,7 @@
         <details class="onboarding-details" {% if not client.onboarding_complete_date %}open{% endif %}>
         <summary class="onboarding-summary">
             {% if client.onboarding_complete_date %}
-            {% blocktrans with date=client.onboarding_complete_date|date:"d.m.Y" %}✅ Intake completed on {{ date }}{% endblocktrans %}
+            {% blocktrans with date=client.onboarding_complete_date|date:"d M y" %}✅ Intake completed on {{ date }}{% endblocktrans %}
             {% else %}
             📋 {% trans "Intake process" %}
             {% endif %}
@@ -257,13 +242,11 @@
             <li class="onboarding-step {% if client.intake_sent_date %}step-done{% else %}step-pending{% endif %}">
                 <span class="step-icon">{% if client.intake_sent_date %}✅{% else %}○{% endif %}</span>
                 <div class="step-body">
-                    <div class="step-title">{% trans "Intake" %}</div>
-                    {% if client.intake_sent_date %}<div class="step-date">{% blocktrans with date=client.intake_sent_date|date:"d.m.Y" %}Handed out on {{ date }}{% endblocktrans %}</div>
-                    {% else %}<div class="step-pending-hint">{% trans "Send by email or download the PDF and hand it out" %}</div>{% endif %}
+                    <div class="step-title">{% trans "Intake paperwork" %}</div>
+                    {% if client.intake_sent_date %}<div class="step-date">{% blocktrans with date=client.intake_sent_date|date:"d M y" %}Received on {{ date }}{% endblocktrans %}</div>
+                    {% else %}<div class="step-pending-hint">{% trans "Uploaded via the forms portal, or mark as done" %}</div>{% endif %}
                 </div>
                 <div class="step-actions">
-                    {% if client.email %}<a href="{% url 'send_intake_form_email' client.pk %}" class="btn btn-secondary btn-sm">📧 {% trans "Send" %}</a>{% endif %}
-                    <a href="{% url 'intake_form_pdf' client.pk %}" class="btn btn-secondary btn-sm">📄 PDF</a>
                     {% trans "undo" as lbl_undo %}
                     {% trans "✓ Done" as lbl_done %}
                     {% url 'client_onboarding_step' client.pk as onboarding_url %}
@@ -274,13 +257,11 @@
             <li class="onboarding-step {% if client.contract_signed_date %}step-done{% else %}step-pending{% endif %}">
                 <span class="step-icon">{% if client.contract_signed_date %}✅{% else %}○{% endif %}</span>
                 <div class="step-body">
-                    <div class="step-title">{% trans "Contract" %}</div>
-                    {% if client.contract_signed_date %}<div class="step-date">{% blocktrans with date=client.contract_signed_date|date:"d.m.Y" %}Signed on {{ date }}{% endblocktrans %}</div>
-                    {% else %}<div class="step-pending-hint">{% trans "Send contract by email, receive signed copy back" %}</div>{% endif %}
+                    <div class="step-title">{% trans "Informed consent" %}</div>
+                    {% if client.contract_signed_date %}<div class="step-date">{% blocktrans with date=client.contract_signed_date|date:"d M y" %}Signed on {{ date }}{% endblocktrans %}</div>
+                    {% else %}<div class="step-pending-hint">{% trans "Signed informed consent received" %}</div>{% endif %}
                 </div>
                 <div class="step-actions">
-                    {% if client.email %}<a href="{% url 'send_contract_email' client.pk %}" class="btn btn-secondary btn-sm">📧 {% trans "Send" %}</a>{% endif %}
-                    <a href="{% url 'contract_pdf' client.pk %}" class="btn btn-secondary btn-sm">📄 PDF</a>
                     {% trans "undo" as lbl_undo %}
                     {% trans "✓ Done" as lbl_done %}
                     {% url 'client_onboarding_step' client.pk as onboarding_url %}
@@ -291,13 +272,11 @@
             <li class="onboarding-step {% if client.questionnaire_sent_date %}step-done{% else %}step-pending{% endif %}">
                 <span class="step-icon">{% if client.questionnaire_sent_date %}✅{% else %}○{% endif %}</span>
                 <div class="step-body">
-                    <div class="step-title">{% trans "Anamnesis" %}</div>
-                    {% if client.questionnaire_sent_date %}<div class="step-date">{% blocktrans with date=client.questionnaire_sent_date|date:"d.m.Y" %}Sent on {{ date }}{% endblocktrans %}</div>
-                    {% else %}<div class="step-pending-hint">{% trans "Send questionnaire by email" %}</div>{% endif %}
+                    <div class="step-title">{% trans "Health history" %}</div>
+                    {% if client.questionnaire_sent_date %}<div class="step-date">{% blocktrans with date=client.questionnaire_sent_date|date:"d M y" %}Received on {{ date }}{% endblocktrans %}</div>
+                    {% else %}<div class="step-pending-hint">{% trans "Health history questionnaire received" %}</div>{% endif %}
                 </div>
                 <div class="step-actions">
-                    {% if client.email %}<a href="{% url 'send_questionnaire_docx' client.pk %}" class="btn btn-secondary btn-sm">📧 {% trans "Send" %}</a>
-                    {% else %}<span class="text-muted no-email-hint">{% trans "no email" %}</span>{% endif %}
                     {% trans "undo" as lbl_undo %}
                     {% trans "✓ Done" as lbl_done %}
                     {% url 'client_onboarding_step' client.pk as onboarding_url %}
@@ -309,7 +288,7 @@
                 <span class="step-icon">{% if client.onboarding_complete_date %}🎉{% else %}○{% endif %}</span>
                 <div class="step-body">
                     <div class="step-title">{% trans "Intake complete" %}</div>
-                    {% if client.onboarding_complete_date %}<div class="step-date">{% blocktrans with date=client.onboarding_complete_date|date:"d.m.Y" %}Completed on {{ date }}{% endblocktrans %}</div>
+                    {% if client.onboarding_complete_date %}<div class="step-date">{% blocktrans with date=client.onboarding_complete_date|date:"d M y" %}Completed on {{ date }}{% endblocktrans %}</div>
                     {% else %}<div class="step-pending-hint">{% trans "All documents complete — finalise intake" %}</div>{% endif %}
                 </div>
                 <div class="step-actions">
@@ -330,10 +309,10 @@
         <div class="sidebar-section-label">🧠 {% trans "Assessments" %}</div>
         {% for q in available_questionnaires %}
         <div class="questionnaire-row">
-            <span class="questionnaire-title">{{ q.title|dict_get:client.language }}</span>
+            <span class="questionnaire-title">{{ q.title.en }}</span>
             <div class="step-actions">
                 {% if client.email %}<a href="{% url 'send_questionnaire_pdf_email' client.pk q.code %}" class="btn btn-secondary btn-sm">📧 {% trans "Send" %}</a>{% endif %}
-                <a href="{% url 'questionnaire_pdf' q.code %}?lang={{ client.language }}" target="_blank" class="btn btn-secondary btn-sm">📄 PDF</a>
+                <a href="{% url 'questionnaire_pdf' q.code %}" target="_blank" class="btn btn-secondary btn-sm">📄 PDF</a>
             </div>
         </div>
         {% endfor %}
@@ -347,7 +326,7 @@
     <div class="section-card">
         <div class="sidebar-section-label">📬 {% trans "Source inquiry" %}</div>
         <a href="{% url 'inquiry_edit' client.source_inquiry.pk %}" class="sidebar-source-link">
-            {{ client.source_inquiry.get_source_display }} &mdash; {{ client.source_inquiry.inquiry_date|date:"d.m.Y" }}
+            {{ client.source_inquiry.get_source_display }} &mdash; {{ client.source_inquiry.inquiry_date|date:"d M y" }}
         </a>
     </div>
     {% endif %}
@@ -411,12 +390,11 @@
         {% if log and log.content or log and log.summary or log and log.interventions or log and log.therapist_reflection or log and log.next_session_ideas %}
         <div class="cn-session-grid">
             <div class="cn-session-left">
-                <span class="cn-session-date">{{ session.session_date|date:"d.m.Y" }}</span>
+                <span class="cn-session-date">{{ session.session_date|date:"d M y" }}</span>
                 <span class="cn-session-duration">{{ session.duration }} {% trans "min" %}</span>
                 {% if not session.invoice_items.all %}{% if session.billable %}<span class="cn-session-unbilled">{% trans "Unbilled" %}</span>{% else %}<span class="cn-session-not-billable">{% trans "Non-billable" %}</span>{% endif %}{% endif %}
                 {% if log.session_type %}<span class="cn-session-type">{{ log.get_session_type_display }}</span>{% endif %}
                 {% for tag in log.mood_tags %}<span class="cn-tag cn-tag-{{ tag }}">{{ tag|mood_tag_label }}</span>{% endfor %}
-                {% if session.gebueh_leistungen.all %}<div class="cn-gebueh-ziffern">{% for le in session.gebueh_leistungen.all %}<span class="cn-gebueh-chip">{{ le.ziffer.nummer }}</span>{% endfor %}</div>{% endif %}
             </div>
             <div class="cn-session-content">
                 {% if log.summary %}<p class="cn-session-summary">{{ log.summary }}</p>{% endif %}
@@ -438,34 +416,24 @@
         </div>
         <div class="cn-session-actions cn-session-actions-bar">
             <a href="{% url 'session_log_edit' client.pk log.pk %}" class="btn btn-secondary btn-sm">✏️ {% trans "Edit" %}</a>
-            {% if client.needs_gebueh_invoice %}
-            {% include 'includes/gebueh_button.html' with client=client session=session %}
-            {% endif %}
             {% include 'includes/session_invoice_actions.html' with client=client session=session lbl_to_invoice=lbl_to_invoice lbl_non_billable=lbl_non_billable lbl_billable=lbl_billable %}
             {% include 'includes/session_noshow_action.html' with client=client log=log lbl_noshow=lbl_noshow %}
             {% include 'includes/session_log_delete_button.html' with client=client log=log confirm_delete_log=confirm_delete_log %}
         </div>
         {% else %}
         <div class="cn-session-meta">
-            <span class="cn-session-date">{{ session.session_date|date:"d.m.Y" }}</span>
+            <span class="cn-session-date">{{ session.session_date|date:"d M y" }}</span>
             <span class="cn-session-duration">{{ session.duration }} {% trans "min" %}</span>
             {% if not session.invoice_items.all %}{% if session.billable %}<span class="cn-session-unbilled">{% trans "Unbilled" %}</span>{% else %}<span class="cn-session-not-billable">{% trans "Non-billable" %}</span>{% endif %}{% endif %}
             {% if session.pk in recent_sessions_needing_log %}<span class="cn-session-missing-log">📝 {% trans "Log missing" %}</span>{% endif %}
             {% if log %}<span class="cn-session-type">{{ log.get_session_type_display }}</span>{% for tag in log.mood_tags %}<span class="cn-tag cn-tag-{{ tag }}">{{ tag|mood_tag_label }}</span>{% endfor %}{% endif %}
-            {% if session.gebueh_leistungen.all %}<div class="cn-gebueh-ziffern inline-flex">{% for le in session.gebueh_leistungen.all %}<span class="cn-gebueh-chip">{{ le.ziffer.nummer }}</span>{% endfor %}</div>{% endif %}
         </div>
         <div class="cn-session-actions">
             {% if log %}
             <a href="{% url 'session_log_edit' client.pk log.pk %}" class="btn btn-secondary btn-sm">✏️ {% trans "Edit" %}</a>
-            {% if client.needs_gebueh_invoice %}
-            {% include 'includes/gebueh_button.html' with client=client session=session %}
-            {% endif %}
             {% include 'includes/session_noshow_action.html' with client=client log=log lbl_noshow=lbl_noshow %}
             {% include 'includes/session_log_delete_button.html' with client=client log=log confirm_delete_log=confirm_delete_log %}
             {% else %}
-            {% if client.needs_gebueh_invoice %}
-            {% include 'includes/gebueh_button.html' with client=client session=session %}
-            {% endif %}
             {% include 'includes/session_invoice_actions.html' with client=client session=session lbl_to_invoice=lbl_to_invoice lbl_non_billable=lbl_non_billable lbl_billable=lbl_billable %}
             {% if session.pk not in no_log_needed_session_ids %}<a href="{% url 'session_log_create' client.pk %}?session_date={{ session.session_date|date:'Y-m-d' }}" class="btn btn-sm">{% trans "+ Log" %}</a>{% endif %}
             {% if not session.invoice_items.all %}
@@ -488,7 +456,7 @@
     {% trans "Delete note?" as confirm_del_note %}
     <div class="cn-note-item" x-data="{ editing: false }">
         <div class="cn-note-header">
-            <span class="cn-note-date">{{ note.note_date|date:"d.m.Y" }}</span>
+            <span class="cn-note-date">{{ note.note_date|date:"d M y" }}</span>
             <button type="button" class="btn btn-secondary btn-sm" x-on:click="editing = !editing">✏️</button>
             <form method="post" action="{% url 'client_note_delete' client.pk note.pk %}" class="form-inline"
                   x-on:submit="confirm('{{ confirm_del_note }}') || $event.preventDefault()">
@@ -521,9 +489,9 @@
         <div class="cn-supervision-meta">
             <span class="cn-supervision-label">🔍 {% trans "Supervision" %}</span>
             <span class="cn-status-badge cn-status-{{ item.status }}">{{ item.get_status_display }}</span>
-            <span class="cn-date-hint">{% trans "Raised on" %} {{ item.created_at|date:"d.m.Y" }}</span>
+            <span class="cn-date-hint">{% trans "Raised on" %} {{ item.created_at|date:"d M y" }}</span>
             {% if item.resolved_date %}
-            <span class="cn-date-hint">{% trans "Discussed on" %} {{ item.resolved_date|date:"d.m.Y" }}</span>
+            <span class="cn-date-hint">{% trans "Discussed on" %} {{ item.resolved_date|date:"d M y" }}</span>
             {% endif %}
         </div>
         <div class="cn-supervision-content">{{ item.content }}</div>
@@ -597,7 +565,7 @@
                 <tbody>
                 {% for event in pending_sessions %}
                 <tr>
-                    <td>{{ event.event_date|date:"d.m.Y" }}</td>
+                    <td>{{ event.event_date|date:"d M y" }}</td>
                     <td>{{ event.event_time|time:"H:i"|default:"–" }}</td>
                     <td>{{ event.duration_minutes }} {% trans "min" %}</td>
                     <td><span class="status-badge pending">{% trans "Pending" %}</span></td>
@@ -644,7 +612,7 @@
                 {% for invoice in invoices %}
                 <tr>
                     <td><a href="{% url 'invoice_detail' invoice.id %}" class="invoice-link-primary"><span class="invoice-number">{{ invoice.invoice_number }}</span></a></td>
-                    <td>{{ invoice.invoice_date|date:"d.m.Y" }}</td>
+                    <td>{{ invoice.invoice_date|date:"d M y" }}</td>
                     <td>{{ invoice.items.count }}</td>
                     <td><span class="status-badge {{ invoice.status }}">{{ invoice.get_status_display|upper }}</span></td>
                     <td class="text-right fw-700">{{ invoice.total|currency }}</td>

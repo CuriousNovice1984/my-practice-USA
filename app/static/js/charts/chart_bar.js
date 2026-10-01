@@ -37,7 +37,7 @@ function drawSimpleBarChart(ctx, padding, chartWidth, chartHeight, height, label
     const barWidth = chartWidth / (labels.length * 1.5);
     const barSpacing = barWidth * 0.5;
     const showValueLabels = options.showValueLabels !== false;
-    const valueSuffix = options.valueSuffix || '€';
+    const valueSuffix = options.valueSuffix || '$';
     const positions = [];
 
     data.forEach((value, index) => {
@@ -59,7 +59,9 @@ function drawSimpleBarChart(ctx, padding, chartWidth, chartHeight, height, label
 
         // Draw value label on top
         if (showValueLabels) {
-            const text = Math.round(value) + valueSuffix;
+            const text = valueSuffix === '$'
+                ? '$' + Math.round(value).toLocaleString('en-US')
+                : Math.round(value) + valueSuffix;
             ctx.font = 'bold 16px sans-serif';
             ctx.textAlign = 'center';
 

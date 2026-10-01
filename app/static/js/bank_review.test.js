@@ -223,7 +223,7 @@ function assertContains(haystack, needle, message) {
 
 /** Invoice option label exactly as _invoice_label builds it. */
 function label(number, date, amount) {
-    return `${number} (${date}): ${amount} €`;
+    return `${number} (${date}): $${amount}`;
 }
 
 console.log("\n🏦 Running bank_review Tests\n");
@@ -252,16 +252,15 @@ test("deselecting everything hides the tally again", () => {
 
 test("parses a plain dot-decimal amount", () => {
     const page = setupPage({ options: [label("XX-1", "2026-01-15", "90.00")] });
-    assertContains(page.choose(0).innerHTML, "90,00 €", "90.00 should tally as 90,00 €");
+    assertContains(page.choose(0).innerHTML, "$90.00", "90.00 should tally as $90.00");
 });
 
-test("parses space-separated thousands, as _invoice_label emits them", () => {
-    // "{:,.2f}" then "," -> " ", so 1234.56 reaches the DOM as "1 234.56".
+test("parses comma-separated thousands, as _invoice_label emits them", () => {
     const page = setupPage({
         amount: "1234.56",
-        options: [label("XX-1", "2026-01-15", "1 234.56")],
+        options: [label("XX-1", "2026-01-15", "1,234.56")],
     });
-    assertContains(page.choose(0).innerHTML, "1.234,56 €", "spaces are thousands separators");
+    assertContains(page.choose(0).innerHTML, "$1,234.56", "commas are thousands separators");
 });
 
 test("sums multiple selected invoices", () => {
@@ -272,7 +271,7 @@ test("sums multiple selected invoices", () => {
             label("XX-2", "2026-01-16", "60.50"),
         ],
     });
-    assertContains(page.choose(0, 1).innerHTML, "150,50 €", "90.00 + 60.50 = 150,50");
+    assertContains(page.choose(0, 1).innerHTML, "$150.50", "90.00 + 60.50 = 150.50");
 });
 
 test("hides the tally when an option label cannot be parsed", () => {
@@ -287,27 +286,27 @@ test("one unparseable option suppresses the whole tally", () => {
     assertEquals(page.choose(0, 1).style.display, "none", "a partial sum must not be shown");
 });
 
-// --- German number formatting ----------------------------------------------
+// --- US number formatting --------------------------------------------------
 
-test("formats thousands with a dot and decimals with a comma", () => {
+test("formats thousands with a comma and decimals with a dot", () => {
     const page = setupPage({
         amount: "1000.00",
-        options: [label("XX-1", "2026-01-15", "1 000.00")],
+        options: [label("XX-1", "2026-01-15", "1,000.00")],
     });
-    assertContains(page.choose(0).innerHTML, "1.000,00 €", "1000 formats as 1.000,00");
+    assertContains(page.choose(0).innerHTML, "$1,000.00", "1000 formats as $1,000.00");
 });
 
 test("formats millions with both thousands separators", () => {
     const page = setupPage({
         amount: "1234567.89",
-        options: [label("XX-1", "2026-01-15", "1 234 567.89")],
+        options: [label("XX-1", "2026-01-15", "1,234,567.89")],
     });
-    assertContains(page.choose(0).innerHTML, "1.234.567,89 €", "grouping repeats every 3 digits");
+    assertContains(page.choose(0).innerHTML, "$1,234,567.89", "grouping repeats every 3 digits");
 });
 
-test("keeps two decimals on a whole-euro amount", () => {
+test("keeps two decimals on a whole-dollar amount", () => {
     const page = setupPage({ amount: "7.00", options: [label("XX-1", "2026-01-15", "7.00")] });
-    assertContains(page.choose(0).innerHTML, "7,00 €", "always two decimal places");
+    assertContains(page.choose(0).innerHTML, "$7.00", "always two decimal places");
 });
 
 // --- match / mismatch against the transaction amount ------------------------
@@ -324,19 +323,19 @@ test("a total over the transaction shows a + difference", () => {
     const page = setupPage({ amount: "90.00", options: [label("XX-1", "2026-01-15", "95.50")] });
     const tally = page.choose(0);
     assertContains(tally.innerHTML, "⚠️", "mismatch gets the warning icon");
-    assertContains(tally.innerHTML, "+5,50 €", "over by 5,50");
+    assertContains(tally.innerHTML, "+$5.50", "over by 5.50");
     assertEquals(tally.style.color, "var(--color-warning)", "warning colour");
 });
 
 test("a total under the transaction shows a minus difference", () => {
     const page = setupPage({ amount: "90.00", options: [label("XX-1", "2026-01-15", "80.00")] });
     // U+2212 MINUS SIGN, not a hyphen.
-    assertContains(page.choose(0).innerHTML, "−10,00 €", "under by 10,00");
+    assertContains(page.choose(0).innerHTML, "−$10.00", "under by 10.00");
 });
 
 test("cent-level differences are reported, not rounded away", () => {
     // The bug |unlocalize fixes: data-amount="90,50" parseFloats to 90, so a
-    // genuinely matching pair used to render as a 0,50 € mismatch.
+    // genuinely matching pair used to render as a $0.50 mismatch.
     const page = setupPage({ amount: "90.50", options: [label("XX-1", "2026-01-15", "90.50")] });
     assertContains(page.choose(0).innerHTML, "✅", "90.50 vs 90.50 matches exactly");
 });

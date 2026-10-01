@@ -10,7 +10,7 @@
         <li id="doc-{{ doc.pk }}" class="sidebar-doc-item">
             <span class="doc-type-badge sidebar-doc-badge">{{ doc.get_document_type_display }}</span>
             <a href="{{ doc.file.url }}" target="_blank" class="sidebar-doc-name" title="{{ doc.filename }}">{% if doc.description %}{{ doc.description }}{% else %}{{ doc.filename }}{% endif %}</a>
-            <span class="sidebar-doc-date">{{ doc.document_date|date:"d.m.Y" }}</span>
+            <span class="sidebar-doc-date">{{ doc.document_date|date:"d M y" }}</span>
             <button class="btn btn-danger btn-sm" onclick="docDelete(this)"
                     data-doc-id="{{ doc.pk }}"
                     data-csrf="{{ csrf_token }}">🗑️</button>
@@ -82,7 +82,7 @@
         if (fileInput.files.length) showUploadForm(fileInput.files[0]);
     });
 
-    // Infer date and document type from filename like "2026-01-09-behandlungsvertrag.pdf"
+    // Infer date and document type from filename like "2026-01-09-informed-consent.pdf"
     function inferFromFilename(name) {
         const stem = name.replace(/\.[^.]+$/, '').toLowerCase();
 
@@ -96,21 +96,15 @@
             : null;
 
         // Document type: keyword matching (first match wins)
-        /* i18n-exempt-start: German filename keywords to match against uploaded filenames, not UI text */
         const typeMap = [
-            ['vorgespräch',        'intro_notes'],
-            ['vorgesprach',        'intro_notes'],   // without umlaut
-            ['aufnahmebogen',      'intake'],
-            ['intake',             'intake'],
-            ['anamnesebogen',      'anamnese'],
-            ['anamnese',           'anamnese'],
-            ['behandlungsvertrag', 'contract'],
-            ['vertrag',            'contract'],
-            ['überweisung',        'referral'],
-            ['uberweisung',        'referral'],      // without umlaut
-            ['referral',           'referral'],
+            ['intro',          'intro_notes'],
+            ['history',        'health_history'],
+            ['consent',        'consent'],
+            ['release',        'release'],
+            ['roi',            'release'],
+            ['intake',         'intake'],
+            ['referral',       'referral'],
         ];
-        /* i18n-exempt-end */
         let inferredType = null;
         for (const [keyword, type] of typeMap) {
             if (stem.includes(keyword)) { inferredType = type; break; }

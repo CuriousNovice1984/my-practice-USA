@@ -114,13 +114,13 @@ function testChartTooltipCustomFormatter() {
     const canvas = createTestCanvas();
 
     try {
-        const formatter = (data) => `<strong>${data.label}</strong>: €${data.value}`;
+        const formatter = (data) => `<strong>${data.label}</strong>: $${data.value}`;
         const tooltip = new ChartTooltip(canvas, { formatter });
 
         tooltip.show(100, 100, { label: 'Revenue', value: 500 });
 
         console.assert(tooltip.tooltip.innerHTML.includes('<strong>Revenue</strong>'), 'Custom formatter should be used');
-        console.assert(tooltip.tooltip.innerHTML.includes('€500'), 'Custom formatter should format value');
+        console.assert(tooltip.tooltip.innerHTML.includes('$500'), 'Custom formatter should format value');
     } finally {
         cleanupCanvas(canvas);
     }

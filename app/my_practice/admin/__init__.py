@@ -35,9 +35,6 @@ from .expense_category_rule import ExpenseCategoryRuleAdmin
 # Financial admin
 from .financial import CompanyExpenseAdmin, CompanyWithdrawalAdmin
 
-# GebüH admin
-from .gebueh import GebuhZifferAdmin, LeistungserfassungAdmin
-
 # Inquiry admin
 from .inquiry import ClientInquiryAdmin, MarketingPeriodAdmin
 
@@ -83,12 +80,10 @@ __all__ = [
     "CompanyExpenseAdmin",
     "CompanyWithdrawalAdmin",
     "ExpenseCategoryRuleAdmin",
-    "GebuhZifferAdmin",
     "InvoiceAdmin",
     "InvoiceItemAdmin",
     "InvoiceItemAdminForm",
     "InvoiceItemInline",
-    "LeistungserfassungAdmin",
     "MarketingPeriodAdmin",
     "OperationalChecklistCompletionAdmin",
     "PendingCalendarEventAdmin",

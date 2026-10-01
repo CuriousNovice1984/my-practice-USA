@@ -100,7 +100,7 @@ class CheckMediaCoverageTests(TestCase):
         stored.write_bytes(b"%PDF-1.4 signed contract")
         ClientDocument.objects.create(
             client=client,
-            document_type=ClientDocument.DocumentType.CONTRACT,
+            document_type=ClientDocument.DocumentType.CONSENT,
             file=rel_path,
             document_date=date(2026, 3, 1),
         )

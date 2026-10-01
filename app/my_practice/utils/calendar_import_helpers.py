@@ -303,5 +303,5 @@ def bill_session(session: "Session", practice) -> tuple[bool, str]:
         return False, _("Error: %(error)s") % {"error": e}
 
     return True, _("Session on %(date)s was billed.") % {
-        "date": session.session_date.strftime("%d.%m.%Y")
+        "date": session.session_date.strftime("%d %b %y")
     }

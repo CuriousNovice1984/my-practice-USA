@@ -3,7 +3,7 @@
 
 {% block title %}{% trans "Triage overview – Emergency access" %}{% endblock %}
 {% block page_title %}🚨 {% trans "Triage overview" %}{% endblock %}
-{% block page_subtitle %}{% blocktrans with date=generated_date|date:"d.m.Y" %}Generated on {{ date }} — Metadata only (no clinical content){% endblocktrans %}{% endblock %}
+{% block page_subtitle %}{% blocktrans with date=generated_date|date:"d M y" %}Generated on {{ date }} — Metadata only (no clinical content){% endblocktrans %}{% endblock %}
 
 
 {% block content %}
@@ -28,7 +28,7 @@
         <div class="cn-label-small">{% blocktrans count counter=entry.sessions|length %}Last {{ counter }} session:{% plural %}Last {{ counter }} sessions:{% endblocktrans %}</div>
         {% for s in entry.sessions %}
         <div class="cn-triage-session-row">
-            <span class="cn-session-date">{{ s.date|date:"d.m.Y" }}</span>
+            <span class="cn-session-date">{{ s.date|date:"d M y" }}</span>
             {% if s.session_type %}
             <span class="cn-session-type">{{ s.session_type }}</span>
             {% endif %}

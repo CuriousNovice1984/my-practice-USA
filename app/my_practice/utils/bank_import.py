@@ -2,6 +2,8 @@
 Bank statement import and matching utilities.
 
 Handles CSV parsing, invoice number extraction, and automatic payment matching.
+Transactions from a bank connection (Plaid) go through the same matching via
+``BankStatementImporter.for_account()`` + ``ingest_transaction()``.
 """
 
 import csv
@@ -29,14 +31,13 @@ class BankStatementImporter:
 
     The delimiter and column headers are read from the practice's
     csv_delimiter/csv_column_* settings (Practice model), so any bank's
-    export can be supported without touching code. Defaults match GLS
-    Bank's export format.
+    export can be supported without touching code.
 
-    Format details (defaults, all configurable per practice):
-    - Encoding: UTF-8
-    - Delimiter: Semicolon (;)
-    - Decimal separator: Comma (,)
-    - Date format: DD.MM.YYYY
+    Format details:
+    - Encoding: UTF-8 (a leading byte-order mark is tolerated)
+    - Delimiter: configurable, default comma
+    - Amounts: US format — "1,234.56", "-1,234.56", "(1,234.56)", "$1,234.56"
+    - Dates: MM/DD/YYYY, MM/DD/YY or YYYY-MM-DD
 
     Usage:
         importer = BankStatementImporter(csv_file, practice)
@@ -47,56 +48,50 @@ class BankStatementImporter:
     INVOICE_PATTERNS = [
         # Pattern 1: Direct codes (XX-1, YY-2, AB-3)
         r"\b([A-Z]{2,4}-\d+)\b",
-        # Pattern 2: with a keyword prefix before the code (see the German/
-        # English invoice-label variants in the regex below)
-        r"(?:Rechnung|Invoice|ReNr|Re)\s*(?:Nr\.?|No\.?)?\s*([A-Z]{2,4}-\d+)",
-        # Pattern 3: In context (3x Therapie CD-4)
-        r"Therapie\s+([A-Z]{2,4}-\d+)",
+        # Pattern 2: with a keyword prefix before the code ("Invoice No. XX-1", "Inv #XX-1")
+        r"(?:Invoice|Inv)\s*(?:No\.?|#)?\s*([A-Z]{2,4}-\d+)",
     ]
 
-    # Keywords for salary / owner-pay withdrawal detection
+    # Keywords for owner-pay withdrawal detection
     WITHDRAWAL_KEYWORDS = [
-        "entnahme",
-        "unternehmerlohn",
-        "payr",
-        "gehalt",
+        "owner draw",
+        "owner's draw",
+        "owners draw",
+        "payroll",
     ]
 
     # Keywords for correction / reversal detection
     CORRECTION_KEYWORDS = [
-        "fehlbuchung",
-        "korrektur",
-        "storno",
-        "rückbuchung",
-        "ausgleich",
+        "reversal",
+        "correction",
+        "adjustment",
     ]
 
     @staticmethod
-    def _normalize_iban(iban: str) -> str:
-        """Normalize IBAN by removing spaces and uppercasing."""
-        return iban.replace(" ", "").upper()
+    def _normalize_account(account: str) -> str:
+        """Normalize an account identifier by removing spaces and uppercasing."""
+        return account.replace(" ", "").upper()
 
     @classmethod
-    def for_account(cls, practice, account_iban: str) -> "BankStatementImporter":
+    def for_account(cls, practice, source_account: str) -> "BankStatementImporter":
         """
         Build an importer for a non-CSV source (e.g. a bank API fetcher).
 
         ``process()`` is unavailable on the result — there is no file to read
         and no CSV header to validate the account against — so the caller is
         responsible for producing normalized dicts and feeding them to
-        ``ingest_transaction()`` itself. The account IBAN is supplied up front
-        because it would otherwise be read from the CSV by
-        ``_validate_csv_account()``.
+        ``ingest_transaction()`` itself. The account identifier is supplied up
+        front because it would otherwise be read from the CSV.
 
         Args:
             practice: Practice instance for scoping
-            account_iban: IBAN of the account the transactions belong to
+            source_account: Identifier of the account the transactions belong to
 
         Returns:
             An importer with only the source-agnostic half wired up.
         """
         importer = cls(None, practice)
-        importer.account_iban = cls._normalize_iban(account_iban)
+        importer.source_account = cls._normalize_account(source_account)
         return importer
 
     def __init__(self, csv_file, practice):
@@ -111,14 +106,14 @@ class BankStatementImporter:
         """
         self.csv_file = csv_file
         self.practice = practice
-        # Normalized private IBAN for withdrawal/contribution detection
-        self.private_iban = (
-            self._normalize_iban(practice.private_bank_account)
+        # Normalized private account identifier for withdrawal/contribution detection
+        self.private_account = (
+            self._normalize_account(practice.private_bank_account)
             if practice.private_bank_account
             else ""
         )
-        # IBAN of the source account from the CSV (populated during process())
-        self.account_iban: str = ""
+        # Source account from the CSV (populated during process())
+        self.source_account: str = ""
         self.results: dict[str, Any] = {
             "total": 0,
             "matched": 0,
@@ -129,54 +124,62 @@ class BankStatementImporter:
             "transactions": [],
         }
 
-    def parse_german_decimal(self, value: str) -> Decimal:
+    def parse_amount(self, value: str) -> Decimal:
         """
-        Parse German decimal format to Decimal.
+        Parse a US-format amount to Decimal.
 
         Args:
-            value: String like "90,00", "-300,00", or "1.234,56" (with a "." thousands
-                separator, as German bank exports use for amounts >= 1000)
+            value: String like "90.00", "-1,234.56", "(300.00)" or "$1,234.56"
 
         Returns:
-            Decimal object
+            Decimal object (parenthesized amounts are negative)
 
         Raises:
             InvalidOperation: If parsing fails
         """
-        # German format uses "." as thousands separator and "," as decimal separator.
-        normalized = value.replace(".", "").replace(",", ".")
-        return Decimal(normalized)
+        text = value.strip().replace("$", "").replace(",", "").replace(" ", "")
+        if text.startswith("(") and text.endswith(")"):
+            text = "-" + text[1:-1]
+        return Decimal(text)
 
-    def parse_german_date(self, value: str) -> "date":
+    DATE_FORMATS = ("%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d")
+
+    def parse_date(self, value: str) -> "date":
         """
-        Parse German date format to datetime.
+        Parse a bank-export date.
 
         Args:
-            value: String like "02.02.2026"
+            value: String like "02/14/2026", "02/14/26" or "2026-02-14"
 
         Returns:
             datetime.date object
 
         Raises:
-            ValueError: If parsing fails
+            ValueError: If no supported format matches
         """
-        return datetime.strptime(value, "%d.%m.%Y").date()
+        text = value.strip()
+        for fmt in self.DATE_FORMATS:
+            try:
+                return datetime.strptime(text, fmt).date()
+            except ValueError:
+                continue
+        raise ValueError(f"Unrecognized date: {value!r}")
 
     def extract_invoice_number(self, reference: str) -> str | None:
         """
         Extract invoice number from reference text using regex patterns.
 
         Args:
-            reference: Payment reference text (Verwendungszweck)
+            reference: Payment memo/description text
 
         Returns:
             Extracted invoice number (uppercase) or None
 
         Examples:
             "XX-1" → "XX-1"
-            "Rechnung Nr. YY-2" → "YY-2"
-            "3x Therapie CD-4" → "CD-4"
-            "Mi 9-10" → None
+            "Invoice No. YY-2" → "YY-2"
+            "Zelle payment from M Schmidt for CD-4" → "CD-4"
+            "Wed 9-10" → None
         """
         for pattern in self.INVOICE_PATTERNS:
             match = re.search(pattern, reference, re.IGNORECASE)
@@ -243,17 +246,17 @@ class BankStatementImporter:
             return None
 
     def detect_and_create_financial_record(
-        self, transaction_date, amount, reference, payer_iban: str = "", payer_name: str = ""
+        self, transaction_date, amount, reference, payer_account: str = "", payer_name: str = ""
     ) -> dict | None:
         """
         Detect if a negative transaction is a withdrawal or expense and create it.
 
         Detection priority and category assignment:
-        - IBAN match + correction keywords → CompanyWithdrawal(correction)
-        - IBAN match + salary keywords    → CompanyWithdrawal(salary)
-        - IBAN match, no keywords         → CompanyWithdrawal(private_transfer)
-        - No IBAN configured, correction keywords → CompanyWithdrawal(correction)
-        - No IBAN configured, salary keywords    → CompanyWithdrawal(salary)
+        - Private account match + correction keywords → CompanyWithdrawal(correction)
+        - Private account match + owner-draw keywords → CompanyWithdrawal(salary)
+        - Private account match, no keywords          → CompanyWithdrawal(private_transfer)
+        - No private account configured, correction keywords → CompanyWithdrawal(correction)
+        - No private account configured, owner-draw keywords → CompanyWithdrawal(salary)
         - Otherwise → CompanyExpense, category from a learned ExpenseCategoryRule
           for this counterparty if one exists, else "other"
 
@@ -261,7 +264,7 @@ class BankStatementImporter:
             transaction_date: Date of transaction
             amount: Transaction amount (negative)
             reference: Transaction reference text
-            payer_iban: IBAN of the counterparty (recipient for outgoing payments)
+            payer_account: Account identifier of the counterparty, if the source provides one
             payer_name: Name of the counterparty, used as a fallback categorization key
 
         Returns:
@@ -270,29 +273,29 @@ class BankStatementImporter:
         reference_lower = reference.lower()
         abs_amount = abs(amount)
 
-        # IBAN-based detection: if the private account is configured and the
-        # transaction goes to/from it (via payer_iban field OR mention in reference
-        # text), it's treated as a private-account transaction.
-        iban_match = bool(
-            self.private_iban
+        # Private-account detection: if the private account is configured and the
+        # transaction goes to/from it (via payer_account field OR mention in the memo,
+        # e.g. "Online transfer to CHK ...1234"), it's a private-account transaction.
+        private_account_match = bool(
+            self.private_account
             and (
-                self._normalize_iban(payer_iban) == self.private_iban
-                or self.private_iban in self._normalize_iban(reference)
+                self._normalize_account(payer_account) == self.private_account
+                or self.private_account in self._normalize_account(reference)
             )
         )
 
         # Keyword sub-classification — used to assign category regardless of how
-        # the withdrawal was detected (IBAN or fallback).
+        # the withdrawal was detected (private account or fallback).
         salary_keyword_hit = any(keyword in reference_lower for keyword in self.WITHDRAWAL_KEYWORDS)
         correction_keyword_hit = any(
             keyword in reference_lower for keyword in self.CORRECTION_KEYWORDS
         )
 
-        # Keyword fallback: only fires when no private IBAN is configured, to avoid
-        # false positives on client payments that mention salary-related words.
-        keyword_match = not self.private_iban and (salary_keyword_hit or correction_keyword_hit)
+        # Keyword fallback: only fires when no private account is configured, to avoid
+        # false positives on client payments that mention payroll-related words.
+        keyword_match = not self.private_account and (salary_keyword_hit or correction_keyword_hit)
 
-        is_withdrawal = iban_match or keyword_match
+        is_withdrawal = private_account_match or keyword_match
 
         if is_withdrawal:
             # Check if withdrawal already exists
@@ -307,9 +310,9 @@ class BankStatementImporter:
                 return {"type": "CompanyWithdrawal", "record": existing_withdrawal}
 
             # Category priority:
-            # 1. Correction keywords (fehlbuchung/storno) → correction
-            # 2. Salary keywords (entnahme/gehalt) → salary
-            # 3. IBAN match only (pure capital transfer, no keywords) → private_transfer
+            # 1. Correction keywords (reversal/correction) → correction
+            # 2. Owner-draw keywords (owner draw/payroll) → salary
+            # 3. Private account match only (plain transfer, no keywords) → private_transfer
             if correction_keyword_hit:
                 withdrawal_category = "correction"
             elif salary_keyword_hit:
@@ -338,7 +341,7 @@ class BankStatementImporter:
 
             # Create CompanyExpense for other negative amounts, using a learned
             # category for this counterparty when one is on file.
-            match_key = build_counterparty_key(payer_iban, payer_name)
+            match_key = build_counterparty_key(payer_account, payer_name)
             rule = (
                 ExpenseCategoryRule.objects.filter(
                     practice=self.practice, match_key=match_key
@@ -368,50 +371,71 @@ class BankStatementImporter:
             Dictionary with parsed transaction data or None if parsing fails
         """
         practice = self.practice
+
+        def optional(column: str) -> str:
+            return row.get(column, "").strip() if column else ""
+
         try:
+            transaction_date = self.parse_date(row[practice.csv_column_date])
+            value_date_raw = optional(practice.csv_column_value_date)
+            balance_raw = optional(practice.csv_column_balance)
             return {
-                "transaction_date": self.parse_german_date(row[practice.csv_column_date]),
-                "value_date": self.parse_german_date(row[practice.csv_column_value_date]),
-                "payer_name": row[practice.csv_column_payer_name],
-                "payer_iban": row.get(practice.csv_column_payer_iban, ""),
-                "reference": row[practice.csv_column_reference],
-                "amount": self.parse_german_decimal(row[practice.csv_column_amount]),
-                "balance_after": self.parse_german_decimal(row[practice.csv_column_balance]),
+                "transaction_date": transaction_date,
+                "value_date": self.parse_date(value_date_raw)
+                if value_date_raw
+                else transaction_date,
+                "payer_name": row[practice.csv_column_payer_name].strip(),
+                "payer_account": optional(practice.csv_column_payer_account),
+                "reference": row[practice.csv_column_reference].strip(),
+                "amount": self.parse_amount(row[practice.csv_column_amount]),
+                "balance_after": self.parse_amount(balance_raw) if balance_raw else None,
             }
         except KeyError, ValueError, InvalidOperation:
             return None
 
-    def _validate_csv_account(self, rows: list) -> bool:
-        """Verify the CSV belongs to this practice's bank account. Returns False and sets error if mismatch."""
-        if not rows:
-            return True
-        csv_account_iban = rows[0].get(self.practice.csv_column_account_iban, "").strip()
-        self.account_iban = csv_account_iban
-        practice_iban_norm = self._normalize_iban(self.practice.iban)
-        csv_iban_norm = self._normalize_iban(csv_account_iban)
-        if csv_iban_norm and practice_iban_norm and csv_iban_norm != practice_iban_norm:
+    def _validate_columns(self, header: list[str]) -> bool:
+        """Check the CSV has every required column. Sets an error and returns False if not."""
+        practice = self.practice
+        required = {
+            practice.csv_column_date,
+            practice.csv_column_payer_name,
+            practice.csv_column_reference,
+            practice.csv_column_amount,
+        }
+        missing = sorted(required - {h.strip() for h in header})
+        if missing:
             self.results["errors"].append(
                 _(
-                    "Wrong account: the CSV file belongs to IBAN %(csv_iban)s, "
-                    "expected the practice IBAN %(practice_iban)s. Import aborted."
+                    "The CSV file is missing the column(s) %(missing)s. Check the column "
+                    "names in the practice settings (Bank Import) against your bank's export."
                 )
-                % {"csv_iban": csv_account_iban, "practice_iban": self.practice.iban}
+                % {"missing": ", ".join(f'"{m}"' for m in missing)}
             )
-            self.results["account_mismatch"] = True
+            self.results["invalid_format"] = True
             return False
         return True
 
+    def _find_existing(self, parsed: dict) -> "BankTransaction | None":
+        """Return the already-imported transaction for this row, if any.
+
+        A bank-connection transaction ID is authoritative when present; otherwise
+        (CSV) the date + amount + memo triple identifies a transaction.
+        """
+        qs = BankTransaction.objects.for_practice(self.practice)
+        external_id = parsed.get("external_id", "")
+        if external_id:
+            existing = qs.filter(external_id=external_id).first()
+            if existing:
+                return existing
+        return qs.filter(
+            transaction_date=parsed["transaction_date"],
+            amount=parsed["amount"],
+            reference=parsed["reference"],
+        ).first()
+
     def _handle_negative_row(self, parsed: dict, skip_negatives: bool) -> bool:
         """Handle a negative-amount row. Returns True if fully processed (caller should continue)."""
-        existing = (
-            BankTransaction.objects.for_practice(self.practice)
-            .filter(
-                transaction_date=parsed["transaction_date"],
-                amount=parsed["amount"],
-                reference=parsed["reference"],
-            )
-            .first()
-        )
+        existing = self._find_existing(parsed)
         if existing:
             self.results["ignored"] += 1
             return True
@@ -420,7 +444,7 @@ class BankStatementImporter:
             parsed["transaction_date"],
             parsed["amount"],
             parsed["reference"],
-            payer_iban=parsed["payer_iban"],
+            payer_account=parsed["payer_account"],
             payer_name=parsed["payer_name"],
         )
         if withdrawal_or_expense:
@@ -439,11 +463,12 @@ class BankStatementImporter:
                 transaction_date=parsed["transaction_date"],
                 value_date=parsed["value_date"],
                 payer_name=parsed["payer_name"],
-                payer_iban=parsed["payer_iban"],
+                payer_account=parsed["payer_account"],
                 reference=parsed["reference"],
                 amount=parsed["amount"],
                 balance_after=parsed["balance_after"],
-                account_iban=self.account_iban,
+                source_account=self.source_account,
+                external_id=parsed.get("external_id", ""),
                 match_confidence=match_confidence,
                 linked_expense=linked_expense,
                 linked_withdrawal=linked_withdrawal,
@@ -475,16 +500,16 @@ class BankStatementImporter:
         if is_private_contribution:
             reference_lower = parsed["reference"].lower()
             correction_keyword_hit = any(kw in reference_lower for kw in self.CORRECTION_KEYWORDS)
-            # Positive transactions from private IBAN with a correction keyword
-            # (e.g. "Fehlbuchung") are bank errors, not real contributions.
+            # Positive transactions from the private account with a correction keyword
+            # (e.g. "reversal") are bank errors, not real contributions.
             if correction_keyword_hit:
                 withdrawal_category = "correction"
                 confidence = "auto-correction"
-                notes = "Fehlbuchung / Korrektur vom privaten Konto"
+                notes = "Correction from private account"
             else:
                 withdrawal_category = "contribution"
                 confidence = "auto-contribution"
-                notes = "Kapitaleinlage vom privaten Konto"
+                notes = "Owner contribution from private account"
             # Only create for positive (incoming) amounts
             if parsed["amount"] > 0:
                 withdrawal, _ = CompanyWithdrawal.objects.get_or_create(
@@ -498,7 +523,7 @@ class BankStatementImporter:
             self.results["needs_review"] += 1
         elif is_self_payment:
             confidence = "ignored"
-            notes = "Eigene Zahlung (Einlage) - automatisch ignoriert"
+            notes = "Own payment (contribution) - ignored automatically"
             self.results["ignored"] += 1
         elif invoice_number:
             match_result = self.find_matching_invoice(
@@ -525,11 +550,13 @@ class BankStatementImporter:
         Returns:
             Dictionary with processing results
         """
-        content = self.csv_file.read().decode("utf-8")
-        rows = list(csv.DictReader(content.splitlines(), delimiter=self.practice.csv_delimiter))
-
-        if not self._validate_csv_account(rows):
+        content = self.csv_file.read().decode("utf-8-sig")
+        reader = csv.DictReader(content.splitlines(), delimiter=self.practice.csv_delimiter)
+        if not self._validate_columns(reader.fieldnames or []):
             return self.results
+        rows = list(reader)
+        if rows and self.practice.csv_column_account:
+            self.source_account = rows[0].get(self.practice.csv_column_account, "").strip()
 
         for row in rows:
             parsed = self.parse_csv_row(row)
@@ -557,7 +584,8 @@ class BankStatementImporter:
         Args:
             parsed: Normalized transaction dict with the keys produced by
                 ``parse_csv_row``: transaction_date, value_date, payer_name,
-                payer_iban, reference, amount, balance_after
+                payer_account, reference, amount, balance_after — plus an
+                optional ``external_id`` from a bank connection
             skip_negatives: If True, ignore negative amounts (expenses)
 
         Returns:
@@ -569,15 +597,15 @@ class BankStatementImporter:
         payer_name_lower = parsed["payer_name"].lower().strip()
         is_self_payment = payer_name_lower == self.practice.name.lower().strip()
 
-        # IBAN-based capital contribution detection takes priority over name matching.
-        # Check both the payer_iban field AND the reference text (bank embeds IBANs there).
-        payer_iban_normalized = self._normalize_iban(parsed["payer_iban"])
-        reference_normalized = self._normalize_iban(parsed["reference"])
+        # Private-account contribution detection takes priority over name matching.
+        # Check both the payer_account field AND the memo text (banks embed account hints there).
+        payer_account_normalized = self._normalize_account(parsed["payer_account"])
+        reference_normalized = self._normalize_account(parsed["reference"])
         is_private_contribution = bool(
-            self.private_iban
+            self.private_account
             and (
-                payer_iban_normalized == self.private_iban
-                or self.private_iban in reference_normalized
+                payer_account_normalized == self.private_account
+                or self.private_account in reference_normalized
             )
         )
 
@@ -585,15 +613,7 @@ class BankStatementImporter:
             return None
 
         # Duplicate check for non-negative (and unhandled negative) rows
-        existing = (
-            BankTransaction.objects.for_practice(self.practice)
-            .filter(
-                transaction_date=parsed["transaction_date"],
-                amount=parsed["amount"],
-                reference=parsed["reference"],
-            )
-            .first()
-        )
+        existing = self._find_existing(parsed)
         if existing:
             self.results["ignored"] += 1
             return None
@@ -608,11 +628,12 @@ class BankStatementImporter:
             transaction_date=parsed["transaction_date"],
             value_date=parsed["value_date"],
             payer_name=parsed["payer_name"],
-            payer_iban=parsed["payer_iban"],
+            payer_account=parsed["payer_account"],
             reference=parsed["reference"],
             amount=parsed["amount"],
             balance_after=parsed["balance_after"],
-            account_iban=self.account_iban,
+            source_account=self.source_account,
+            external_id=parsed.get("external_id", ""),
             matched_invoice=matched_invoice,
             match_confidence=confidence,
             extracted_invoice_number=invoice_number or "",
@@ -630,16 +651,18 @@ class BankStatementImporter:
         return bank_transaction
 
 
-def build_counterparty_key(payer_iban: str, payer_name: str) -> str | None:
+def build_counterparty_key(payer_account: str, payer_name: str) -> str | None:
     """
     Build the ExpenseCategoryRule.match_key for a bank counterparty.
 
-    IBAN is preferred when present (more reliable than free-text names on
-    statements); falls back to the normalized payer name. Returns None when
-    neither is available.
+    The counterparty account is preferred when present (more reliable than
+    free-text names on statements); falls back to the normalized payer name.
+    Returns None when neither is available.
     """
-    normalized_iban = BankStatementImporter._normalize_iban(payer_iban) if payer_iban else ""
-    if normalized_iban:
-        return f"iban:{normalized_iban}"
+    normalized_account = (
+        BankStatementImporter._normalize_account(payer_account) if payer_account else ""
+    )
+    if normalized_account:
+        return f"account:{normalized_account}"
     normalized_name = payer_name.strip().lower()
     return f"name:{normalized_name}" if normalized_name else None

@@ -1,5 +1,5 @@
 """
-Custom encrypted field types for Art. 9 DSGVO (health data) protection.
+Custom encrypted field types for protecting health data at rest.
 
 Uses Fernet symmetric encryption from the `cryptography` library.
 Key is read from settings.FERNET_KEY (set via FERNET_KEY env var).

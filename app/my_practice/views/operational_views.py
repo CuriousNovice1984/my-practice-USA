@@ -251,116 +251,87 @@ def checklist_unpause_item(request: HttpRequest, checklist_type: str, item_id: s
     return redirect("checklist", checklist_type=checklist_type)
 
 
+# Titles are UI chrome (translated); bodies are authored email content.
 _BOILERPLATE_CARDS: list[dict] = [
     {
-        "title": "Keine Kassenerstattung (Privatpraxis)",
-        "id": "kasse",
-        "body_de": (
-            "Guten Tag,\n\n"
-            "ich möchte Sie darauf hinweisen, dass meine Praxis als Privatpraxis "
-            "geführt wird. Das bedeutet, dass die Kosten in der Regel nicht direkt "
-            "von der gesetzlichen Krankenversicherung übernommen werden.\n\n"
-            "Gesetzlich Versicherte können die Honorarnoten jedoch bei ihrer Kasse "
-            "einreichen – eine Erstattung ist möglich, liegt aber im Ermessen der "
-            "jeweiligen Kasse. Ich stelle Ihnen gerne eine formgerechte Rechnung aus.\n\n"
-            "Bei Fragen stehe ich Ihnen gerne zur Verfügung.\n\n"
-            "Mit freundlichen Grüßen"
-        ),
-        "body_en": (
-            "Dear Sir/Madam,\n\n"
-            "please note that my practice operates on a private-pay basis. This means "
-            "that costs are generally not directly reimbursed by statutory health "
-            "insurance (GKV).\n\n"
-            "However, patients with statutory insurance may submit invoices to their "
-            "insurer for reimbursement — approval is at the insurer's discretion. "
-            "I will issue formal invoices on request.\n\n"
+        "title": gettext_lazy("Private pay (no insurance billing)"),
+        "id": "private-pay",
+        "body": (
+            "Hello,\n\n"
+            "Please note that my practice is private pay: I don't bill insurance "
+            "companies directly, and payment is due at the time of service.\n\n"
+            "If your plan offers out-of-network benefits, you may be able to request "
+            "reimbursement from your insurer yourself. I'm happy to provide a detailed "
+            "receipt on request — please check with your plan about what it covers.\n\n"
             "Please feel free to contact me if you have any questions.\n\n"
-            "Kind regards"
+            "Best regards"
         ),
     },
     {
-        "title": "Kein freier Platz / Warteliste",
-        "id": "warteliste",
-        "body_de": (
-            "Guten Tag,\n\n"
-            "vielen Dank für Ihre Nachricht. Leider habe ich derzeit keinen freien "
-            "Therapieplatz. Ich führe jedoch eine Warteliste und würde Sie gerne "
-            "darauf aufnehmen.\n\n"
-            "Sobald ein Platz frei wird, melde ich mich bei Ihnen. Bitte beachten "
-            "Sie, dass dies einige Monate dauern kann.\n\n"
-            "In dringenden Fällen empfehle ich Ihnen, sich an die "
-            "Terminservicestelle Ihrer Krankenkasse oder an einen psychiatrischen "
-            "Notfalldienst zu wenden.\n\n"
-            "Mit freundlichen Grüßen"
-        ),
-        "body_en": (
-            "Dear Sir/Madam,\n\n"
-            "thank you for reaching out. Unfortunately I do not have any therapy "
-            "slots available at this time. I do maintain a waiting list and would "
-            "be happy to add you to it.\n\n"
-            "I will contact you as soon as a place becomes available. Please note "
-            "that this may take several months.\n\n"
-            "In urgent cases, I recommend contacting your health insurer's "
-            "appointment service or an emergency psychiatric service.\n\n"
-            "Kind regards"
+        "title": gettext_lazy("Good Faith Estimate"),
+        "id": "good-faith-estimate",
+        "body": (
+            "Hello,\n\n"
+            "Under the No Surprises Act, you have the right to receive a Good Faith "
+            "Estimate of the expected cost of your care if you are not using "
+            "insurance.\n\n"
+            "My fee is [amount] per [length]-minute session. Based on what we've "
+            "discussed, I expect [number] sessions over the next [period], for an "
+            "estimated total of [total]. This estimate is not a contract and the "
+            "actual number of sessions may vary.\n\n"
+            "If you are billed for more than $400 above this estimate, you have the "
+            "right to dispute the bill. You can learn more at www.cms.gov/nosurprises.\n\n"
+            "Best regards"
         ),
     },
     {
-        "title": "Terminverschiebung / Absage",
-        "id": "absage",
-        "body_de": (
-            "Guten Tag,\n\n"
-            "ich schreibe Ihnen bezüglich unseres Termins am [Datum]. Leider muss "
-            "ich diesen Termin verschieben / absagen.\n\n"
-            "Ich möchte Ihnen folgende Ausweichtermine anbieten:\n"
-            "– [Datum 1]\n"
-            "– [Datum 2]\n\n"
-            "Bitte geben Sie mir kurz Bescheid, welcher Termin für Sie passt, oder "
-            "ob Sie einen anderen Zeitraum bevorzugen.\n\n"
-            "Ich entschuldige mich für die Unannehmlichkeiten und freue mich darauf, "
-            "Sie bald zu einem neuen Termin zu empfangen.\n\n"
-            "Mit freundlichen Grüßen"
+        "title": gettext_lazy("No opening / waitlist"),
+        "id": "waitlist",
+        "body": (
+            "Hello,\n\n"
+            "Thank you for reaching out. Unfortunately I don't have any openings at "
+            "this time. I do keep a waitlist and would be glad to add you to it.\n\n"
+            "I'll contact you as soon as a spot becomes available. Please note that "
+            "this may take several months.\n\n"
+            "If you need support sooner, the Psychology Today therapist directory can "
+            "help you find another provider. If you are in crisis, please call or "
+            "text 988 (Suicide & Crisis Lifeline), available 24/7.\n\n"
+            "Best regards"
         ),
-        "body_en": (
-            "Dear Sir/Madam,\n\n"
-            "I am writing regarding our appointment on [date]. Unfortunately I need "
+    },
+    {
+        "title": gettext_lazy("Reschedule / cancel appointment"),
+        "id": "reschedule",
+        "body": (
+            "Hello,\n\n"
+            "I'm writing regarding our appointment on [date]. Unfortunately I need "
             "to reschedule / cancel this appointment.\n\n"
-            "I would like to offer the following alternative dates:\n"
-            "– [Date 1]\n"
-            "– [Date 2]\n\n"
-            "Please let me know which date works for you, or whether you would "
-            "prefer a different time.\n\n"
-            "I apologise for the inconvenience and look forward to seeing you at "
-            "the rescheduled appointment.\n\n"
-            "Kind regards"
+            "I'd like to offer the following alternative times:\n"
+            "– [Time 1]\n"
+            "– [Time 2]\n\n"
+            "Please let me know which works for you, or whether you'd prefer a "
+            "different time.\n\n"
+            "I apologize for the inconvenience and look forward to seeing you soon.\n\n"
+            "Best regards"
         ),
     },
     {
-        "title": "Abschluss / Therapieende",
-        "id": "abschluss",
-        "body_de": (
-            "Guten Tag,\n\n"
-            "wie besprochen beenden wir unsere therapeutische Zusammenarbeit mit dem "
-            "[Datum]. Ich möchte Ihnen noch einmal herzlich für das entgegengebrachte "
-            "Vertrauen danken.\n\n"
-            "Bei Bedarf können Sie sich jederzeit wieder an mich wenden. Ich wünsche "
-            "Ihnen alles Gute auf Ihrem weiteren Weg.\n\n"
-            "Mit freundlichen Grüßen"
-        ),
-        "body_en": (
-            "Dear Sir/Madam,\n\n"
-            "as discussed, our therapeutic work together will conclude on [date]. "
-            "I would like to sincerely thank you for the trust you have placed in me.\n\n"
-            "Should you ever need support again, please do not hesitate to get in "
+        "title": gettext_lazy("Ending therapy"),
+        "id": "termination",
+        "body": (
+            "Hello,\n\n"
+            "As we discussed, our work together will conclude on [date]. Thank you "
+            "for the trust you have placed in me.\n\n"
+            "Should you ever need support again, please don't hesitate to get in "
             "touch. I wish you all the best going forward.\n\n"
-            "Kind regards"
+            "Best regards"
         ),
     },
 ]
 
 
 def boilerplate_view(request: HttpRequest) -> HttpResponse:
-    """Display copyable DE/EN email text templates (P-033)."""
+    """Display copyable email text templates (P-033)."""
     from django.shortcuts import render
 
     return render(request, "my_practice/boilerplate.html", {"cards": _BOILERPLATE_CARDS})

@@ -29,7 +29,6 @@ class InvoiceValidationTests(TestCase):
             client_code="TEST",
             full_name="Test Client",
             email="test@example.com",
-            language="de",
             hourly_rate_60=Decimal("90.00"),
             hourly_rate_90=Decimal("130.00"),
             practice=self.practice,
@@ -38,8 +37,6 @@ class InvoiceValidationTests(TestCase):
         self.service_type = ServiceType.objects.create(
             code="test_service",
             name="Test Service",
-            name_de="Test Service DE",
-            name_en="Test Service EN",
             default_duration=60,
             practice=self.practice,
         )
@@ -70,7 +67,7 @@ class InvoiceValidationTests(TestCase):
 
         # Check error message
         self.assertIn("invoice_number", cm.exception.message_dict)
-        self.assertIn("existiert bereits", str(cm.exception))
+        self.assertIn("already exists", str(cm.exception))
 
     def test_unique_invoice_numbers_work(self):
         """Test that different invoice numbers work fine"""
@@ -110,7 +107,7 @@ class InvoiceValidationTests(TestCase):
             invoice.save()
 
         self.assertIn("paid_date", cm.exception.message_dict)
-        self.assertIn("nicht vor dem Rechnungsdatum", str(cm.exception))
+        self.assertIn("must not be before the invoice date", str(cm.exception))
 
     def test_paid_date_after_invoice_date_works(self):
         """Test that paid_date after invoice_date works"""

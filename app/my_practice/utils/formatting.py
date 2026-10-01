@@ -2,25 +2,29 @@
 Shared output formatting helpers.
 
 These exist so that the same value renders identically wherever it is shown —
-in a template, in a PDF, or in the body of a client-facing email. Formatting
-money inline (e.g. ``f"{invoice.total:.2f} €"``) silently produces English
-number format and diverges from the rest of the app; use these instead.
+in a template, in a PDF, or in the body of a client-facing email. Format money
+through these rather than inline (e.g. ``f"{invoice.total:.2f}"``) so the sign,
+symbol and separators never diverge between surfaces.
 """
 
 from decimal import Decimal
 
 
-def format_currency_de(value: Decimal | float | int, symbol: str = "€") -> str:
-    """Format a number as currency in German/EU convention.
+def format_currency(value: Decimal | float | int, symbol: str = "$") -> str:
+    """Format a number as US currency.
 
-    Period as thousands separator, comma as decimal separator, and a
-    non-breaking space before the symbol so the amount never wraps away
-    from its currency sign.
+    Comma thousands separator, period decimal separator, symbol in front and
+    the minus sign ahead of the symbol.
 
-    Example: ``Decimal("11064.03")`` -> ``"11.064,03 €"`` (with U+00A0)
+    Example: ``Decimal("11064.03")`` -> ``"$11,064.03"``; ``-5`` -> ``"-$5.00"``
     """
-    # Format US-style first, then swap the separators via a placeholder so the
-    # two replacements can't clobber each other.
-    formatted = f"{float(value):,.2f}"
-    formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"{formatted}\u00a0{symbol}"  # U+00A0, written as an escape on purpose
+    amount = float(value)
+    sign = "-" if amount < 0 else ""
+    return f"{sign}{symbol}{abs(amount):,.2f}"
+
+
+def format_currency_rounded(value: Decimal | float | int, symbol: str = "$") -> str:
+    """Format a number as US currency rounded to whole dollars: ``"$11,065"``."""
+    amount = round(float(value))
+    sign = "-" if amount < 0 else ""
+    return f"{sign}{symbol}{abs(amount):,}"

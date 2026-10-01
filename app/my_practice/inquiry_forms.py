@@ -29,7 +29,6 @@ class InquiryForm(StyledFormMixin, forms.ModelForm):
             "email",
             "phone",
             "source",
-            "language",
             "status",
             "inquiry_date",
             "contacted_date",
@@ -87,7 +86,7 @@ class InquiryConvertForm(StyledFormMixin, forms.Form):
     default_hourly_rate = forms.DecimalField(
         max_digits=8,
         decimal_places=2,
-        label=_("Hourly rate (€)"),
+        label=_("Hourly rate ($)"),
         widget=forms.NumberInput(attrs={"step": "0.01"}),
     )
 
@@ -108,7 +107,7 @@ class MarketingPeriodForm(StyledFormMixin, forms.ModelForm):
         model = MarketingPeriod
         fields = ["description", "start_date", "end_date"]
         widgets = {
-            "description": forms.TextInput(attrs={"placeholder": _('e.g. "Google Ads €5/day"')}),
+            "description": forms.TextInput(attrs={"placeholder": _('e.g. "Google Ads $5/day"')}),
         }
 
     def clean(self):

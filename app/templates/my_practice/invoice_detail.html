@@ -17,13 +17,13 @@
         </div>
         <div class="meta-item p-4 bg-bg-secondary rounded-lg border-l-4 border-l-btn-primary">
             <div class="meta-label text-text-secondary text-sm uppercase tracking-wide">{% trans "Date" %}</div>
-            <div class="meta-value text-lg font-semibold mt-1">{{ invoice.invoice_date|date:"d.m.Y" }}</div>
+            <div class="meta-value text-lg font-semibold mt-1">{{ invoice.invoice_date|date:"d M y" }}</div>
         </div>
         <div class="meta-item p-4 bg-bg-secondary rounded-lg border-l-4 border-l-btn-primary">
             <div class="meta-label text-text-secondary text-sm uppercase tracking-wide">{% trans "Paid on" %}</div>
             <div class="meta-value text-lg font-semibold mt-1">
                 {% if invoice.paid_date %}
-                {{ invoice.paid_date|date:"d.m.Y" }}
+                {{ invoice.paid_date|date:"d M y" }}
                 {% else %}
                 <span class="text-muted">-</span>
                 {% endif %}
@@ -89,50 +89,12 @@
             </tr>
         </thead>
         <tbody>
-            {% if gebueh_blocks %}
-            {% if arbeitsdiagnose and not invoice.client.gebueh_no_diagnosis %}
-            <tr>
-                <td colspan="5" class="text-secondary italic">
-                    {% trans "Diagnosis" %}: {{ arbeitsdiagnose }}
-                </td>
-            </tr>
-            {% endif %}
-            {% for block in gebueh_blocks %}
-            <tr>
-                <td{% if block.leistungen %} class="border-b-0"{% endif %}>{{ block.item.session.session_date|date:"d.m.Y" }}</td>
-                <td class="font-semibold{% if block.leistungen %} border-b-0{% endif %}">
-                    {% if block.item.service_type %}
-                        {% if invoice.client.language == 'en' %}
-                            {{ block.item.service_type.name_en|default:block.item.service_type.name }}
-                        {% else %}
-                            {{ block.item.service_type.name_de|default:block.item.service_type.name }}
-                        {% endif %}
-                    {% endif %}
-                </td>
-                <td{% if block.leistungen %} class="border-b-0"{% endif %}>{{ block.item.session.duration }} {% trans "min" %}</td>
-                <td class="text-right{% if block.leistungen %} border-b-0{% endif %}">{{ block.vereinbarter_betrag|currency }}</td>
-                <td class="text-right font-bold{% if block.leistungen %} border-b-0{% endif %}">{{ block.vereinbarter_betrag|currency }}</td>
-            </tr>
-            {% if block.leistungen %}
-            <tr class="text-secondary text-sm">
-                <td></td>
-                <td colspan="4">
-                    {% for le in block.leistungen %}{% trans "Code" %} {{ le.ziffer.nummer }} · {{ le.ziffer.bezeichnung }} — {{ le.betrag|currency }}{% if not forloop.last %} · {% endif %}{% endfor %}{% if block.restbetrag %} + {% trans "Remaining amount" %} {{ block.restbetrag|currency }}{% endif %}
-                </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-            {% else %}
             {% for item in invoice.items.all %}
             <tr>
-                <td>{% if item.session_id %}{{ item.session.session_date|date:"d.m.Y" }}{% endif %}</td>
+                <td>{% if item.session_id %}{{ item.session.session_date|date:"d M y" }}{% endif %}</td>
                 <td>
                     {% if item.service_type %}
-                        {% if invoice.client.language == 'en' %}
-                            {{ item.service_type.name_en|default:item.service_type.name }}
-                        {% else %}
-                            {{ item.service_type.name_de|default:item.service_type.name }}
-                        {% endif %}
+                        {{ item.service_type.name }}
                     {% else %}
                         <em class="text-muted">{% trans "No service type" %}</em>
                     {% endif %}
@@ -148,7 +110,6 @@
                 <td class="text-right font-bold">{{ item.total|currency }}</td>
             </tr>
             {% endfor %}
-            {% endif %}
         </tbody>
     </table>
 </div>
@@ -160,19 +121,8 @@
     </div>
     {% if invoice.tax_rate > 0 %}
     <div class="flex-between mb-2">
-        <span>{% blocktrans with rate=invoice.tax_rate %}VAT ({{ rate }}%):{% endblocktrans %}</span>
+        <span>{% blocktrans with rate=invoice.tax_rate %}Sales tax ({{ rate }}%):{% endblocktrans %}</span>
         <span class="font-semibold">{{ invoice.tax_amount|currency }}</span>
-    </div>
-    {% else %}
-    <div class="flex-between mb-2">
-        <span><em>{% trans "Kleinunternehmerregelung § 19 UStG — no tax" %}</em></span>
-        <span class="font-semibold">{{ invoice.tax_amount|currency }}</span>
-    </div>
-    {% endif %}
-    {% if gebueh_total %}
-    <div class="flex-between mb-2">
-        <span>{% trans "GebüH total:" %} <span class="text-secondary text-sm">({% trans "official fee schedule" %})</span></span>
-        <span class="font-semibold">{{ gebueh_total|currency }}</span>
     </div>
     {% endif %}
     <div class="flex-between mt-3 pt-4 border-t-2 border-link text-xl">

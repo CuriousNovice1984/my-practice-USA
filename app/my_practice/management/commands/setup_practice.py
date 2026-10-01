@@ -48,55 +48,40 @@ class Command(BaseCommand):
 
         title = self._ask(
             "Professional title",
-            "Heilpraktikerin für Psychotherapie",
+            "Licensed Professional Counselor (LPC)",
             no_input,
         )
-        short_title_de = self._ask(
-            "Short title, German (for invoice headers and the German UI)",
-            "Psychotherapie",
-            no_input,
-        )
-        short_title_en = self._ask(
-            "Short title, English (for the English UI)", "Psychotherapy", no_input
-        )
+        short_title = self._ask("Short title (for the title bar)", "Therapy", no_input)
 
         self.stdout.write("\nAddress (appears on invoices):")
         street = self._ask("  Street", "", no_input)
-        postal_code = self._ask("  Postal code", "", no_input)
         city = self._ask("  City", "", no_input)
+        state = self._ask("  State (two-letter code)", "TX", no_input).upper()
+        postal_code = self._ask("  ZIP code", "", no_input)
 
         self.stdout.write("\nContact:")
         email = self._ask("  Email", "mail@example.com", no_input)
 
-        self.stdout.write("\nBank details (for invoice payment section):")
-        bank_name = self._ask("  Bank name", "", no_input)
-        iban = self._ask("  IBAN", "", no_input)
-        bic = self._ask("  BIC", "", no_input)
+        self.stdout.write("\nPayments (printed on invoices):")
+        payment_instructions = self._ask(
+            "  Payment instructions (e.g. 'Zelle: payments@practice.example')", "", no_input
+        )
 
         self.stdout.write("\nTax:")
-        tax_id = self._ask("  Steuernummer", "", no_input)
-        is_kleinunternehmer = self._ask_bool(
-            "  Kleinunternehmer (§19 UStG)?",
-            default=False,
-            no_input=no_input,
-            hint="No = VAT-exempt as Heilpraktiker (§4 Nr.14 UStG)",
-        )
+        tax_id = self._ask("  EIN", "", no_input)
 
         practice = Practice.objects.create(
             name=name,
             slug=slug,
             title=title,
-            short_title_de=short_title_de,
-            short_title_en=short_title_en,
+            short_title=short_title,
             street=street,
-            postal_code=postal_code,
             city=city,
+            state=state,
+            postal_code=postal_code,
             email=email,
-            bank_name=bank_name,
-            iban=iban,
-            bic=bic,
+            payment_instructions=payment_instructions,
             tax_id=tax_id,
-            is_kleinunternehmer=is_kleinunternehmer,
         )
 
         User = get_user_model()
@@ -129,13 +114,3 @@ class Command(BaseCommand):
         display_default = f" [{default}]" if default else ""
         value = input(f"{label}{display_default}: ").strip()
         return value if value else default
-
-    def _ask_bool(self, label: str, default: bool, no_input: bool, hint: str = "") -> bool:
-        if no_input:
-            return default
-        hint_str = f"  ({hint})" if hint else ""
-        default_str = "y/N" if not default else "Y/n"
-        raw = input(f"{label}{hint_str} [{default_str}]: ").strip().lower()
-        if not raw:
-            return default
-        return raw in ("y", "yes", "j", "ja")

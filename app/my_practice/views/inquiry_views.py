@@ -26,7 +26,7 @@ from ..inquiry_forms import InquiryConvertForm, InquiryForm, MarketingPeriodForm
 from ..models import Client, ClientInquiry, InquiryStatus, MarketingPeriod
 from ..utils import DateRangeHelper
 from ..utils.inquiry_email_templates import STAGE_EMAIL_TEMPLATES
-from ..utils.practice_days import berlin_public_holidays
+from ..utils.practice_days import us_federal_holidays
 from .crud_mixins import (
     PracticeScopedCreateView,
     PracticeScopedDeleteView,
@@ -42,23 +42,15 @@ def _interpolate_inquiry_template(template: dict, inquiry: ClientInquiry, practi
     """Return a copy of the template dict with runtime values substituted."""
     first_name = inquiry.full_name.split()[0] if inquiry.full_name else ""
     practitioner = practice.name or ""
-    booking = practice.booking_url or "[Buchungs-URL]"
-    booking_en = practice.booking_url or "[booking URL]"
-
-    def _sub(text: str) -> str:
-        return (
-            text.replace("<..>", first_name)
-            .replace("[Buchungs-URL]", booking)
-            .replace("[booking URL]", booking_en)
-            .replace("[Ihr Name]", practitioner)
-            .replace("[Your name]", practitioner)
-        )
+    booking = practice.booking_url or "[booking URL]"
 
     result = dict(template)
-    if "body" in result:
-        result["body"] = _sub(result["body"])
-    if "body_en" in result:
-        result["body_en"] = _sub(result["body_en"])
+    result["body"] = (
+        result["body"]
+        .replace("<..>", first_name)
+        .replace("[booking URL]", booking)
+        .replace("[Your name]", practitioner)
+    )
     return result
 
 
@@ -86,13 +78,13 @@ def _build_inquiry_analytics(request) -> dict:
         for s in (InquiryStatus.DECLINED, InquiryStatus.UNREACHABLE, InquiryStatus.NOT_SUITABLE)
     )
 
-    # --- Time-in-stage averages (working days, Mon–Fri excl. Berlin public holidays) ---
+    # --- Time-in-stage averages (working days, Mon–Fri excl. US federal holidays) ---
     # Pre-build a holiday set covering all inquiry years (plus the next, for year-spanning cases).
     _inquiry_years = {d.year for d in base_qs.dates("inquiry_date", "year")}
     _holidays: set[date] = set()
     for yr in _inquiry_years:
-        _holidays |= berlin_public_holidays(yr)
-        _holidays |= berlin_public_holidays(yr + 1)
+        _holidays |= us_federal_holidays(yr)
+        _holidays |= us_federal_holidays(yr + 1)
 
     def _avg_days(from_field: str, to_field: str) -> tuple[float | None, int]:
         pairs = list(
@@ -136,20 +128,6 @@ def _build_inquiry_analytics(request) -> dict:
         for r in source_rows
     ]
 
-    # --- Language breakdown ---
-    lang_rows = list(base_qs.values("language").annotate(count=Count("id")).order_by("-count"))
-    lang_total = sum(r["count"] for r in lang_rows) or 1
-    _lang_labels = {"de": _("German"), "en": _("English")}
-    language_breakdown = [
-        {
-            "language": r["language"],
-            "label": _lang_labels.get(r["language"], r["language"]),
-            "count": r["count"],
-            "pct": round(100 * r["count"] / lang_total),
-        }
-        for r in lang_rows
-    ]
-
     # --- Monthly trend (last 12 months, by inquiry_date) ---
     range_start = DateRangeHelper.add_months(
         date(timezone.localdate().year, timezone.localdate().month, 1), -11
@@ -176,7 +154,6 @@ def _build_inquiry_analytics(request) -> dict:
         "closed_count": closed_count,
         "time_in_stage": time_in_stage,
         "source_breakdown": source_breakdown,
-        "language_breakdown": language_breakdown,
         "monthly_trend": monthly_trend,
         "total_inquiries": sum(status_counts.values()),
     }
@@ -294,10 +271,8 @@ class InquiryUpdateView(PracticeScopedUpdateView):
             {
                 "status": status,
                 "label": t["label"],
-                "subject": t.get("subject", ""),
-                "body": t.get("body", ""),
-                "subject_en": t.get("subject_en", ""),
-                "body_en": t.get("body_en", ""),
+                "subject": t["subject"],
+                "body": t["body"],
             }
             for status, t in (
                 (s, _interpolate_inquiry_template(tmpl, self.object, self.request.current_practice))
@@ -393,7 +368,6 @@ class InquiryConvertView(LoginRequiredMixin, View):
             first_seen_date=form.cleaned_data.get("first_seen_date"),
             hourly_rate_60=form.cleaned_data["default_hourly_rate"],
             hourly_rate_90=form.cleaned_data["default_hourly_rate"],
-            language=inquiry.language,
         )
 
         inquiry.converted_client = client

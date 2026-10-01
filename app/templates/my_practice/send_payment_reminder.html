@@ -6,7 +6,7 @@
 {% block title %}{% trans "Send payment reminder" %}{% endblock %}
 
 {% block page_title %}📧 {% trans "Send payment reminder" %}{% endblock %}
-{% block page_subtitle %}<span class="sensitive-data">{{ client.full_name }}</span> ({{ client.client_code }}) &mdash; {% if client.language == 'en' %}🇬🇧 English{% else %}🇩🇪 Deutsch{% endif %}{% endblock %}
+{% block page_subtitle %}<span class="sensitive-data">{{ client.full_name }}</span> ({{ client.client_code }}){% endblock %}
 
 {% block content %}
 
@@ -32,7 +32,7 @@
                             {{ invoice.invoice_number }}
                         </a>
                     </td>
-                    <td>{{ invoice.invoice_date|date:"d.m.Y" }}</td>
+                    <td>{{ invoice.invoice_date|date:"d M y" }}</td>
                     <td>{% include 'includes/invoice_status_badge.html' with invoice=invoice static_only=True %}</td>
                     <td class="text-right font-semibold">{{ invoice.total|currency }}</td>
                 </tr>
@@ -41,7 +41,7 @@
             <tfoot>
                 <tr class="total-row">
                     <td colspan="3">{% trans "Total open" %}</td>
-                    <td class="text-right"><strong>{{ open_invoices_total|floatformat:2 }} €</strong></td>
+                    <td class="text-right"><strong>{{ open_invoices_total|currency }}</strong></td>
                 </tr>
             </tfoot>
         </table>

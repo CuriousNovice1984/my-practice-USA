@@ -96,7 +96,6 @@ class InquiryCreateViewTest(TestCase):
             "full_name": "Maria Musterfrau",
             "email": "maria@example.com",
             "source": "referral",
-            "language": "de",
             "status": "new",
             "inquiry_date": date.today().isoformat(),
         }
@@ -135,7 +134,6 @@ class InquiryUpdateViewTest(TestCase):
             "full_name": "Anna Schmidt Updated",
             "email": "anna@example.com",
             "source": "website",
-            "language": "de",
             "status": "contacted",
             "inquiry_date": date.today().isoformat(),
         }

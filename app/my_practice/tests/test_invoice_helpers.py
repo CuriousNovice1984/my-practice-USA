@@ -45,8 +45,6 @@ class GetNextInvoiceNumberTests(TestCase):
         # Create service type
         self.service_type = ServiceType.objects.create(
             code="individual",
-            name_de="Einzelsitzung",
-            name_en="Individual Session",
             practice=self.practice,
         )
 

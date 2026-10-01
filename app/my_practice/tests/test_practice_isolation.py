@@ -36,9 +36,6 @@ class PracticeIsolationTestCase(TestCase):
             email="a@example.com",
             email_from_name="Practice A",
             website="https://a.example.com",
-            bank_name="Bank A",
-            iban="DE89370400440532013000",
-            bic="COBADEFFXXX",
             tax_id="12345",
         )
         self.practice_a.users.add(self.user)
@@ -53,9 +50,6 @@ class PracticeIsolationTestCase(TestCase):
             email="b@example.com",
             email_from_name="Practice B",
             website="https://b.example.com",
-            bank_name="Bank B",
-            iban="DE89370400440532013001",
-            bic="COBADEFFXXY",
             tax_id="54321",
         )
         self.practice_b.users.add(self.user)
@@ -181,14 +175,14 @@ class PracticeIsolationTestCase(TestCase):
             practice=self.practice_a,
             date=date.today(),
             amount=100,
-            category="miete",
+            category="rent",
         )
 
         CompanyExpense.objects.create(
             practice=self.practice_b,
             date=date.today(),
             amount=200,
-            category="telefon",
+            category="phone_internet",
         )
 
         # Test practice A context
@@ -198,13 +192,13 @@ class PracticeIsolationTestCase(TestCase):
 
         expenses_a = CompanyExpense.objects.for_current_practice(request)
         self.assertEqual(expenses_a.count(), 1)
-        self.assertEqual(expenses_a.first().category, "miete")
+        self.assertEqual(expenses_a.first().category, "rent")
 
         # Test practice B context
         request.current_practice = self.practice_b
         expenses_b = CompanyExpense.objects.for_current_practice(request)
         self.assertEqual(expenses_b.count(), 1)
-        self.assertEqual(expenses_b.first().category, "telefon")
+        self.assertEqual(expenses_b.first().category, "phone_internet")
 
     def test_create_without_practice_raises_integrity_error(self):
         """practice_id is NOT NULL — creating a client without a practice is rejected at DB level"""

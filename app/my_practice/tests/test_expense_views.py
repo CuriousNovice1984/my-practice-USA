@@ -50,20 +50,20 @@ class ExpenseListViewTest(TestCase):
             practice=self.practice,
             date=date(2025, 1, 15),
             description="2025 Expense 1",
-            category="materialien",
+            category="supplies",
             amount=Decimal("100.00"),
         )
         CompanyExpense.objects.create(
             date=date(2025, 2, 20),
             description="2025 Expense 2",
-            category="miete",
+            category="rent",
             amount=Decimal("1000.00"),
             practice=self.practice,
         )
         CompanyExpense.objects.create(
             date=date(2024, 12, 10),
             description="2024 Expense",
-            category="materialien",
+            category="supplies",
             amount=Decimal("50.00"),
             practice=self.practice,
         )
@@ -149,7 +149,7 @@ class ExpenseCreateViewTest(TestCase):
         data = {
             "date": "2025-01-15",
             "description": "New expense",
-            "category": "miete",
+            "category": "rent",
             "amount": "150.00",
             "is_tax_deductible": True,
         }
@@ -206,7 +206,7 @@ class ExpenseUpdateViewTest(TestCase):
         self.expense = CompanyExpense.objects.create(
             date=date(2025, 1, 15),
             description="Original description",
-            category="materialien",
+            category="supplies",
             amount=Decimal("100.00"),
             practice=self.practice,
         )
@@ -224,7 +224,7 @@ class ExpenseUpdateViewTest(TestCase):
         data = {
             "date": "2025-01-20",
             "description": "Updated description",
-            "category": "miete",
+            "category": "rent",
             "amount": "200.00",
             "is_tax_deductible": True,
         }
@@ -235,7 +235,7 @@ class ExpenseUpdateViewTest(TestCase):
         self.expense.refresh_from_db()
         self.assertEqual(self.expense.description, "Updated description")
         self.assertEqual(self.expense.amount, Decimal("200.00"))
-        self.assertEqual(self.expense.category, "miete")
+        self.assertEqual(self.expense.category, "rent")
 
         # Should redirect after success
         if response.status_code == 302:
@@ -252,7 +252,7 @@ class ExpenseUpdateViewTest(TestCase):
         data = {
             "date": "2025-01-20",
             "description": "Updated description",
-            "category": "miete",
+            "category": "rent",
             "amount": "200.00",
             "is_tax_deductible": True,
         }
@@ -266,11 +266,11 @@ class ExpenseUpdateViewTest(TestCase):
             transaction_date=date(2025, 1, 15),
             value_date=date(2025, 1, 15),
             payer_name="Vermieter GmbH",
-            payer_iban="",
+            payer_account="",
             reference="Miete",
             amount=Decimal("-100.00"),
             balance_after=Decimal("900.00"),
-            account_iban="",
+            source_account="",
             match_confidence="auto-expense",
             linked_expense=self.expense,
             processed=False,
@@ -278,7 +278,7 @@ class ExpenseUpdateViewTest(TestCase):
         data = {
             "date": "2025-01-20",
             "description": "Updated description",
-            "category": "miete",
+            "category": "rent",
             "amount": "200.00",
             "is_tax_deductible": True,
         }
@@ -286,7 +286,7 @@ class ExpenseUpdateViewTest(TestCase):
         rule = ExpenseCategoryRule.objects.get(
             practice=self.practice, match_key="name:vermieter gmbh"
         )
-        self.assertEqual(rule.category, "miete")
+        self.assertEqual(rule.category, "rent")
 
     def test_update_without_category_change_does_not_create_rule(self):
         """Saving the form without actually changing category shouldn't churn a rule."""
@@ -295,11 +295,11 @@ class ExpenseUpdateViewTest(TestCase):
             transaction_date=date(2025, 1, 15),
             value_date=date(2025, 1, 15),
             payer_name="Vermieter GmbH",
-            payer_iban="",
+            payer_account="",
             reference="Miete",
             amount=Decimal("-100.00"),
             balance_after=Decimal("900.00"),
-            account_iban="",
+            source_account="",
             match_confidence="auto-expense",
             linked_expense=self.expense,
             processed=False,
@@ -307,7 +307,7 @@ class ExpenseUpdateViewTest(TestCase):
         data = {
             "date": "2025-01-20",
             "description": "Updated description",
-            "category": "materialien",  # same category as setUp
+            "category": "supplies",  # same category as setUp
             "amount": "200.00",
             "is_tax_deductible": True,
         }
@@ -418,7 +418,7 @@ class ExpenseReceiptUploadTest(TestCase):
         data = {
             "date": "2025-03-02",
             "description": "Ohne Beleg",
-            "category": "materialien",
+            "category": "supplies",
             "amount": "10.00",
         }
         self.client.post(reverse("expense_create"), data)

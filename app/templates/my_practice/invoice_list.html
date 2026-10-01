@@ -12,7 +12,7 @@
 {% if unbilled.client_count %}
 <div class="info-box unbilled-callout">
     <strong>{% blocktrans count count=unbilled.client_count %}{{ count }} client with unbilled sessions{% plural %}{{ count }} clients with unbilled sessions{% endblocktrans %}</strong>
-    &mdash; {% trans "approx." %} {{ unbilled.amount|floatformat:2 }} €
+    &mdash; {% trans "approx." %} {{ unbilled.amount|currency }}
     &ensp;<a href="{% url 'monthly_billing' %}">→ {% trans "Open monthly billing" %}</a>
 </div>
 {% endif %}
@@ -30,12 +30,12 @@
     <a href="{% url 'invoice_list' %}?status=sent{% if current_year != 'all' %}&year={{ current_year }}{% endif %}" class="stat-card link-plain {% if current_status == 'sent' %}active{% endif %}">
         <div class="stat-label">{% trans "Sent" %}</div>
         <div class="stat-value">{{ stats.sent }}</div>
-        <div class="text-muted text-sm mt-1">{{ stats.sent_amount|floatformat:2 }} €</div>
+        <div class="text-muted text-sm mt-1">{{ stats.sent_amount|currency }}</div>
     </a>
     <a href="{% url 'invoice_list' %}?status=paid{% if current_year != 'all' %}&year={{ current_year }}{% endif %}" class="stat-card link-plain {% if current_status == 'paid' %}active{% endif %}">
         <div class="stat-label">{% trans "Paid" %}</div>
         <div class="stat-value">{{ stats.paid }}</div>
-        <div class="text-muted text-sm mt-1">{{ stats.paid_amount|floatformat:2 }} €</div>
+        <div class="text-muted text-sm mt-1">{{ stats.paid_amount|currency }}</div>
     </a>
 </div>
 
@@ -71,7 +71,7 @@
 
             <!-- Amount Range -->
             <div>
-                <label class="filter-panel__label">{% trans "Min. amount (€)" %}</label>
+                <label class="filter-panel__label">{% trans "Min. amount ($)" %}</label>
                 <input
                     type="number"
                     name="min_amount"
@@ -83,7 +83,7 @@
             </div>
 
             <div>
-                <label class="filter-panel__label">{% trans "Max. amount (€)" %}</label>
+                <label class="filter-panel__label">{% trans "Max. amount ($)" %}</label>
                 <input
                     type="number"
                     name="max_amount"
@@ -125,8 +125,8 @@
             <strong class="text-primary">{% blocktrans count count=invoices.paginator.count %}{{ count }} invoice found{% plural %}{{ count }} invoices found{% endblocktrans %}</strong>
             {% if start_date %} • {% blocktrans with date=start_date %}From: {{ date }}{% endblocktrans %}{% endif %}
             {% if end_date %} • {% blocktrans with date=end_date %}To: {{ date }}{% endblocktrans %}{% endif %}
-            {% if min_amount %} • {% blocktrans with amount=min_amount %}Min: {{ amount }}€{% endblocktrans %}{% endif %}
-            {% if max_amount %} • {% blocktrans with amount=max_amount %}Max: {{ amount }}€{% endblocktrans %}{% endif %}
+            {% if min_amount %} • {% blocktrans with amount=min_amount|currency %}Min: {{ amount }}{% endblocktrans %}{% endif %}
+            {% if max_amount %} • {% blocktrans with amount=max_amount|currency %}Max: {{ amount }}{% endblocktrans %}{% endif %}
         </p>
         {% endif %}
     </details>
@@ -176,11 +176,11 @@
             <tr>
                 <td class="truncate"><a href="{% url 'invoice_detail' invoice.pk %}" class="link-plain"><span class="invoice-number">{{ invoice.invoice_number }}</span></a></td>
                 <td class="truncate"><span class="sensitive-data">{{ invoice.client.full_name }}</span></td>
-                <td class="truncate">{{ invoice.invoice_date|date:"d.m.Y" }}</td>
+                <td class="truncate">{{ invoice.invoice_date|date:"d M y" }}</td>
                 <td id="invoice-status-{{ invoice.pk }}">
                     {% include 'includes/invoice_status_badge.html' %}
                 </td>
-                <td class="truncate text-right">{{ invoice.total|floatformat:2 }}&nbsp;€</td>
+                <td class="truncate text-right">{{ invoice.total|currency }}</td>
                 <td class="truncate">
                     <a href="{% url 'invoice_detail' invoice.pk %}" class="link-plain font-semibold">👁️ {% trans "View" %}</a>
                 </td>

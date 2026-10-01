@@ -27,7 +27,7 @@
     {% if checklist.is_completed %}
     <div class="checklist-done-banner">
         <div class="checklist-done-banner__title">
-            ✅ {% blocktrans with date=checklist.completed_at|date:"d.m.Y" time=checklist.completed_at|time:"H:i" %}Completed on {{ date }} at {{ time }}{% endblocktrans %}
+            ✅ {% blocktrans with date=checklist.completed_at|date:"d M y" time=checklist.completed_at|time:"H:i" %}Completed on {{ date }} at {{ time }}{% endblocktrans %}
         </div>
         {% if checklist.notes %}
         <div class="checklist-done-banner__notes">
@@ -65,7 +65,7 @@
                         <div class="checklist-item-paused__reason">
                             <strong>{% trans "Paused:" %}</strong> {{ item.pause.reason }}
                             {% if item.pause.paused_until %}
-                            · <em>{% blocktrans with date=item.pause.paused_until|date:"d.m.Y" %}until {{ date }}{% endblocktrans %}</em>
+                            · <em>{% blocktrans with date=item.pause.paused_until|date:"d M y" %}until {{ date }}{% endblocktrans %}</em>
                             {% endif %}
                         </div>
                     </div>

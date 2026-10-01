@@ -99,7 +99,7 @@ class CalendarOAuth2CallbackTest(CalendarViewsTestBase):
         )
         self.assertRedirects(response, reverse("dashboard"))
         messages = list(response.context["messages"])
-        self.assertTrue(any("OAuth-Statusfehler" in str(m) for m in messages))
+        self.assertTrue(any("OAuth state mismatch" in str(m) for m in messages))
 
     def test_successful_callback_saves_token_and_redirects(self):
         self._set_session_state("state123")
@@ -131,7 +131,7 @@ class CalendarOAuth2CallbackTest(CalendarViewsTestBase):
             )
         self.assertRedirects(response, reverse("dashboard"))
         messages = list(response.context["messages"])
-        self.assertTrue(any("Fehler bei der Autorisierung" in str(m) for m in messages))
+        self.assertTrue(any("Authorization error" in str(m) for m in messages))
 
 
 class CalendarImportViewTest(CalendarViewsTestBase):
@@ -211,7 +211,7 @@ class CalendarImportViewTest(CalendarViewsTestBase):
             response = self.http.get(reverse("calendar_import"), follow=True)
         self.assertRedirects(response, reverse("dashboard"))
         messages = list(response.context["messages"])
-        self.assertTrue(any("Fehler beim Laden der Kalender-Einträge" in str(m) for m in messages))
+        self.assertTrue(any("Error loading calendar events" in str(m) for m in messages))
 
 
 class CalendarImportEventsViewTest(CalendarViewsTestBase):
@@ -527,7 +527,7 @@ class CalendarEventQuickActionTest(CalendarViewsTestBase):
             follow=True,
         )
         messages = list(response.context["messages"])
-        self.assertTrue(any("Unbekannte Aktion" in str(m) for m in messages))
+        self.assertTrue(any("Unknown action" in str(m) for m in messages))
 
     def test_no_client_assigned_redirects_to_approval_queue(self):
         event = self._make_event(matched_client=None)
@@ -546,7 +546,7 @@ class CalendarEventQuickActionTest(CalendarViewsTestBase):
             follow=True,
         )
         messages = list(response.context["messages"])
-        self.assertTrue(any("Kein passender Leistungstyp" in str(m) for m in messages))
+        self.assertTrue(any("No matching service type" in str(m) for m in messages))
 
     def test_falls_back_to_default_60min_service_type(self):
         event = self._make_event(suggested_service_type=None)
@@ -568,7 +568,7 @@ class CalendarEventQuickActionTest(CalendarViewsTestBase):
             follow=True,
         )
         messages = list(response.context["messages"])
-        self.assertTrue(any("Kein Stundensatz" in str(m) for m in messages))
+        self.assertTrue(any("No hourly rate" in str(m) for m in messages))
 
     def test_already_billed_session_shows_warning(self):
         invoice = Invoice.objects.create(
@@ -596,7 +596,7 @@ class CalendarEventQuickActionTest(CalendarViewsTestBase):
             follow=True,
         )
         messages = list(response.context["messages"])
-        self.assertTrue(any("bereits abgerechnet" in str(m) for m in messages))
+        self.assertTrue(any("already billed" in str(m) for m in messages))
 
     def test_new_invoice_action_creates_invoice_and_item(self):
         event = self._make_event()
@@ -641,4 +641,4 @@ class CalendarEventQuickActionTest(CalendarViewsTestBase):
                 follow=True,
             )
         messages = list(response.context["messages"])
-        self.assertTrue(any("Fehler beim Import" in str(m) for m in messages))
+        self.assertTrue(any("Import error" in str(m) for m in messages))

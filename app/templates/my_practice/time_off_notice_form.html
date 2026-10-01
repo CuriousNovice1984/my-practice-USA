@@ -4,7 +4,7 @@
 {% block title %}{% trans "Send heads-up email" %}{% endblock %}
 
 {% block page_title %}📧 {% trans "Send heads-up email" %}{% endblock %}
-{% block page_subtitle %}{% for time_off in time_offs %}{{ time_off.title }} ({{ time_off.start_date|date:"d.m.Y" }} – {{ time_off.end_date|date:"d.m.Y" }}){% if not forloop.last %}, {% endif %}{% endfor %}{% endblock %}
+{% block page_subtitle %}{% for time_off in time_offs %}{{ time_off.title }} ({{ time_off.start_date|date:"d M y" }} – {{ time_off.end_date|date:"d M y" }}){% if not forloop.last %}, {% endif %}{% endfor %}{% endblock %}
 
 {% block content %}
 
@@ -27,7 +27,6 @@
                                    title="{% trans 'Select/unselect all' %}" aria-label="{% trans 'Select/unselect all' %}">
                         </th>
                         <th class="py-0.5 px-2">{% trans "Code" %}</th>
-                        <th class="py-0.5 px-2">{% trans "Language" %}</th>
                         <th class="py-0.5 px-2">{% trans "Last session" %}</th>
                         <th class="py-0.5 px-2">{% trans "Next session" %}</th>
                     </tr>
@@ -37,7 +36,6 @@
                     <tr>
                         <td class="py-0.5 px-2"><input type="checkbox" name="recipients" value="{{ client.pk }}" class="form-check-input recipient-checkbox" {% if client.pk|stringformat:"s" in checked_ids %}checked{% endif %} aria-label="{% trans 'Select recipient' %}"></td>
                         <td class="py-0.5 px-2 font-mono font-bold text-base">{{ client.client_code }}</td>
-                        <td class="py-0.5 px-2"><span class="badge badge-{{ client.language }} py-0.5 px-2">{{ client.language|upper }}</span></td>
                         <td class="py-0.5 px-2">{{ client.last_session_date|date:"Y-m-d"|default:"–" }}</td>
                         <td class="py-0.5 px-2">{{ client.next_session_date|date:"Y-m-d"|default:"–" }}</td>
                     </tr>
@@ -51,37 +49,18 @@
     </div>
 
     <div class="form-section">
-        <h3>🇩🇪 {% trans "German" %}</h3>
+        <h3>✉️ {% trans "Message" %}</h3>
 
         <div class="form-group">
-            <label for="{{ form.subject_de.id_for_label }}">{{ form.subject_de.label }}</label>
-            {{ form.subject_de }}
-            {% if form.subject_de.errors %}<div class="error">{{ form.subject_de.errors }}</div>{% endif %}
+            <label for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
+            {{ form.subject }}
+            {% if form.subject.errors %}<div class="error">{{ form.subject.errors }}</div>{% endif %}
         </div>
 
         <div class="form-group">
-            <label for="{{ form.body_de.id_for_label }}">{{ form.body_de.label }}</label>
-            {{ form.body_de }}
-            {% if form.body_de.errors %}<div class="error">{{ form.body_de.errors }}</div>{% endif %}
-            <div class="helptext">
-                {% trans "Leave the {salutation} token in place — it is replaced with each client's personal salutation when sending." %}
-            </div>
-        </div>
-    </div>
-
-    <div class="form-section">
-        <h3>🇬🇧 {% trans "English" %}</h3>
-
-        <div class="form-group">
-            <label for="{{ form.subject_en.id_for_label }}">{{ form.subject_en.label }}</label>
-            {{ form.subject_en }}
-            {% if form.subject_en.errors %}<div class="error">{{ form.subject_en.errors }}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.body_en.id_for_label }}">{{ form.body_en.label }}</label>
-            {{ form.body_en }}
-            {% if form.body_en.errors %}<div class="error">{{ form.body_en.errors }}</div>{% endif %}
+            <label for="{{ form.body.id_for_label }}">{{ form.body.label }}</label>
+            {{ form.body }}
+            {% if form.body.errors %}<div class="error">{{ form.body.errors }}</div>{% endif %}
             <div class="helptext">
                 {% trans "Leave the {salutation} token in place — it is replaced with each client's personal salutation when sending." %}
             </div>

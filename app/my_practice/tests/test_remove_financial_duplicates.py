@@ -77,8 +77,8 @@ class RemoveFinancialDuplicatesTest(TestCase):
         self.assertEqual(CompanyExpense.objects.count(), 2)
 
     def test_yes_flag_deletes_duplicates_keeping_lowest_id(self):
-        first = self._make_expense(category="miete")
-        self._make_expense(category="telefon")
+        first = self._make_expense(category="rent")
+        self._make_expense(category="phone_internet")
         self._make_expense(category="software")
 
         output = self._run("--yes")
@@ -87,7 +87,7 @@ class RemoveFinancialDuplicatesTest(TestCase):
         self.assertEqual(CompanyExpense.objects.count(), 1)
         remaining = CompanyExpense.objects.first()
         self.assertEqual(remaining.pk, first.pk)
-        self.assertEqual(remaining.category, "miete")
+        self.assertEqual(remaining.category, "rent")
 
     def test_year_filter_scopes_deletion(self):
         self._make_expense(day=1)  # 2025 duplicate pair

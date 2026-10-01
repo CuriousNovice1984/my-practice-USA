@@ -51,7 +51,7 @@
             <span class="font-semibold">📄 {{ filename }}</span>
             <div class="mt-1 text-sm">
                 {% trans "The questionnaire is attached automatically as a PDF (with fillable fields)." %}
-                <a href="{% url 'questionnaire_pdf' questionnaire_code %}?lang={{ client.language }}" target="_blank" class="ml-3">
+                <a href="{% url 'questionnaire_pdf' questionnaire_code %}" target="_blank" class="ml-3">
                     🔍 {% trans "Preview / download" %}
                 </a>
             </div>

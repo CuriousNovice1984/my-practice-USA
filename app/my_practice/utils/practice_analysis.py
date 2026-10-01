@@ -352,8 +352,8 @@ class PracticeAnalyzer:
         ph = sum(c["sessions_in_period"] for c in probatoric)
         return [
             ngettext(
-                "🌱 %(n)s new probatoric client (%(h)sh)",
-                "🌱 %(n)s new probatoric clients (%(h)sh)",
+                "🌱 %(n)s new client (%(h)sh)",
+                "🌱 %(n)s new clients (%(h)sh)",
                 len(probatoric),
             )
             % {"n": len(probatoric), "h": f"{ph:.1f}"}

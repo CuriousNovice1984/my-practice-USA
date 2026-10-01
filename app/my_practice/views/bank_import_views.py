@@ -60,8 +60,8 @@ class BankImportView(FormView):
         importer = BankStatementImporter(csv_file, self.request.current_practice)
         results = importer.process(skip_negatives=skip_expenses)
 
-        # Abort if CSV belongs to the wrong bank account
-        if results.get("account_mismatch"):
+        # Abort if the CSV doesn't have the configured columns
+        if results.get("invalid_format"):
             for error in results["errors"]:
                 messages.error(self.request, error)
             return self.form_invalid(form)
@@ -648,7 +648,7 @@ class BankFinancialReviewView(PracticeScopedListView):
                 description = transactions.first().reference
             else:
                 label = dict(self.record_model.CATEGORY_CHOICES).get(category, self.record_label)
-                description = f"{count}x {label} ({min_date.strftime('%d.%m.%Y')} – {max_date.strftime('%d.%m.%Y')})"
+                description = f"{count}x {label} ({min_date.strftime('%d %b %y')} – {max_date.strftime('%d %b %y')})"
 
         # Collected before the grouped record exists so it can never be in the list.
         orphan_ids = self._orphan_record_ids(transactions)
@@ -721,11 +721,11 @@ class BankExpenseReviewView(BankFinancialReviewView):
     redirect_name = "bank_expense_review"
     page_title = gettext_lazy("Bank Import - Assign Expenses")
     default_category = "other"
-    record_label = "Ausgabe"
-    grouped_note_prefix = "Zu Ausgabe zusammengefasst"
+    record_label = "Expense"
+    grouped_note_prefix = "Grouped into expense"
     group_success_message = ngettext_lazy(
-        "%(count)s transaction successfully grouped into expense: %(amount)s €",
-        "%(count)s transactions successfully grouped into expense: %(amount)s €",
+        "%(count)s transaction successfully grouped into expense: $%(amount)s",
+        "%(count)s transactions successfully grouped into expense: $%(amount)s",
         "count",
     )
 
@@ -752,7 +752,7 @@ class BankExpenseReviewView(BankFinancialReviewView):
         # future imports from the same payer are pre-categorized.
         learned_keys = set()
         for trans in transactions:
-            match_key = build_counterparty_key(trans.payer_iban, trans.payer_name)
+            match_key = build_counterparty_key(trans.payer_account, trans.payer_name)
             if match_key and match_key not in learned_keys:
                 learned_keys.add(match_key)
                 ExpenseCategoryRule.objects.update_or_create(
@@ -771,11 +771,11 @@ class BankWithdrawalReviewView(BankFinancialReviewView):
     redirect_name = "bank_withdrawal_review"
     page_title = gettext_lazy("Bank Import - Assign Withdrawals")
     default_category = "salary"
-    record_label = "Entnahme"
-    grouped_note_prefix = "Zu Entnahme zusammengefasst"
+    record_label = "Withdrawal"
+    grouped_note_prefix = "Grouped into withdrawal"
     group_success_message = ngettext_lazy(
-        "%(count)s transaction successfully grouped into withdrawal: %(amount)s €",
-        "%(count)s transactions successfully grouped into withdrawal: %(amount)s €",
+        "%(count)s transaction successfully grouped into withdrawal: $%(amount)s",
+        "%(count)s transactions successfully grouped into withdrawal: $%(amount)s",
         "count",
     )
 

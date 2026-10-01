@@ -4,7 +4,7 @@
 {% block title %}{% if withdrawal %}{% trans "Edit withdrawal" %}{% else %}{% trans "New withdrawal" %}{% endif %}{% endblock %}
 
 {% block page_title %}{% if withdrawal %}{% trans "Edit withdrawal" %}{% else %}{% trans "New withdrawal" %}{% endif %}{% endblock %}
-{% block page_subtitle %}{% if withdrawal %}{% blocktrans with date=withdrawal.date|date:"d.m.Y" %}Edit withdrawal of {{ date }}{% endblocktrans %}{% else %}{% trans "Record a new withdrawal" %}{% endif %}{% endblock %}
+{% block page_subtitle %}{% if withdrawal %}{% blocktrans with date=withdrawal.date|date:"d M y" %}Edit withdrawal of {{ date }}{% endblocktrans %}{% else %}{% trans "Record a new withdrawal" %}{% endif %}{% endblock %}
 
 {% block content %}
 

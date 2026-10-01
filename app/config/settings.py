@@ -88,7 +88,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "my_practice.context_processors.update_check",
                 "django.template.context_processors.i18n",
             ],
             # Disable template caching in DEBUG mode for instant updates
@@ -114,10 +113,7 @@ DATABASES = {
 # Cache
 #
 # Without this block Django falls back to per-process LocMemCache: each gunicorn
-# worker warms its own copy and every restart starts cold. The only thing cached
-# today is the GitHub release lookup in context_processors.update_check, which
-# runs on every authenticated page render — so a cold or per-worker cache means
-# that outbound call happens far more often than its 24-hour TTL implies.
+# worker warms its own copy and every restart starts cold.
 #
 # The database backend is the one that needs no extra service. Its table is
 # created by migration 0032 rather than a manual `createcachetable`, so there is
@@ -147,13 +143,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = os.getenv("DJANGO_LANGUAGE_CODE", "de-de")
-LANGUAGES = [
-    ("de", "Deutsch"),
-    ("en", "English"),
-]
+LANGUAGE_CODE = "en-us"
+LANGUAGES = [("en", "English")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
-TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Europe/Berlin")
+# config/formats/en/formats.py overrides Django's stock US formats with
+# DD MMM YY dates ("01 Oct 26").
+FORMAT_MODULE_PATH = ["config.formats"]
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "America/Chicago")
 USE_I18N = True
 USE_TZ = True
 
@@ -337,7 +333,3 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
 DEFAULT_EXCEPTION_REPORTER_FILTER = "config.exception_reporter.PIIExceptionReporterFilter"
-
-# Update check — context processor polls GitHub releases API (once per day, cached).
-# Set UPDATE_CHECK_DISABLED=true in .env to opt out.
-UPDATE_CHECK_DISABLED = os.environ.get("UPDATE_CHECK_DISABLED", "false").lower() == "true"

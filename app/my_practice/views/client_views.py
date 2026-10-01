@@ -23,18 +23,41 @@ from django.views.decorators.http import require_POST
 from ..forms import ClientIntakeForm
 from ..models import Client, ClientDocument, ClientTag, Invoice, InvoiceItem
 from ..utils import (
+    DateRangeHelper,
     RevenueCalculator,
     annotate_activity_status,
     sort_tags_by_category,
 )
-from ..utils.email_utils import get_gdpr_deletion_email_content
+from ..utils.email_utils import get_records_deletion_email_content
 from ..utils.file_processing import process_upload
 from ..utils.view_helpers import get_object_or_403
 from .crud_mixins import NextRedirectMixin, PracticeScopedListView, PracticeScopedUpdateView
 
 logger = logging.getLogger(__name__)
 
-GDPR_RETENTION_YEARS = 10
+
+def retention_end_date(client: Client, last_session: date, years: int) -> date:
+    """Earliest date this client's records may be destroyed.
+
+    ``years`` after the last session, or — for a client seen as a minor — ``years``
+    after their 18th birthday, whichever is later.
+    """
+    end = DateRangeHelper.add_years(last_session, years)
+    if client.date_of_birth:
+        end = max(end, DateRangeHelper.add_years(client.date_of_birth, 18 + years))
+    return end
+
+
+def _retention_years(practice) -> int:
+    return practice.records_retention_years if practice else 7
+
+
+def _retention_expired(client: Client, last_session: date | None, practice) -> bool:
+    if client.active or not last_session:
+        return False
+    return (
+        retention_end_date(client, last_session, _retention_years(practice)) < timezone.localdate()
+    )
 
 
 class ClientListView(PracticeScopedListView):
@@ -133,12 +156,10 @@ class ClientListView(PracticeScopedListView):
             )
         )
 
-        # Clients eligible for GDPR deletion (inactive + last session 10+ years ago)
-        retention_cutoff = today - timedelta(days=365 * GDPR_RETENTION_YEARS + 2)
+        # Clients whose records retention period has ended (inactive only)
+        practice = self.request.current_practice
         clients_deletion_eligible = [
-            c
-            for c in clients_inactive
-            if c.last_session_date and c.last_session_date <= retention_cutoff
+            c for c in clients_inactive if _retention_expired(c, c.last_session_date, practice)
         ]
         context["clients_deletion_eligible"] = clients_deletion_eligible
 
@@ -333,8 +354,8 @@ def client_document_upload(request: HttpRequest, pk: int) -> JsonResponse:
     dt = ClientDocument.DocumentType
     onboarding_map = {
         dt.INTAKE: ("intake_sent_date", "intake"),
-        dt.CONTRACT: ("contract_signed_date", "contract"),
-        dt.ANAMNESE: ("questionnaire_sent_date", "anamnese"),
+        dt.CONSENT: ("contract_signed_date", "contract"),
+        dt.HEALTH_HISTORY: ("questionnaire_sent_date", "questionnaire"),
     }
     if doc_type in onboarding_map:
         field, step = onboarding_map[doc_type]
@@ -369,33 +390,32 @@ def client_document_delete(request: HttpRequest, pk: int) -> JsonResponse:
     return JsonResponse({"success": True})
 
 
-def _gdpr_cutoff() -> date:
-    return timezone.localdate() - timedelta(days=365 * GDPR_RETENTION_YEARS + 2)
-
-
-def client_gdpr_delete_confirm(request: HttpRequest, pk: int) -> HttpResponse:
-    """Confirmation page before GDPR deletion of a client record."""
+def client_records_delete_confirm(request: HttpRequest, pk: int) -> HttpResponse:
+    """Confirmation page before destroying a client's records after retention ends."""
 
     client = get_object_or_404(Client.objects.for_current_practice(request), pk=pk)
     last_session = client.sessions.aggregate(last=Max("session_date"))["last"]
+    practice = request.current_practice
 
-    if client.active or not last_session or last_session > _gdpr_cutoff():
+    if not _retention_expired(client, last_session, practice):
         messages.error(
             request,
             _(
-                "Client %(code)s does not meet the requirements for GDPR deletion "
-                "(inactive + last session more than %(years)s years ago)."
+                "Client %(code)s's records can't be destroyed yet: the client must be "
+                "inactive and the %(years)s-year retention period must have ended."
             )
-            % {"code": client.client_code, "years": GDPR_RETENTION_YEARS},
+            % {"code": client.client_code, "years": _retention_years(practice)},
         )
         return redirect("client_list")
 
     return render(
         request,
-        "my_practice/client_gdpr_delete_confirm.html",
+        "my_practice/client_records_delete_confirm.html",
         {
             "client": client,
             "last_session": last_session,
+            "retention_years": _retention_years(practice),
+            "retention_end": retention_end_date(client, last_session, _retention_years(practice)),
             "invoice_count": client.invoices.count(),
             "document_count": client.documents.count(),
             "has_email": bool(client.email),
@@ -403,21 +423,21 @@ def client_gdpr_delete_confirm(request: HttpRequest, pk: int) -> HttpResponse:
     )
 
 
-def _send_gdpr_deletion_email(request: HttpRequest, client: Client, practice) -> None:
+def _send_records_deletion_email(request: HttpRequest, client: Client, practice) -> None:
     """Best-effort notification email to the client before their data is erased."""
     if not (client.email and practice):
         return
     try:
-        subject, body = get_gdpr_deletion_email_content(client, practice)
+        subject, body = get_records_deletion_email_content(client, practice)
         EmailMessage(
             subject=subject,
             body=body,
             from_email=practice.email,
             to=[client.email],
         ).send()
-        logger.info("GDPR deletion email sent for %s", client.client_code)
+        logger.info("Records deletion email sent for %s", client.client_code)
     except Exception:
-        logger.exception("Failed to send GDPR deletion email for %s", client.client_code)
+        logger.exception("Failed to send records deletion email for %s", client.client_code)
         messages.warning(
             request,
             _(
@@ -443,24 +463,24 @@ def _delete_files_from_disk(paths: list[str]) -> None:
         try:
             os.unlink(path)
         except OSError:
-            logger.warning("Could not delete media file after GDPR erasure: %s", path)
+            logger.warning("Could not delete media file after records destruction: %s", path)
 
 
 @require_POST
-def client_gdpr_delete(request: HttpRequest, pk: int) -> HttpResponse:
-    """GDPR Art. 17 deletion: send notification email then erase client data."""
+def client_records_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    """Destroy a client's records after retention ends: notify, then erase all data."""
 
     client = get_object_or_404(Client.objects.for_current_practice(request), pk=pk)
     last_session = client.sessions.aggregate(last=Max("session_date"))["last"]
+    practice = request.current_practice
 
-    if client.active or not last_session or last_session > _gdpr_cutoff():
-        messages.error(request, _("Requirements for GDPR deletion not met."))
+    if not _retention_expired(client, last_session, practice):
+        messages.error(request, _("The records retention period has not ended yet."))
         return redirect("client_list")
 
-    practice = request.current_practice
     client_code = client.client_code
 
-    _send_gdpr_deletion_email(request, client, practice)
+    _send_records_deletion_email(request, client, practice)
     doc_file_paths = _collect_document_file_paths(client)
 
     # Delete in FK dependency order (PROTECT constraints first)
@@ -475,7 +495,7 @@ def client_gdpr_delete(request: HttpRequest, pk: int) -> HttpResponse:
 
     messages.success(
         request,
-        _("Client %(code)s has been deleted pursuant to GDPR Art. 17.") % {"code": client_code},
+        _("Records for client %(code)s have been destroyed.") % {"code": client_code},
     )
     return redirect("client_list")
 

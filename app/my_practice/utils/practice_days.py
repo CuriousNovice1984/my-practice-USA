@@ -1,19 +1,17 @@
 """
-Fahrtkosten / Entfernungspauschale calculation (P-027).
+US calendar and tax-year helpers for a self-employed practice.
 
-§9 Abs. 1 Nr. 4 EStG: the daily commute deduction for each day actually driven
-to the practice. Rates (as of 2024):
-  - 0.30 €/km for the first 20 km (one-way)
-  - 0.38 €/km for every km beyond 20 km
+- ``us_federal_holidays`` — the eleven federal holidays (observed dates), used
+  to exclude closures from working-day and capacity calculations. Other
+  closures (e.g. the day after Thanksgiving) are recorded as TimeOff.
+- ``estimated_tax_periods`` — the IRS Form 1040-ES payment periods and their
+  due dates. They are *not* calendar quarters: Q2 covers only April–May and Q3
+  June–August.
+- ``self_employment_tax_estimate`` — Schedule SE estimate on net profit.
+- ``HomeOfficeCalculator`` — the IRS simplified home office deduction
+  ($5 per square foot, up to 300 sq ft).
 
-The deduction basis is the number of *actual session days* in the tax year —
-i.e. days where at least one session is recorded in the database — filtered to
-the practitioner's configured weekdays. The calendar-based estimate
-(weekdays − public holidays − TimeOff) is also computed for reference but is
-not used for the deduction itself.
-
-Public holidays ARE still needed: they are excluded from the calendar-based
-``practice_days`` count (which serves as a reference / upper bound).
+These are planning estimates, not tax advice — the tax pages say so.
 """
 
 from __future__ import annotations
@@ -27,416 +25,142 @@ if TYPE_CHECKING:
     from ..models import Practice
 
 
-# Entfernungspauschale rates (§9 Abs. 1 Nr. 4 EStG)
-RATE_FIRST_20_KM = Decimal("0.30")
-RATE_ABOVE_20_KM = Decimal("0.38")
-KM_THRESHOLD = 20
+# IRS simplified method for business use of home (Rev. Proc. 2013-13)
+HOME_OFFICE_RATE_PER_SQFT = Decimal("5")
+HOME_OFFICE_MAX_SQFT = 300
 
-# Home-Office-Pauschale (§4 Abs. 5 Nr. 6b EStG; annual cap in days)
-HOME_OFFICE_DAILY_RATE = Decimal("6.00")
-HOME_OFFICE_MAX_DAYS = 210
-
-
-def _easter(year: int) -> date:
-    """Compute Easter Sunday via the Anonymous Gregorian algorithm."""
-    a = year % 19
-    b = year // 100
-    c = year % 100
-    d = b // 4
-    e = b % 4
-    f = (b + 8) // 25
-    g = (b - f + 1) // 3
-    h = (19 * a + b - d - g + 15) % 30
-    i = c // 4
-    k = c % 4
-    ll = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * ll) // 451
-    month = (h + ll - 7 * m + 114) // 31
-    day = ((h + ll - 7 * m + 114) % 31) + 1
-    return date(year, month, day)
+# Schedule SE: 92.35% of net earnings is subject to the 15.3% SE tax
+# (12.4% Social Security up to the annual wage base + 2.9% Medicare)
+SE_TAX_EARNINGS_FACTOR = Decimal("0.9235")
+SE_TAX_RATE = Decimal("0.153")
 
 
-def berlin_public_holidays(year: int) -> set[date]:
-    """
-    Return the set of Berlin public holidays for the given year.
+def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
+    """The n-th ``weekday`` (0=Mon) of a month; ``n=-1`` for the last one."""
+    if n > 0:
+        first = date(year, month, 1)
+        offset = (weekday - first.weekday()) % 7
+        return first + timedelta(days=offset + 7 * (n - 1))
+    next_month = date(year + month // 12, month % 12 + 1, 1)
+    last = next_month - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() - weekday) % 7)
 
-    Includes all federal holidays observed in Berlin plus Berlin-specific ones
-    (Tag der Deutschen Einheit, Reformationstag since 2018, International Women's Day since 2019).
-    Does NOT include Heilige Drei Könige (Berlin: not a public holiday).
-    """
-    easter = _easter(year)
 
+def _observed(day: date) -> date:
+    """Federal observance rule: Saturday → preceding Friday, Sunday → following Monday."""
+    if day.weekday() == 5:
+        return day - timedelta(days=1)
+    if day.weekday() == 6:
+        return day + timedelta(days=1)
+    return day
+
+
+def us_federal_holiday_names(year: int) -> dict[date, str]:
+    """Return {observed date: name} for the US federal holidays of ``year``."""
     holidays = {
-        date(year, 1, 1),  # Neujahr
-        easter - timedelta(days=2),  # Karfreitag
-        easter,  # Ostersonntag (kein gesetzl. Feiertag, but included for safety)
-        easter + timedelta(days=1),  # Ostermontag
-        date(year, 5, 1),  # Tag der Arbeit
-        easter + timedelta(days=39),  # Christi Himmelfahrt
-        easter + timedelta(days=49),  # Pfingstsonntag
-        easter + timedelta(days=50),  # Pfingstmontag
-        date(year, 10, 3),  # Tag der Deutschen Einheit
-        date(year, 12, 25),  # 1. Weihnachtstag
-        date(year, 12, 26),  # 2. Weihnachtstag
+        _observed(date(year, 1, 1)): "New Year's Day",
+        _nth_weekday(year, 1, 0, 3): "Martin Luther King Jr. Day",
+        _nth_weekday(year, 2, 0, 3): "Washington's Birthday",
+        _nth_weekday(year, 5, 0, -1): "Memorial Day",
+        _observed(date(year, 7, 4)): "Independence Day",
+        _nth_weekday(year, 9, 0, 1): "Labor Day",
+        _nth_weekday(year, 10, 0, 2): "Columbus Day",
+        _observed(date(year, 11, 11)): "Veterans Day",
+        _nth_weekday(year, 11, 3, 4): "Thanksgiving Day",
+        _observed(date(year, 12, 25)): "Christmas Day",
     }
-
-    # Reformationstag: Berlin since 2018
-    if year >= 2018:
-        holidays.add(date(year, 10, 31))
-
-    # Internationaler Frauentag: Berlin since 2019
-    if year >= 2019:
-        holidays.add(date(year, 3, 8))
-
+    # Juneteenth became a federal holiday in 2021
+    if year >= 2021:
+        holidays[_observed(date(year, 6, 19))] = "Juneteenth"
+    # When next New Year's Day is a Saturday it is observed on 31 Dec of this year
+    next_new_year = _observed(date(year + 1, 1, 1))
+    if next_new_year.year == year:
+        holidays[next_new_year] = "New Year's Day"
     return holidays
 
 
-def _timeoff_dates_for_year(year: int) -> set[date]:
-    """Return all dates within TimeOff entries that fall inside the given year."""
-    from ..models import TimeOff
-
-    entries = TimeOff.objects.filter(
-        start_date__year__lte=year,
-        end_date__year__gte=year,
-    )
-    off_dates: set[date] = set()
-    year_start = date(year, 1, 1)
-    year_end = date(year, 12, 31)
-    for entry in entries:
-        current = max(entry.start_date, year_start)
-        end = min(entry.end_date, year_end)
-        while current <= end:
-            off_dates.add(current)
-            current += timedelta(days=1)
-    return off_dates
+def us_federal_holidays(year: int) -> set[date]:
+    """Return the set of observed US federal holiday dates for ``year``."""
+    return set(us_federal_holiday_names(year))
 
 
-@dataclass
-class FahrtkostenResult:
-    """Result of a Fahrtkosten calculation."""
+def _next_business_day(day: date) -> date:
+    """Roll a due date that falls on a weekend or federal holiday forward."""
+    while day.weekday() >= 5 or day in us_federal_holidays(day.year):
+        day += timedelta(days=1)
+    return day
 
-    year: int
-    distance_km: int
-    practice_days: int  # calendar-based (weekdays - holidays - timeoff)
-    session_days: int  # actual days with at least one session in the DB
-    deduction_total: Decimal
-    deduction_first_20_km: Decimal
-    deduction_above_20_km: Decimal
-    configured_weekdays: list[int]  # 0=Mo … 4=Fr
-    total_possible_days: int  # weekdays in year matching practice_weekdays
-    timeoff_days_excluded: int  # days excluded due to TimeOff entries
+
+@dataclass(frozen=True)
+class EstimatedTaxPeriod:
+    """One IRS estimated-tax payment period (Form 1040-ES)."""
+
+    number: int
+    start: date
+    end: date
+    due: date
 
     @property
-    def is_configured(self) -> bool:
-        return self.distance_km > 0 and bool(self.configured_weekdays)
+    def label(self) -> str:
+        return f"Q{self.number}"
+
+
+def estimated_tax_periods(year: int) -> list[EstimatedTaxPeriod]:
+    """The four 1040-ES periods for ``year`` with their (business-day adjusted) due dates."""
+    raw = [
+        (1, date(year, 1, 1), date(year, 3, 31), date(year, 4, 15)),
+        (2, date(year, 4, 1), date(year, 5, 31), date(year, 6, 15)),
+        (3, date(year, 6, 1), date(year, 8, 31), date(year, 9, 15)),
+        (4, date(year, 9, 1), date(year, 12, 31), date(year + 1, 1, 15)),
+    ]
+    return [
+        EstimatedTaxPeriod(number=n, start=s, end=e, due=_next_business_day(d))
+        for n, s, e, d in raw
+    ]
+
+
+def self_employment_tax_estimate(net_profit: Decimal) -> Decimal:
+    """Estimated self-employment tax on ``net_profit`` (zero for a loss).
+
+    Ignores the Social Security wage-base cap, so it overstates the tax only
+    for net earnings above the cap.
+    """
+    if net_profit <= 0:
+        return Decimal("0.00")
+    return (net_profit * SE_TAX_EARNINGS_FACTOR * SE_TAX_RATE).quantize(Decimal("0.01"))
 
 
 @dataclass
 class HomeOfficeResult:
-    """Result of a home-office day calculation."""
+    """Result of the simplified home office deduction."""
 
     year: int
-    configured_practice_weekdays: list[int]  # 0=Mo … 4=Fr
-    home_office_weekdays: list[int]  # 0=Mo … 4=Fr
-    total_possible_days: int
-    timeoff_days_excluded: int
-    home_office_days: int  # calendar-based (weekdays - holidays - timeoff)
-    capped_days: int  # legal cap for the pauschale
+    square_feet: int
+    counted_square_feet: int  # capped at HOME_OFFICE_MAX_SQFT
     deduction_total: Decimal
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.configured_practice_weekdays)
+        return self.square_feet > 0
 
 
-class PracticeDayCalculator:
+class HomeOfficeCalculator:
+    """IRS simplified home office deduction: $5 × office square feet (max 300).
+
+    The deduction can't exceed the business's gross income minus other
+    expenses; the tax summary applies that limit where it knows net profit.
     """
-    Calculate practice days and Entfernungspauschale for a tax year.
-
-    Practice days = all days in the year on the configured weekdays,
-    minus public holidays (Berlin), minus TimeOff periods recorded in the system.
-
-    Args:
-        practice: Practice model instance with commute_distance_km and practice_weekdays
-        year: The tax year to calculate for
-    """
-
-    def __init__(self, practice: Practice, year: int) -> None:
-        self.practice = practice
-        self.year = year
-
-    def _session_dates(self) -> set[date]:
-        """Return all dates in this year that have at least one session (any client)."""
-        from ..models import Session
-
-        return set(
-            Session.objects.filter(session_date__year=self.year).values_list(
-                "session_date", flat=True
-            )
-        )
-
-    def calculate(self) -> FahrtkostenResult:
-        """
-        Calculate practice days and Entfernungspauschale.
-
-        Returns a FahrtkostenResult dataclass. If practice is not configured
-        (no distance or no weekdays), returns a result with zeros.
-        """
-        distance_km: int = self.practice.commute_distance_km or 0
-        weekdays: list[int] = list(self.practice.practice_weekdays or [])
-
-        if not distance_km or not weekdays:
-            return FahrtkostenResult(
-                year=self.year,
-                distance_km=distance_km,
-                practice_days=0,
-                session_days=0,
-                deduction_total=Decimal("0"),
-                deduction_first_20_km=Decimal("0"),
-                deduction_above_20_km=Decimal("0"),
-                configured_weekdays=weekdays,
-                total_possible_days=0,
-                timeoff_days_excluded=0,
-            )
-
-        holidays = berlin_public_holidays(self.year)
-        timeoff = _timeoff_dates_for_year(self.year)
-        sessions = self._session_dates()
-
-        year_start = date(self.year, 1, 1)
-        year_end = date(self.year, 12, 31)
-
-        total_possible = 0
-        timeoff_excluded = 0
-        practice_days = 0
-
-        current = year_start
-        while current <= year_end:
-            if current.weekday() in weekdays:
-                total_possible += 1
-                if current in holidays:
-                    pass  # holiday, not a practice day
-                elif current in timeoff:
-                    timeoff_excluded += 1
-                else:
-                    practice_days += 1
-            current += timedelta(days=1)
-
-        # Session-based count: distinct days with at least one session,
-        # restricted to the configured weekdays. Public holidays are NOT
-        # excluded here — if a session actually happened, the drive is claimable.
-        session_days = len({d for d in sessions if d.weekday() in weekdays})
-
-        # Deduction basis: actual session days (§9: days you drove to the practice)
-        km = distance_km
-        first_part_km = min(km, KM_THRESHOLD)
-        above_part_km = max(km - KM_THRESHOLD, 0)
-
-        deduction_first = Decimal(str(first_part_km)) * RATE_FIRST_20_KM * session_days
-        deduction_above = Decimal(str(above_part_km)) * RATE_ABOVE_20_KM * session_days
-
-        return FahrtkostenResult(
-            year=self.year,
-            distance_km=km,
-            practice_days=practice_days,
-            session_days=session_days,
-            deduction_total=deduction_first + deduction_above,
-            deduction_first_20_km=deduction_first,
-            deduction_above_20_km=deduction_above,
-            configured_weekdays=weekdays,
-            total_possible_days=total_possible,
-            timeoff_days_excluded=timeoff_excluded,
-        )
-
-
-class HomeOfficeDayCalculator:
-    """Calculate home-office days and Home-Office-Pauschale for a tax year."""
 
     def __init__(self, practice: Practice, year: int) -> None:
         self.practice = practice
         self.year = year
 
     def calculate(self) -> HomeOfficeResult:
-        """Calculate home-office weekdays and deductible pauschale."""
-        practice_weekdays = sorted(
-            {int(d) for d in (self.practice.practice_weekdays or []) if 0 <= int(d) <= 4}
-        )
-        home_office_weekdays = [d for d in range(5) if d not in practice_weekdays]
-
-        if not practice_weekdays:
-            return HomeOfficeResult(
-                year=self.year,
-                configured_practice_weekdays=[],
-                home_office_weekdays=[],
-                total_possible_days=0,
-                timeoff_days_excluded=0,
-                home_office_days=0,
-                capped_days=0,
-                deduction_total=Decimal("0"),
-            )
-
-        holidays = berlin_public_holidays(self.year)
-        timeoff = _timeoff_dates_for_year(self.year)
-
-        total_possible = 0
-        timeoff_excluded = 0
-        home_office_days = 0
-
-        current = date(self.year, 1, 1)
-        year_end = date(self.year, 12, 31)
-        while current <= year_end:
-            if current.weekday() in home_office_weekdays:
-                total_possible += 1
-                if current in holidays:
-                    pass
-                elif current in timeoff:
-                    timeoff_excluded += 1
-                else:
-                    home_office_days += 1
-            current += timedelta(days=1)
-
-        capped_days = min(home_office_days, HOME_OFFICE_MAX_DAYS)
-        deduction_total = Decimal(str(capped_days)) * HOME_OFFICE_DAILY_RATE
-
+        square_feet = self.practice.home_office_sqft or 0
+        counted = min(square_feet, HOME_OFFICE_MAX_SQFT)
         return HomeOfficeResult(
             year=self.year,
-            configured_practice_weekdays=practice_weekdays,
-            home_office_weekdays=home_office_weekdays,
-            total_possible_days=total_possible,
-            timeoff_days_excluded=timeoff_excluded,
-            home_office_days=home_office_days,
-            capped_days=capped_days,
-            deduction_total=deduction_total,
-        )
-
-
-@dataclass
-class DayAuditEntry:
-    """A single row in the workday audit list."""
-
-    day: date
-    day_type: str  # "practice" | "home_office" | "holiday" | "timeoff" | "weekend"
-    sessions: int  # number of sessions on this day (0 if none / non-session day)
-    holiday_name: str  # non-empty only for public holidays
-
-
-@dataclass
-class WorkdayAuditResult:
-    """Full year workday audit data."""
-
-    year: int
-    entries: list[DayAuditEntry]
-    practice_days: int
-    home_office_days: int
-    holiday_count: int
-    timeoff_days: int
-
-
-# Human-readable Berlin holiday names for the audit list
-def _berlin_holiday_names(year: int) -> dict[date, str]:
-    """Return a mapping of Berlin public holiday dates to German names."""
-    easter = _easter(year)
-    names: dict[date, str] = {
-        date(year, 1, 1): "Neujahr",
-        easter - timedelta(days=2): "Karfreitag",
-        easter: "Ostersonntag",
-        easter + timedelta(days=1): "Ostermontag",
-        date(year, 5, 1): "Tag der Arbeit",
-        easter + timedelta(days=39): "Christi Himmelfahrt",
-        easter + timedelta(days=49): "Pfingstsonntag",
-        easter + timedelta(days=50): "Pfingstmontag",
-        date(year, 10, 3): "Tag der Deutschen Einheit",
-        date(year, 12, 25): "1. Weihnachtstag",
-        date(year, 12, 26): "2. Weihnachtstag",
-    }
-    if year >= 2018:
-        names[date(year, 10, 31)] = "Reformationstag"
-    if year >= 2019:
-        names[date(year, 3, 8)] = "Internationaler Frauentag"
-    return names
-
-
-class WorkdayAuditCalculator:
-    """
-    Build a full-year day-by-day audit list showing each weekday's classification.
-
-    Only weekdays (Mon–Fri) are included; Sat/Sun are skipped.
-    Day types:
-      - "practice"     — a configured practice weekday, not holiday/timeoff
-      - "home_office"  — a non-practice weekday, not holiday/timeoff
-      - "holiday"      — a Berlin public holiday (any weekday)
-      - "timeoff"      — within a TimeOff period (practice or HO day, not holiday)
-    """
-
-    def __init__(self, practice: "Practice", year: int) -> None:
-        self.practice = practice
-        self.year = year
-
-    def _session_counts(self) -> dict[date, int]:
-        """Return {date: session_count} for all non-cancelled sessions in the year."""
-        from ..models import Session
-
-        qs = Session.objects.filter(
-            client__practice=self.practice,
-            session_date__year=self.year,
-            cancelled=False,
-        ).values_list("session_date", flat=True)
-        counts: dict[date, int] = {}
-        for d in qs:
-            counts[d] = counts.get(d, 0) + 1
-        return counts
-
-    def calculate(self) -> WorkdayAuditResult:
-        """Build the audit list for the full year."""
-        practice_weekdays = {
-            int(d) for d in (self.practice.practice_weekdays or []) if 0 <= int(d) <= 4
-        }
-        holidays = berlin_public_holidays(self.year)
-        holiday_names = _berlin_holiday_names(self.year)
-        timeoff = _timeoff_dates_for_year(self.year)
-        session_counts = self._session_counts()
-
-        entries: list[DayAuditEntry] = []
-        practice_days = home_office_days = holiday_count = timeoff_days = 0
-
-        current = date(self.year, 1, 1)
-        year_end = date(self.year, 12, 31)
-        while current <= year_end:
-            wd = current.weekday()
-            if wd >= 5:  # skip weekends
-                current += timedelta(days=1)
-                continue
-
-            sessions = session_counts.get(current, 0)
-
-            if current in holidays:
-                day_type = "holiday"
-                holiday_count += 1
-            elif current in timeoff:
-                day_type = "timeoff"
-                timeoff_days += 1
-            elif wd in practice_weekdays:
-                day_type = "practice"
-                practice_days += 1
-            else:
-                day_type = "home_office"
-                home_office_days += 1
-
-            entries.append(
-                DayAuditEntry(
-                    day=current,
-                    day_type=day_type,
-                    sessions=sessions,
-                    holiday_name=holiday_names.get(current, ""),
-                )
-            )
-            current += timedelta(days=1)
-
-        return WorkdayAuditResult(
-            year=self.year,
-            entries=entries,
-            practice_days=practice_days,
-            home_office_days=home_office_days,
-            holiday_count=holiday_count,
-            timeoff_days=timeoff_days,
+            square_feet=square_feet,
+            counted_square_feet=counted,
+            deduction_total=Decimal(counted) * HOME_OFFICE_RATE_PER_SQFT,
         )

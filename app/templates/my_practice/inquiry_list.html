@@ -96,23 +96,6 @@
                     </div>
                 </div>
 
-                {# Language breakdown #}
-                {% if analytics.language_breakdown %}
-                <div class="analytics-section">
-                    <h4>{% trans "Language" %}</h4>
-                    <div class="source-breakdown">
-                        {% for row in analytics.language_breakdown %}
-                        <div class="source-row">
-                            <span class="lang-badge lang-{{ row.language }}">{{ row.label }}</span>
-                            <div class="source-bar-wrap">
-                                <div class="source-bar" style="width:{{ row.pct }}%"></div>
-                            </div>
-                            <span class="source-count">{{ row.count }}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
 
                 {# Monthly trend #}
                 {% if analytics.monthly_trend %}
@@ -181,7 +164,6 @@
                         <th>{% trans "Date" %}</th>
                         <th>{% trans "Name" %}</th>
                         <th>{% trans "Source" %}</th>
-                        <th>{% trans "Language" %}</th>
                         <th>{% trans "Contact" %}</th>
                         <th>{% trans "Actions" %}</th>
                     </tr>
@@ -189,7 +171,7 @@
                 <tbody>
                 {% for inquiry in group.fresh %}
                 <tr class="inquiry-row {% if inquiry.is_closed %}inquiry-closed{% endif %}">
-                    <td class="inquiry-date">{{ inquiry.inquiry_date|date:"d.m.Y" }}</td>
+                    <td class="inquiry-date">{{ inquiry.inquiry_date|date:"d M y" }}</td>
                     <td class="inquiry-name">
                         <a href="{% url 'inquiry_edit' inquiry.pk %}">{{ inquiry.full_name|privacy_name }}</a>
                         {% if inquiry.converted_client %}
@@ -197,7 +179,6 @@
                         {% endif %}
                     </td>
                     <td><span class="source-badge source-{{ inquiry.source }}">{{ inquiry.get_source_display }}</span></td>
-                    <td><span class="lang-badge lang-{{ inquiry.language }}">{{ inquiry.get_language_display }}</span></td>
                     <td class="inquiry-contact">
                         {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">✉ <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
                         {% if inquiry.phone %}<span class="contact-link">☎ <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
@@ -229,15 +210,14 @@
                             <th>{% trans "Date" %}</th>
                             <th>{% trans "Name" %}</th>
                             <th>{% trans "Source" %}</th>
-                            <th>{% trans "Language" %}</th>
-                            <th>{% trans "Contact" %}</th>
+                                <th>{% trans "Contact" %}</th>
                             <th>{% trans "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for inquiry in group.stale %}
                     <tr class="inquiry-row inquiry-stale {% if inquiry.is_closed %}inquiry-closed{% endif %}">
-                        <td class="inquiry-date">{{ inquiry.inquiry_date|date:"d.m.Y" }}</td>
+                        <td class="inquiry-date">{{ inquiry.inquiry_date|date:"d M y" }}</td>
                         <td class="inquiry-name">
                             <a href="{% url 'inquiry_edit' inquiry.pk %}">{{ inquiry.full_name|privacy_name }}</a>
                             {% if inquiry.converted_client %}
@@ -245,8 +225,7 @@
                             {% endif %}
                         </td>
                         <td><span class="source-badge source-{{ inquiry.source }}">{{ inquiry.get_source_display }}</span></td>
-                        <td><span class="lang-badge lang-{{ inquiry.language }}">{{ inquiry.get_language_display }}</span></td>
-                        <td class="inquiry-contact">
+                            <td class="inquiry-contact">
                             {% if inquiry.email %}<a href="mailto:{{ inquiry.email }}" class="contact-link">✉ <span class="sensitive-data">{{ inquiry.email }}</span></a>{% endif %}
                             {% if inquiry.phone %}<span class="contact-link">☎ <span class="sensitive-data">{{ inquiry.phone }}</span></span>{% endif %}
                         </td>

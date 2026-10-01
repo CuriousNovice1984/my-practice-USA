@@ -53,26 +53,11 @@ def _make_invoice_item(invoice, practice, client_obj, rate=Decimal("90.00")):
     )
 
 
-def _csv_bytes(rows, iban=PRACTICE_IBAN):
-    header = (
-        "IBAN Auftragskonto;Buchungstag;Valutadatum;"
-        "Name Zahlungsbeteiligter;IBAN Zahlungsbeteiligter;"
-        "Betrag;Saldo nach Buchung;Verwendungszweck"
-    )
+def _csv_bytes(rows, header="Date,Description,Amount"):
+    """US-format bank CSV matching the practice's default column settings."""
     lines = [header]
     lines.extend(
-        ";".join(
-            [
-                iban,
-                r.get("date", "15.01.2026"),
-                r.get("date", "15.01.2026"),
-                r.get("payer", "Test Zahler"),
-                r.get("payer_iban", ""),
-                r.get("amount", "90,00"),
-                "1000,00",
-                r.get("ref", "Test"),
-            ]
-        )
+        f"{r.get('date', '01/15/2026')},{r.get('ref', 'Test')},{r.get('amount', '90.00')}"
         for r in rows
     )
     return "\n".join(lines).encode("utf-8")
@@ -84,11 +69,10 @@ class BankImportViewBase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="bankuser", password="pass")
         self.practice = Practice.objects.create(
-            name="Test Praxis",
+            name="Test Practice",
             slug="bank-import-views",
-            title="Therapeutin",
+            title="Therapist",
             email="test@example.com",
-            iban=PRACTICE_IBAN,
         )
         UserPractice.objects.create(user=self.user, practice=self.practice, is_owner=True)
 
@@ -110,45 +94,43 @@ class BankImportViewGetTest(BankImportViewBase):
 
 
 class BankImportViewPostTest(BankImportViewBase):
-    def _upload(self, rows, iban=PRACTICE_IBAN):
+    def _upload(self, rows, **kwargs):
         csv_file = SimpleUploadedFile(
-            "test.csv", _csv_bytes(rows, iban=iban), content_type="text/csv"
+            "test.csv", _csv_bytes(rows, **kwargs), content_type="text/csv"
         )
         return self.http.post(reverse("bank_import"), {"csv_file": csv_file})
 
     def test_valid_csv_redirects_to_review(self):
-        response = self._upload(
-            [
-                {"date": "15.01.2026", "payer": "Jemand", "amount": "50,00", "ref": "Test"},
-            ]
-        )
+        response = self._upload([{"date": "01/15/2026", "amount": "50.00", "ref": "Test"}])
         self.assertRedirects(response, reverse("bank_review"))
 
-    def test_account_mismatch_shows_error(self):
+    def test_missing_columns_shows_error(self):
         response = self._upload(
-            [{"date": "15.01.2026", "payer": "Jemand", "amount": "50,00", "ref": "Test"}],
-            iban="DE00000000000000000000",
+            [{"date": "01/15/2026", "amount": "50.00", "ref": "Test"}],
+            header="Posting Date,Memo,Amount",
         )
-        # Should re-render the form (not redirect) when IBAN doesn't match
+        # Should re-render the form (not redirect) and name the missing columns
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "my_practice/bank_import.html")
+        self.assertContains(response, "missing the column(s)")
+        self.assertEqual(BankTransaction.objects.count(), 0)
 
 
 # ── BankReviewView ────────────────────────────────────────────────────────────
 
 
 class BankReviewViewBase(BankImportViewBase):
-    def _make_unmatched(self, ref="Test Ref", amount="90,00", payer="Jemand"):
+    def _make_unmatched(self, ref="Test Ref", amount="90.00", payer="Somebody"):
         return BankTransaction.objects.create(
             practice=self.practice,
             transaction_date=date(2026, 1, 15),
             value_date=date(2026, 1, 15),
             payer_name=payer,
-            payer_iban="",
+            payer_account="",
             reference=ref,
             amount=Decimal(amount.replace(",", ".")),
             balance_after=Decimal("1000.00"),
-            account_iban=PRACTICE_IBAN,
+            source_account=PRACTICE_IBAN,
             match_confidence="unmatched",
             processed=False,
         )
@@ -187,11 +169,11 @@ class BankReviewViewGetTest(BankReviewViewBase):
             transaction_date=date(2026, 1, 16),
             value_date=date(2026, 1, 16),
             payer_name="Done",
-            payer_iban="",
+            payer_account="",
             reference="Already done",
             amount=Decimal("50.00"),
             balance_after=Decimal("950.00"),
-            account_iban=PRACTICE_IBAN,
+            source_account=PRACTICE_IBAN,
             match_confidence="manual",
             processed=True,
         )
@@ -230,22 +212,22 @@ class BankReviewViewGetTest(BankReviewViewBase):
 class BankReviewDataAmountTest(BankReviewViewBase):
     """data-amount feeds parseFloat in bank_review.js, so it must not be localized.
 
-    Django localizes template numbers, and LANGUAGE_CODE is "de-de" — a bare
+    Django localizes template numbers — under a comma-decimal locale a bare
     {{ trans.amount }} renders "90,50", which parseFloat truncates to 90. That
     silently drops the cents from the tally's match comparison, so a transaction
-    that exactly matches its invoice was reported as a 0,50 € mismatch. The
-    template uses |unlocalize; this pins it.
+    that exactly matches its invoice was reported as a $0.50 mismatch. The
+    template uses |unlocalize; this pins it (rendered under "de" on purpose).
     """
 
     def test_data_amount_is_a_machine_readable_decimal(self):
-        self._make_unmatched(amount="90,50")
+        self._make_unmatched(amount="90.50")
         with translation.override("de"):
             response = self.http.get(reverse("bank_review"))
         self.assertContains(response, 'data-amount="90.50"')
         self.assertNotContains(response, 'data-amount="90,50"')
 
     def test_data_amount_has_no_thousands_separator(self):
-        self._make_unmatched(amount="1234,56")
+        self._make_unmatched(amount="1234.56")
         with translation.override("de"):
             response = self.http.get(reverse("bank_review"))
         self.assertContains(response, 'data-amount="1234.56"')
@@ -259,7 +241,7 @@ class BankReviewPaginationTest(BankReviewViewBase):
         for i in range(20):
             self._make_unmatched(ref=f"Filler {i}", payer=f"Filler {i}")
         self._make_invoice(number="PG-1", status="paid", total=Decimal("90.00"), payer="Page Payer")
-        trans = self._make_unmatched(ref="PG-1", amount="90,00", payer="Page Payer")
+        trans = self._make_unmatched(ref="PG-1", amount="90.00", payer="Page Payer")
         trans.extracted_invoice_number = "PG-1"
         trans.transaction_date = date(2026, 1, 1)  # oldest -> sorts onto page 2
         trans.value_date = date(2026, 1, 1)
@@ -280,8 +262,8 @@ class BankReviewBulkActionsTest(BankReviewViewBase):
         self.assertEqual(BankTransaction.objects.filter(match_confidence="ignored").count(), 2)
 
     def test_ignore_all_expenses(self):
-        self._make_unmatched(ref="Expense", amount="-120,00")
-        self._make_unmatched(ref="Income", amount="90,00")  # positive, should NOT be ignored
+        self._make_unmatched(ref="Expense", amount="-120.00")
+        self._make_unmatched(ref="Income", amount="90.00")  # positive, should NOT be ignored
         self.http.post(reverse("bank_review"), {"action": "ignore_all_expenses"})
         ignored = BankTransaction.objects.filter(match_confidence="ignored")
         self.assertEqual(ignored.count(), 1)
@@ -289,7 +271,7 @@ class BankReviewBulkActionsTest(BankReviewViewBase):
 
     def test_bulk_ignore_paid_matches_paid_invoice(self):
         self._make_invoice(number="BP-1", status="paid", total=Decimal("90.00"), payer="Bulk Payer")
-        trans = self._make_unmatched(ref="BP-1", amount="90,00", payer="Bulk Payer")
+        trans = self._make_unmatched(ref="BP-1", amount="90.00", payer="Bulk Payer")
         trans.extracted_invoice_number = "BP-1"
         trans.save()
 
@@ -300,7 +282,7 @@ class BankReviewBulkActionsTest(BankReviewViewBase):
 
     def test_bulk_ignore_paid_skips_amount_mismatch(self):
         self._make_invoice(number="BM-1", status="paid", total=Decimal("90.00"), payer="Bm Payer")
-        trans = self._make_unmatched(ref="BM-1", amount="80,00", payer="Bm Payer")
+        trans = self._make_unmatched(ref="BM-1", amount="80.00", payer="Bm Payer")
         trans.extracted_invoice_number = "BM-1"
         trans.save()
 
@@ -327,7 +309,7 @@ class BankReviewSingleActionsTest(BankReviewViewBase):
         invoice = self._make_invoice(
             number="AM-1", status="sent", total=Decimal("90.00"), payer="Auto Matcher"
         )
-        trans = self._make_unmatched(ref="AM-1 Zahlung", amount="90,00")
+        trans = self._make_unmatched(ref="AM-1 Zahlung", amount="90.00")
 
         self.http.post(
             reverse("bank_review"),
@@ -395,11 +377,11 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             transaction_date=date(2026, 1, 15),
             value_date=date(2026, 1, 15),
             payer_name="Vermieter",
-            payer_iban="",
+            payer_account="",
             reference=ref,
             amount=Decimal("-120.00"),
             balance_after=Decimal("880.00"),
-            account_iban=PRACTICE_IBAN,
+            source_account=PRACTICE_IBAN,
             match_confidence="unmatched",
             processed=False,
         )
@@ -417,7 +399,7 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             {
                 "action": "group",
                 "transactions": [trans.id],
-                "category": "miete",
+                "category": "rent",
                 "description": "Praxismiete Januar",
             },
         )
@@ -446,8 +428,8 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             practice=self.practice,
             date=date(2026, 1, 15),
             amount=Decimal("120.00"),
-            description="Miete",
-            category="miete",
+            description="Rent",
+            category="rent",
         )
         trans = self._make_expense_transaction()
         trans.match_confidence = "auto-expense"
@@ -470,25 +452,25 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             {
                 "action": "group",
                 "transactions": [trans.id],
-                "category": "miete",
+                "category": "rent",
                 "description": "Praxismiete Januar",
             },
         )
         rule = ExpenseCategoryRule.objects.get(practice=self.practice, match_key="name:vermieter")
-        self.assertEqual(rule.category, "miete")
+        self.assertEqual(rule.category, "rent")
 
     def test_group_learns_one_rule_per_distinct_counterparty(self):
-        trans_a = self._make_expense_transaction(ref="Miete Jan")
+        trans_a = self._make_expense_transaction(ref="Rent Jan")
         trans_b = BankTransaction.objects.create(
             practice=self.practice,
             transaction_date=date(2026, 1, 20),
             value_date=date(2026, 1, 20),
             payer_name="Anderer Vermieter",
-            payer_iban="",
-            reference="Miete Feb",
+            payer_account="",
+            reference="Rent Feb",
             amount=Decimal("-120.00"),
             balance_after=Decimal("760.00"),
-            account_iban=PRACTICE_IBAN,
+            source_account=PRACTICE_IBAN,
             match_confidence="unmatched",
             processed=False,
         )
@@ -497,7 +479,7 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             {
                 "action": "group",
                 "transactions": [trans_a.id, trans_b.id],
-                "category": "miete",
+                "category": "rent",
             },
         )
         self.assertEqual(ExpenseCategoryRule.objects.filter(practice=self.practice).count(), 2)
@@ -512,12 +494,12 @@ class BankExpenseReviewViewTest(BankImportViewBase):
             {
                 "action": "group",
                 "transactions": [trans.id],
-                "category": "miete",
+                "category": "rent",
             },
         )
         self.assertEqual(ExpenseCategoryRule.objects.filter(practice=self.practice).count(), 1)
         rule = ExpenseCategoryRule.objects.get(practice=self.practice, match_key="name:vermieter")
-        self.assertEqual(rule.category, "miete")
+        self.assertEqual(rule.category, "rent")
 
 
 # ── BankWithdrawalReviewView ──────────────────────────────────────────────────
@@ -530,11 +512,11 @@ class BankWithdrawalReviewViewTest(BankImportViewBase):
             transaction_date=date(2026, 1, 15),
             value_date=date(2026, 1, 15),
             payer_name="Praxisinhaber",
-            payer_iban="",
+            payer_account="",
             reference=ref,
             amount=Decimal("-500.00"),
             balance_after=Decimal("500.00"),
-            account_iban=PRACTICE_IBAN,
+            source_account=PRACTICE_IBAN,
             match_confidence="auto-withdrawal",
             processed=False,
         )

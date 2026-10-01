@@ -249,7 +249,7 @@ class PracticeScopedDeleteView(LoginRequiredMixin, DeleteView):
             template_name = "my_practice/expense_confirm_delete.html"
             success_url = reverse_lazy("expense_list")
             context_object_name = "expense"
-            success_message = gettext_lazy("Expense from {obj.date:%d.%m.%Y} deleted successfully.")
+            success_message = gettext_lazy("Expense from {obj.date:%d %b %y} deleted successfully.")
     """
 
     success_message: str | None = None

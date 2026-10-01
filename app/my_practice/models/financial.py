@@ -25,12 +25,12 @@ class CompanyWithdrawal(TimestampedModel):
         CORRECTION = "correction"
 
     CATEGORY_CHOICES = [
-        (Category.SALARY, _("Salary / personal")),
-        (Category.TAX, _("Tax prepayment")),
+        (Category.SALARY, _("Owner's draw")),
+        (Category.TAX, _("Estimated tax payment")),
         (Category.PRIVATE_TRANSFER, _("Private transfer")),
         (Category.OTHER, _("Other")),
         # Incoming / adjustments
-        (Category.CONTRIBUTION, _("Capital contribution")),
+        (Category.CONTRIBUTION, _("Owner contribution")),
         (Category.CORRECTION, _("Incorrect posting / correction")),
     ]
 
@@ -81,7 +81,7 @@ class CompanyWithdrawal(TimestampedModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.date.strftime('%d.%m.%Y')}: {self.amount}€"
+        return f"{self.date.strftime('%d %b %y')}: ${self.amount}"
 
 
 class CompanyExpense(TimestampedModel):
@@ -90,45 +90,46 @@ class CompanyExpense(TimestampedModel):
     class Category(StrEnum):
         """Expense category for tax reporting and profit calculation."""
 
-        MIETE = "miete"
-        TELEFON = "telefon"
-        VERBAND = "verband"
-        VERSICHERUNG = "versicherung"
-        KONTO = "konto"
-        WEBSEITE = "webseite"
-        WERBUNG = "werbung"
+        RENT = "rent"
+        PHONE_INTERNET = "phone_internet"
+        DUES = "dues"
+        INSURANCE = "insurance"
+        BANK_FEES = "bank_fees"
+        LICENSES = "licenses"
+        WEBSITE = "website"
+        ADVERTISING = "advertising"
         SOFTWARE = "software"
-        SELBSTERFAHRUNG = "selbsterfahrung"
+        PERSONAL_THERAPY = "personal_therapy"
         SUPERVISION = "supervision"
         TRAINING = "training"
-        AUSBILDUNG_ORT = "ausbildung_ort"
-        GRUPPE = "gruppe"
-        MATERIALIEN = "materialien"
+        TRAINING_TRAVEL = "training_travel"
+        PEER_CONSULTATION = "peer_consultation"
+        SUPPLIES = "supplies"
         HARDWARE = "hardware"
-        LITERATUR = "literatur"
-        KONGRESS = "kongress"
+        BOOKS = "books"
+        CONFERENCES = "conferences"
         OTHER = "other"
 
-    # Wording matches the existing choices already reused verbatim in
-    # bank_expense_review.html — keep in sync if either changes.
+    # Schedule C line hints in the labels help when transferring the year's totals.
     CATEGORY_CHOICES = [
-        (Category.MIETE, _("Rent")),
-        (Category.TELEFON, _("Phone")),
-        (Category.VERBAND, _("Association / membership fees")),
-        (Category.VERSICHERUNG, _("Insurance")),
-        (Category.KONTO, _("Account / account fees")),
-        (Category.WEBSEITE, _("Website / domain")),
-        (Category.WERBUNG, _("Advertising / marketing")),
-        (Category.SOFTWARE, _("Software")),
-        (Category.SELBSTERFAHRUNG, _("Personal therapy (training)")),
-        (Category.SUPERVISION, _("Supervision")),
-        (Category.TRAINING, _("Training / continuing education")),
-        (Category.AUSBILDUNG_ORT, _("Training location")),
-        (Category.GRUPPE, _("Group")),
-        (Category.MATERIALIEN, _("Materials")),
-        (Category.HARDWARE, _("Hardware")),
-        (Category.LITERATUR, _("Literature")),
-        (Category.KONGRESS, _("Conference")),
+        (Category.RENT, _("Rent / office lease (Sch. C line 20b)")),
+        (Category.PHONE_INTERNET, _("Phone & internet (line 25)")),
+        (Category.DUES, _("Professional dues & memberships (line 27a)")),
+        (Category.INSURANCE, _("Liability & business insurance (line 15)")),
+        (Category.BANK_FEES, _("Bank & card processing fees (line 27a)")),
+        (Category.LICENSES, _("Licenses & renewal fees (line 23)")),
+        (Category.WEBSITE, _("Website / domain (line 8)")),
+        (Category.ADVERTISING, _("Advertising / marketing (line 8)")),
+        (Category.SOFTWARE, _("Software & subscriptions (line 18)")),
+        (Category.PERSONAL_THERAPY, _("Personal therapy (training requirement)")),
+        (Category.SUPERVISION, _("Clinical supervision (line 17)")),
+        (Category.TRAINING, _("Continuing education / CEUs (line 27a)")),
+        (Category.TRAINING_TRAVEL, _("Training travel & lodging (line 24a)")),
+        (Category.PEER_CONSULTATION, _("Peer consultation group")),
+        (Category.SUPPLIES, _("Office & therapy supplies (line 22)")),
+        (Category.HARDWARE, _("Equipment (line 13 / Section 179)")),
+        (Category.BOOKS, _("Books & publications")),
+        (Category.CONFERENCES, _("Conferences")),
         (Category.OTHER, _("Other")),
     ]
 
@@ -173,7 +174,7 @@ class CompanyExpense(TimestampedModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.date} - {self.get_category_display()}: {self.amount}€"
+        return f"{self.date} - {self.get_category_display()}: ${self.amount}"
 
 
 def expense_attachment_upload_path(instance: "ExpenseReceipt", filename: str) -> str:
@@ -223,8 +224,8 @@ class TaxYearNote(TimestampedModel):
     """
     Per-year tax record: allocation note, and the annual settlement result.
 
-    Stores things like "Revenue ratio 95/5 for 2025 — HO and commute split accordingly."
-    Also records the Steuerbescheid outcome (Nachzahlung or Erstattung) once known.
+    Stores things like "Revenue ratio 95/5 for 2025 — home office split accordingly."
+    Also records the filed return's result (balance due or refund) once known.
     One record per practice per year; used as audit documentation.
     """
 
