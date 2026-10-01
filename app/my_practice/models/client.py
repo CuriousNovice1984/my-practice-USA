@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from ..us_states import US_STATE_CHOICES
 from .base import PracticeScopedQuerySet, TimestampedModel
 
 
@@ -98,6 +99,16 @@ class Client(TimestampedModel):
     email = models.EmailField(blank=True, validators=[EmailValidator()], verbose_name=_("Email"))
     phone = models.CharField(max_length=50, blank=True, verbose_name=_("Phone"))
     address = models.TextField(blank=True, verbose_name=_("Address"))
+    state = models.CharField(
+        max_length=2,
+        choices=US_STATE_CHOICES,
+        blank=True,
+        verbose_name=_("State (client location)"),
+        help_text=_(
+            "Where the client is located during sessions — you need a current "
+            "license in this state, including for telehealth."
+        ),
+    )
     cost_carrier = models.CharField(
         max_length=200,
         blank=True,

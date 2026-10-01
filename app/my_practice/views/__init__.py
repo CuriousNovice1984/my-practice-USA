@@ -135,6 +135,9 @@ from .invoice_views import (
     invoice_delete,
 )
 
+# Licensure
+from .license_views import license_list
+
 # Operational checklist views
 from .operational_views import (
     OperationalChecklistView,
@@ -197,6 +200,7 @@ from .withdrawal_views import (
 )
 
 __all__ = [
+    "license_list",
     # Client views
     "ClientListView",
     "ClientIntakeView",

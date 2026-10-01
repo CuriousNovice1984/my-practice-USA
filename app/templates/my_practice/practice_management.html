@@ -12,6 +12,7 @@
         <h2>{% blocktrans with count=practices_with_ownership|length %}My practices ({{ count }}){% endblocktrans %}</h2>
     </div>
     <a href="{% url 'practice_create' %}" class="btn">➕ {% trans "Create new practice" %}</a>
+    <a href="{% url 'license_list' %}" class="btn btn-secondary">🪪 {% trans "Licenses" %}</a>
 </div>
 
 {% if practices_with_ownership %}

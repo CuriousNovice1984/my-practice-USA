@@ -30,6 +30,7 @@ from .chart_helpers import (
     aggregate_invoice_items_by_month,
     prepare_monthly_chart_data,
 )
+from .licensure import client_licensure_gap
 from .questionnaire_content import list_available_questionnaires
 from .revenue_helpers import RevenueCalculator
 from .tag_helpers import sort_tags_by_category
@@ -62,6 +63,7 @@ class ClientDetailContextBuilder:
         context.update(self._build_stats())
         context.update(self._build_billing_context())
         context.update(self._build_clinical_context())
+        context["licensure_gap"] = client_licensure_gap(self.client)
         return context
 
     # ── Stats ─────────────────────────────────────────────────────────────────

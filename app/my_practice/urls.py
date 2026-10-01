@@ -18,6 +18,7 @@ urlpatterns = [
         name="practice_management",
     ),
     path("practice/create/", views.PracticeCreateView.as_view(), name="practice_create"),
+    path("practice/licenses/", views.license_list, name="license_list"),
     path(
         "practice/<slug:slug>/edit/",
         views.PracticeUpdateView.as_view(),

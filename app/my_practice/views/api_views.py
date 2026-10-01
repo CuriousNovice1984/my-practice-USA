@@ -124,6 +124,7 @@ def _render_invoice_pdf_bytes(
     ctx: dict = {
         "invoice": invoice,
         "practice": practice,
+        "licenses": [lic for lic in practice.licenses.all() if lic.is_current()],
         "logo_data": logo_data,
         "signature_data": signature_data,
     }

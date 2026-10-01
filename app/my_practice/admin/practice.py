@@ -5,12 +5,26 @@ from django.utils.html import format_html
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
-from ..models import Practice
+from ..models import Practice, ProviderLicense
+
+
+class ProviderLicenseInline(admin.TabularInline):
+    model = ProviderLicense
+    extra = 0
+    fields = ("state", "license_type", "license_number", "expiration_date", "notes")
+
+
+@admin.register(ProviderLicense)
+class ProviderLicenseAdmin(admin.ModelAdmin):
+    list_display = ("practice", "license_type", "state", "license_number", "expiration_date")
+    list_filter = ("practice", "state")
 
 
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
     """Practice admin with field groups for better organization (Django 5.1 feature)"""
+
+    inlines = [ProviderLicenseInline]
 
     fieldsets = (
         (

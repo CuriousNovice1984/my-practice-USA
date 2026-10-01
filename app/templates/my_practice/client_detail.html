@@ -24,11 +24,11 @@
 
 {% block content %}
 
-{% if client.full_name|slice:":7" == "Klient " and "@example.com" in client.email %}
+{% if licensure_gap %}
 <div class="placeholder-warning">
-    <strong>{% trans "📋 Imported client data - needs updating" %}</strong><br>
-    <span>{% trans "This client was imported with placeholder data. Please update with real information:" %}
-    <a href="{% url 'client_edit' client.pk %}">{% trans "✏️ Edit client details →" %}</a>
+    <strong>{% blocktrans with state=licensure_gap %}⚠️ No current license for {{ state }}{% endblocktrans %}</strong><br>
+    <span>{% trans "This client is located in a state where you don't hold a current license. Sessions — including telehealth — need a license in the client's state." %}
+    <a href="{% url 'license_list' %}">{% trans "Manage licenses →" %}</a>
     </span>
 </div>
 {% endif %}
@@ -209,6 +209,10 @@
                 <div class="contact-value"><span class="sensitive-data">{{ client.address|linebreaksbr }}</span></div>
             </div>
             {% endif %}
+            <div>
+                <div class="contact-label">{% trans "State (client location)" %}</div>
+                <div class="contact-value">{{ client.get_state_display|default:"–" }}</div>
+            </div>
             <div>
                 <div class="contact-label">{% trans "Payment source" %}</div>
                 <div class="contact-value"><span class="sensitive-data">{{ client.cost_carrier|default:"–" }}</span></div>

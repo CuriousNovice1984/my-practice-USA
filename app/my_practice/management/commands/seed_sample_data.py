@@ -33,6 +33,7 @@ from ...models import (
     PendingCalendarEvent,
     Practice,
     PracticeTodo,
+    ProviderLicense,
     ServiceType,
     Session,
     TimeOff,
@@ -191,8 +192,21 @@ class Command(BaseCommand):
             city="Austin",
             state="TX",
         )
+        self._create_licenses(practice)
         self.stdout.write(f"  ✓ Created practice: {practice.name}")
         return practice
+
+    def _create_licenses(self, practice: Practice) -> None:
+        """Placeholder LPC licenses in four states; VA expires soon to demo the renewal task."""
+        today = timezone.localdate()
+        for state, expires_in_days in (("TX", 400), ("UT", 300), ("VA", 45), ("NM", 500)):
+            ProviderLicense.objects.create(
+                practice=practice,
+                state=state,
+                license_type="LPC",
+                license_number=f"{state}-000000",
+                expiration_date=today + timedelta(days=expires_in_days),
+            )
 
     def _assign_superusers(self, practice: Practice) -> None:
         from django.contrib.auth import get_user_model
@@ -294,6 +308,9 @@ class Command(BaseCommand):
                 hourly_rate_90=rate_90,
                 active=active,
                 first_seen_date=intake_date,
+                # Mostly in-state; a few telehealth clients elsewhere, and one in
+                # a state with no license to demo the client-detail warning.
+                state=rng.choices(["TX", "UT", "NM", "VA", "OK"], weights=[80, 6, 6, 6, 2])[0],
             )
             char_map[client.pk] = char_entry
 

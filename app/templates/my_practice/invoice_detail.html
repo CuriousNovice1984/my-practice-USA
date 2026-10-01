@@ -62,16 +62,6 @@
         </span>
     </div>
 
-    {% if invoice.client.full_name|slice:":7" == "Klient " and "@example.com" in invoice.client.email %}
-    <div class="alert-box error mt-2">
-        <strong>📋 {% trans "Imported client data — needs updating" %}</strong><br>
-        <span class="text-danger">{% trans "This client was imported with placeholder data. Please update with real information:" %}
-        <a href="{% url 'client_intake' %}?client={{ invoice.client.pk }}" class="text-danger underline font-semibold">
-            ✏️ {% trans "Edit client data →" %}
-        </a>
-        </span>
-    </div>
-    {% endif %}
 
 </div>
 

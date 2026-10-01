@@ -4,7 +4,7 @@ Management command to materialize derived Task rows for the P-050 Focus Queue.
 Creates a PracticeTodo (task_type != manual) for each currently-outstanding
 derived signal (missing session log, unpaid/unsent invoices, pending
 operational checklists, unmatched bank transactions, open supervision
-topics) and auto-closes ones whose
+topics, licenses expiring within 90 days) and auto-closes ones whose
 underlying signal has since resolved. Reuses the same detection logic as the
 dashboard's "Braucht Aktion" widget builders (or, for supervision, the
 existing SupervisionItem model) rather than re-deriving it.
@@ -24,10 +24,11 @@ from django.core.management.base import BaseCommand
 from django.db.models import Model, Q
 from django.utils import timezone
 
-from ...models import BankTransaction, Invoice, Practice, PracticeTodo
+from ...models import BankTransaction, Invoice, Practice, PracticeTodo, ProviderLicense
 from ...models.clinical import SupervisionItem
 from ...models.session import Session
 from ...utils.dashboard_widgets import ChecklistWidgetBuilder, InvoiceActionsWidgetBuilder
+from ...utils.licensure import licenses_needing_attention
 from ...utils.tag_helpers import get_sessions_missing_log
 
 
@@ -35,7 +36,7 @@ class Command(BaseCommand):
     help = (
         "Materialize derived Focus Queue Task rows (missing session log, "
         "unpaid/unsent invoices, operational checklists, unmatched bank "
-        "transactions, open supervision topics) and auto-close resolved ones."
+        "transactions, open supervision topics, license renewals) and auto-close resolved ones."
     )
 
     def handle(self, *args, **options):
@@ -48,12 +49,37 @@ class Command(BaseCommand):
             self._sync_operational_checklist(practice, totals)
             self._sync_bank_unmatched(practice, totals)
             self._sync_supervision(practice, totals)
+            self._sync_license_renewal(practice, totals)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Focus queue sync: {totals['created']} created, {totals['closed']} closed"
             )
         )
+
+    def _sync_license_renewal(self, practice: Practice, totals: dict) -> None:
+        """One task per license that has expired or expires within 90 days.
+
+        Renewing the license (a later expiration date) closes the task on the
+        next run. The due date mirrors the expiration date so the queue sorts
+        renewals by urgency.
+        """
+        licenses = licenses_needing_attention(practice)
+        self._sync_object_tasks(
+            practice,
+            PracticeTodo.TaskType.LICENSE_RENEWAL,
+            ProviderLicense,
+            licenses,
+            lambda lic: f"{lic.license_type} {lic.state} license expires {lic.expiration_date}",
+            totals,
+        )
+        for lic in licenses:
+            PracticeTodo.objects.filter(
+                practice=practice,
+                task_type=PracticeTodo.TaskType.LICENSE_RENEWAL,
+                object_id=lic.pk,
+                completed_at__isnull=True,
+            ).exclude(due_date=lic.expiration_date).update(due_date=lic.expiration_date)
 
     def _sync_object_tasks(
         self,

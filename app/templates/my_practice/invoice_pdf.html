@@ -12,7 +12,7 @@
   {% if practice.professional_memberships %}<div class="foot-legal">{{ practice.professional_memberships }}</div>{% endif %}
   <table class="foot-cols">
     <tr>
-      <td><b>{{ practice.name }}</b><br>{{ practice.title }}<br>{{ practice.street }}, {{ practice.city }}, {{ practice.state }} {{ practice.postal_code }}</td>
+      <td><b>{{ practice.name }}</b><br>{{ practice.title }}<br>{% for lic in licenses %}{{ lic.license_type }} {{ lic.state }} #{{ lic.license_number }}{% if not forloop.last %} · {% endif %}{% endfor %}{% if licenses %}<br>{% endif %}{{ practice.street }}, {{ practice.city }}, {{ practice.state }} {{ practice.postal_code }}</td>
       <td class="col-center"><b>Payment</b><br>{{ practice.payment_instructions|linebreaksbr }}</td>
       <td class="col-right"><b>Contact</b><br>{{ practice.email }}{% if practice.phone %}<br>{{ practice.phone }}{% endif %}{% if practice.tax_id %}<br>EIN: {{ practice.tax_id }}{% endif %}</td>
     </tr>

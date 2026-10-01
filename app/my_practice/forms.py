@@ -11,6 +11,7 @@ from .models import (
     CompanyExpense,
     CompanyWithdrawal,
     Practice,
+    ProviderLicense,
     TaxYearNote,
     TimeOff,
 )
@@ -85,6 +86,7 @@ class ClientIntakeForm(StyledFormMixin, forms.ModelForm):
             "email",
             "phone",
             "address",
+            "state",
             "cost_carrier",
             "salutation",
             "active",
@@ -115,6 +117,7 @@ class ClientIntakeForm(StyledFormMixin, forms.ModelForm):
             "email": _("Email"),
             "phone": _("Phone"),
             "address": _("Address"),
+            "state": _("State (client location)"),
             "cost_carrier": _("Payment source"),
             "salutation": _("Custom Email Salutation"),
             "active": _("Active client"),
@@ -260,6 +263,29 @@ CapacityPeriodFormSet = forms.inlineformset_factory(
     Practice,
     CapacityPeriod,
     form=CapacityPeriodForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class ProviderLicenseForm(StyledFormMixin, forms.ModelForm):
+    expiration_date = DateFormField(required=False, label=_("Expiration date"))
+
+    class Meta:
+        model = ProviderLicense
+        fields = ["state", "license_type", "license_number", "expiration_date", "notes"]
+        labels = {
+            "state": _("State"),
+            "license_type": _("License type"),
+            "license_number": _("License number"),
+            "notes": _("Notes"),
+        }
+
+
+ProviderLicenseFormSet = forms.inlineformset_factory(
+    Practice,
+    ProviderLicense,
+    form=ProviderLicenseForm,
     extra=1,
     can_delete=True,
 )

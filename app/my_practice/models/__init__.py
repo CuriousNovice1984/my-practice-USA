@@ -18,6 +18,7 @@ from .inquiry import (
     MarketingPeriod,
 )
 from .invoice import Invoice, InvoiceItem, InvoiceQuerySet
+from .licensure import ProviderLicense
 from .operational import ChecklistItemPause, OperationalChecklistCompletion
 from .practice import CapacityPeriod, Practice, UserPractice
 from .service import ServiceType
@@ -57,6 +58,7 @@ __all__ = [
     "PendingCalendarEvent",
     "TimeOff",
     "PracticeTodo",
+    "ProviderLicense",
     "BankTransaction",
     "OperationalChecklistCompletion",
     "ChecklistItemPause",

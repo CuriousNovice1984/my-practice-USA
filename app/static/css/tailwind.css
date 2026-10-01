@@ -831,7 +831,7 @@
   .detail-label { font-weight: 600; color: var(--color-text-secondary); }
 
   /* Practice management / selection pages */
-  .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--color-border); }
+  .action-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--color-border); }
   .practice-list { display: flex; flex-direction: column; gap: 1rem; }
   .practice-item { background: var(--color-bg-secondary); border: 2px solid var(--color-border); border-radius: 12px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
   .practice-item.current { border-color: var(--color-btn-primary); background: var(--color-success-bg); }
@@ -932,6 +932,10 @@
   .capacity-period-row { padding: 0.5rem 0; border-bottom: 1px solid var(--color-border); }
   .capacity-period-row:last-child { border-bottom: none; }
   .capacity-delete-col { display: flex; align-items: center; max-width: 80px; }
+  .license-row { padding: 0.5rem 0; border-bottom: 1px solid var(--color-border); }
+  .license-row:last-child { border-bottom: none; }
+  .license-row__status { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+  .license-delete-col { display: flex; align-items: center; max-width: 80px; }
   .analytics-panel { margin-bottom: 1.25rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); overflow: hidden; }
   .analytics-toggle { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; cursor: pointer; background: var(--color-bg-muted); user-select: none; flex-wrap: wrap; }
   .analytics-toggle:hover { background: var(--color-bg-secondary); }
@@ -1298,6 +1302,7 @@
   .badge--ok      { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.78rem; background: rgba(39, 174, 96, 0.12); color: var(--color-success); font-weight: 500; }
   .badge--warn    { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.78rem; background: rgba(230, 126, 34, 0.12); color: var(--color-warning); font-weight: 500; }
   .badge--neutral { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.78rem; background: var(--color-bg-secondary); color: var(--color-text-secondary); }
+  .badge--danger  { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.78rem; background: var(--color-danger-bg); color: var(--color-danger); font-weight: 500; }
   .withdrawal-list { font-size: 0.82rem; color: var(--color-text-secondary); margin-top: 0.25rem; padding-left: 0; list-style: none; }
   .withdrawal-list li { padding: 0.15rem 0; }
   .totals-row td { font-weight: 600; border-top: 2px solid var(--color-border); }

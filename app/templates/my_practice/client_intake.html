@@ -91,6 +91,13 @@
         {{ form.address.errors }}
     </div>
 
+    <div class="form-group">
+        {{ form.state.label_tag }}
+        {{ form.state }}
+        {{ form.state.errors }}
+        <div class="helptext">{{ form.state.help_text }}</div>
+    </div>
+
     {% if form.hourly_rate_60 %}
     <div class="form-row">
         <div class="form-group">

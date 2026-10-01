@@ -50,7 +50,7 @@ from .invoice import (
 from .operational import ChecklistItemPauseAdmin, OperationalChecklistCompletionAdmin
 
 # Practice admin
-from .practice import PracticeAdmin
+from .practice import PracticeAdmin, ProviderLicenseAdmin
 
 # Service type admin
 from .service import ServiceTypeAdmin
@@ -88,6 +88,7 @@ __all__ = [
     "OperationalChecklistCompletionAdmin",
     "PendingCalendarEventAdmin",
     "PracticeAdmin",
+    "ProviderLicenseAdmin",
     "PracticeTodoAdmin",
     "ServiceTypeAdmin",
     "SessionAdmin",
