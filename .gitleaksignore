@@ -1,0 +1,9 @@
+# Known false positives that live in git history (gitleaks detect scans every
+# commit, so fixing the file going forward does not clear them). Each entry is a
+# finding fingerprint: <commit>:<file>:<rule>:<line>.
+#
+# test_plaid.py briefly carried the shared throwaway TEST_FERNET_KEY from
+# test_clinical.py as a literal; ruff format moved it off the line holding its
+# gitleaks:allow comment. It is a test-only key, never used outside the suite,
+# and the file now imports the constant instead.
+34678c8ab96b193419764303cdb43eceff228642:app/my_practice/tests/test_plaid.py:generic-api-key:355

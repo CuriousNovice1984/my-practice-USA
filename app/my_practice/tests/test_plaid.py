@@ -29,6 +29,7 @@ from ..models import (
 from ..models.plaid import PlaidAccount, PlaidItem
 from ..utils.plaid_client import PlaidClient, PlaidError
 from ..utils.plaid_sync import _to_parsed, link_item, sync_item
+from .test_clinical import TEST_FERNET_KEY
 
 PLAID_SETTINGS = {"PLAID_CLIENT_ID": "test-client", "PLAID_SECRET": "test-secret"}
 
@@ -86,7 +87,7 @@ class FakePlaid:
         return self.pages.pop(0)
 
 
-@override_settings(FERNET_KEY="7zIJPIlZkdMSPifNsPuNBjIAIqiUkFHmRJN8HGG8ytQ=")  # gitleaks:allow
+@override_settings(FERNET_KEY=TEST_FERNET_KEY)
 class PlaidTestBase(TestCase):
     def setUp(self):
         self.practice = Practice.objects.create(name="Test Practice", slug="plaid-test")
@@ -351,9 +352,7 @@ class PlaidViewsTest(PlaidTestBase):
         self.assertEqual(response.status_code, 404)
 
 
-@override_settings(
-    **PLAID_SETTINGS, FERNET_KEY="7zIJPIlZkdMSPifNsPuNBjIAIqiUkFHmRJN8HGG8ytQ="
-)  # gitleaks:allow
+@override_settings(**PLAID_SETTINGS, FERNET_KEY=TEST_FERNET_KEY)
 class PlaidSyncCommandTest(PlaidTestBase):
     @patch("my_practice.management.commands.plaid_sync.sync_practice")
     def test_runs_for_practices_with_items(self, mock_sync):
